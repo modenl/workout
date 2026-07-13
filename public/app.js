@@ -226,8 +226,8 @@ function startCountCycle({fromStart=false,testing=false}={}) {
     if(testing){setSoundStatus("正在播放：一、二、三、四","playing");soundTestTimer=setTimeout(()=>{stopCountCycle(true);setSoundStatus("声音正常，可以开始锻炼","ready");},4100);}
     return true;
   }).catch(()=>{
-    countCyclePlayable=false;stopCountCycle(true);setSoundStatus("声音被手机拦截，请调高媒体音量并再点一次","blocked");
-    if(!testing&&state.open){state.voice=false;els.voice.textContent="点此开声音";els.voice.setAttribute("aria-pressed","false");}
+    countCyclePlayable=false;stopCountCycle(true);setSoundStatus("媒体播放被拦截，正在尝试 Android 系统朗读","blocked");
+    if(testing)speak("一，二，三，四",{interrupt:true});
     return false;
   });
 }
