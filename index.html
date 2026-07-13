@@ -9,7 +9,226 @@
     <meta property="og:title" content="常青动一动｜70+ 每日全身保肌" />
     <meta property="og:description" content="七个温和动作覆盖全身，语音数拍，自动跟练。" />
     <meta name="twitter:card" content="summary" />
-    <link rel="stylesheet" href="styles.css" />
+    <style>
+:root {
+  --paper: #f4efe5;
+  --paper-2: #e9e1d2;
+  --ink: #173a34;
+  --muted: #5c6c67;
+  --green: #21584e;
+  --orange: #df714d;
+  --yellow: #efc75e;
+  --white: #fffdf8;
+  --line: rgba(23, 58, 52, 0.18);
+  --display: "Songti SC", "STSong", "Noto Serif CJK SC", Georgia, serif;
+  --sans: "PingFang SC", "Microsoft YaHei", system-ui, sans-serif;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+body { margin: 0; color: var(--ink); background: var(--paper); font-family: var(--sans); font-size: 18px; }
+body.is-training { overflow: hidden; }
+button, a { color: inherit; font: inherit; -webkit-tap-highlight-color: transparent; }
+button { cursor: pointer; }
+.skip-link { position: fixed; left: 16px; top: -80px; z-index: 300; padding: 14px 20px; background: var(--white); border-radius: 8px; }
+.skip-link:focus { top: 16px; }
+.orientation-gate { display: none; }
+
+.topbar { height: 80px; padding: 0 clamp(20px, 5vw, 72px); display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); background: rgba(244,239,229,.94); }
+.brand { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; font-size: 20px; font-weight: 900; }
+.brand__mark { display: grid; place-items: center; width: 42px; height: 42px; border-radius: 50% 50% 46% 54%; color: var(--white); background: var(--orange); font-family: var(--display); }
+.topbar__note { color: var(--muted); font-size: 15px; font-weight: 700; }
+
+.hero { min-height: calc(100svh - 80px); display: grid; grid-template-columns: 1.05fr .95fr; overflow: hidden; border-bottom: 1px solid var(--line); }
+.hero__copy { display: flex; justify-content: center; flex-direction: column; padding: clamp(56px, 8vw, 116px) clamp(24px, 7vw, 108px); }
+.eyebrow, .section-no { margin: 0 0 18px; color: var(--orange); font-size: 14px; font-weight: 900; letter-spacing: .11em; }
+h1, h2 { margin: 0; font-family: var(--display); font-weight: 700; }
+h1 { max-width: 790px; font-size: clamp(50px, 6.2vw, 94px); line-height: 1.04; letter-spacing: -.055em; }
+h1 em, h2 em { color: var(--orange); font-style: normal; }
+.hero__lead { max-width: 680px; margin: 30px 0 0; font-size: clamp(20px, 1.55vw, 25px); line-height: 1.72; }
+.hero__actions, .today__actions { display: flex; gap: 13px; flex-wrap: wrap; margin-top: 34px; }
+.sound-check { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; margin-top: 13px; color: var(--muted); font-size: 14px; }
+.sound-check button { min-height: 44px; padding: 0 16px; border: 1px solid var(--line); border-radius: 999px; color: var(--green); background: var(--white); font-weight: 900; }
+.sound-check span { line-height: 1.4; }
+.sound-check__player { flex: 0 0 100%; width: min(100%, 360px); max-width: 360px; height: 44px; }
+.sound-check span[data-state="ready"] { color: var(--green); font-weight: 800; }
+.sound-check span[data-state="blocked"] { color: #9b3d28; font-weight: 800; }
+.button { min-height: 58px; padding: 0 25px; border: 2px solid var(--green); border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; font-weight: 900; background: transparent; }
+.button:hover { transform: translateY(-1px); }
+.button:focus-visible, button:focus-visible, a:focus-visible { outline: 4px solid var(--yellow); outline-offset: 3px; }
+.button--primary { color: white; background: var(--green); }
+.button--quiet { color: var(--green); }
+.hero__note { margin: 22px 0 0; color: var(--muted); font-size: 16px; }
+.hero__note span { color: var(--orange); }
+
+.hero__visual { position: relative; min-height: 560px; overflow: hidden; background: var(--green); }
+.sun { position: absolute; width: min(34vw, 470px); aspect-ratio: 1; left: 50%; top: 12%; transform: translateX(-50%); border-radius: 50%; background: var(--yellow); }
+.rhythm { position: absolute; left: 9%; top: 9%; z-index: 2; display: flex; gap: 7px; }
+.rhythm span { display: grid; place-items: center; width: 44px; height: 44px; border: 2px solid var(--white); border-radius: 50%; color: var(--white); font-weight: 900; animation: rhythm 4s infinite; }
+.rhythm span:nth-child(2) { animation-delay: 1s; }
+.rhythm span:nth-child(3) { animation-delay: 2s; }
+.rhythm span:nth-child(4) { animation-delay: 3s; }
+@keyframes rhythm { 0%, 24% { color: var(--ink); background: var(--yellow); transform: scale(1.08); } 25%, 100% { color: var(--white); background: transparent; transform: scale(1); } }
+.hero-figure { position: absolute; left: 49%; bottom: 10%; width: 170px; height: 400px; animation: breathe 4s ease-in-out infinite; }
+.hero-figure span { position: absolute; display: block; background: var(--white); border: 6px solid var(--ink); }
+.hero-figure .head { width: 92px; height: 104px; border-radius: 48%; left: 38px; top: 0; }
+.hero-figure .body { width: 78px; height: 160px; left: 46px; top: 96px; border-radius: 35px 35px 24px 24px; background: var(--orange); }
+.hero-figure .arm, .hero-figure .leg { width: 34px; transform-origin: 50% 10%; border-radius: 20px; }
+.hero-figure .arm { height: 156px; top: 108px; }
+.hero-figure .arm--left { left: 28px; transform: rotate(24deg); }
+.hero-figure .arm--right { right: 28px; transform: rotate(-20deg); }
+.hero-figure .leg { height: 180px; top: 235px; background: var(--paper-2); }
+.hero-figure .leg--left { left: 47px; transform: rotate(5deg); }
+.hero-figure .leg--right { right: 47px; transform: rotate(-7deg); }
+.hero-chair { position: absolute; left: 10%; bottom: 10%; width: 210px; height: 250px; border: 14px solid var(--ink); border-top: 0; }
+.hero-chair::before { content:""; position:absolute; left:-14px; right:-14px; top:60px; height:24px; background:var(--ink); }
+.hero-chair span { position: absolute; left: -14px; top: 0; width: 70%; height: 75px; background: var(--orange); border: 12px solid var(--ink); }
+@keyframes breathe { 50% { transform: translateY(-10px); } }
+
+.today, .coverage, .safety { padding: clamp(80px, 11vw, 150px) clamp(24px, 7vw, 108px); border-bottom: 1px solid var(--line); }
+.today { background: var(--white); }
+.section-heading, .safety { display: grid; grid-template-columns: 1.05fr .95fr; gap: clamp(42px, 9vw, 140px); align-items: end; }
+h2 { font-size: clamp(42px, 5.1vw, 76px); line-height: 1.1; letter-spacing: -.045em; }
+.section-heading > p { margin: 0; font-size: 21px; line-height: 1.75; }
+.plan-list { margin: 58px 0 0; padding: 0; border-top: 1px solid var(--line); list-style: none; counter-reset: plan; }
+.plan-list li { counter-increment: plan; display: grid; grid-template-columns: 72px 1fr 1fr; gap: 20px; align-items: center; min-height: 86px; border-bottom: 1px solid var(--line); }
+.plan-list li::before { content: counter(plan, decimal-leading-zero); color: var(--orange); font-weight: 900; }
+.plan-list strong { font-family: var(--display); font-size: 28px; }
+.plan-list span { color: var(--muted); }
+.coverage { color: var(--white); background: var(--green); }
+.coverage .section-no { color: var(--yellow); }
+.coverage h2 { max-width: 930px; }
+.coverage h2 em { color: var(--yellow); }
+.coverage__columns { display: grid; grid-template-columns: repeat(3, 1fr); gap: clamp(30px, 6vw, 80px); margin-top: 72px; }
+.coverage__columns p { margin: 0; padding-top: 24px; border-top: 1px solid rgba(255,255,255,.32); }
+.coverage__columns strong, .coverage__columns span { display: block; }
+.coverage__columns strong { margin-bottom: 14px; color: var(--yellow); font-size: 23px; }
+.coverage__columns span { color: #e3ece8; line-height: 1.75; }
+.safety { background: var(--paper); }
+.safety__list p { margin: 0; padding: 21px 0; border-bottom: 1px solid var(--line); line-height: 1.72; }
+.safety__list strong { display: inline-block; min-width: 108px; color: var(--orange); }
+.safety__list .disclaimer { color: var(--muted); font-size: 15px; border-bottom: 0; }
+footer { display: grid; grid-template-columns: 1fr 1fr 1.7fr; gap: 30px; align-items: center; padding: 42px clamp(24px, 7vw, 108px); color: var(--white); background: #102d28; }
+footer p { margin: 0; }
+.sources { color: #bdcbc7; font-size: 14px; line-height: 1.6; }
+.sources a { color: var(--white); text-underline-offset: 3px; }
+
+/* Full-screen guided workout */
+.trainer { position: fixed; inset: 0; z-index: 200; display: none; grid-template-rows: auto minmax(0, 1fr) auto; width: 100%; height: 100vh; height: 100dvh; color: var(--ink); background: var(--paper); }
+.trainer.is-open { display: grid; }
+.trainer__header { min-height: 70px; padding: max(10px, env(safe-area-inset-top)) clamp(14px, 3vw, 34px) 10px; display: grid; grid-template-columns: 84px minmax(0, 1fr) 84px; gap: 18px; align-items: center; border-bottom: 1px solid var(--line); background: var(--white); }
+.icon-button { min-height: 48px; border: 1px solid var(--line); border-radius: 9px; background: transparent; font-size: 16px; font-weight: 800; }
+.trainer__progress { display: grid; gap: 8px; text-align: center; font-size: 15px; font-weight: 900; }
+.progress-track { height: 8px; overflow: hidden; border-radius: 10px; background: var(--paper-2); }
+.progress-track i { display: block; width: 14.285%; height: 100%; border-radius: inherit; background: var(--orange); transition: width .32s ease; }
+.trainer__screen { min-height: 0; display: grid; grid-template-columns: 1.05fr .95fr; }
+.trainer__visual { position: relative; min-height: 0; overflow: hidden; background: var(--paper-2); }
+.trainer__visual canvas { display: block; width: 100%; height: 100%; }
+.count-orb { position: absolute; left: clamp(16px, 3vw, 34px); top: clamp(16px, 3vw, 34px); display: grid; place-items: center; width: 104px; height: 104px; border-radius: 50%; color: var(--ink); background: var(--yellow); box-shadow: 0 0 0 8px rgba(255,253,248,.72); }
+.count-orb span { font-family: var(--display); font-size: 55px; font-weight: 900; line-height: .8; }
+.count-orb small { font-size: 13px; font-weight: 800; }
+.count-orb.is-beat { animation: beat .32s ease; }
+@keyframes beat { 50% { transform: scale(1.11); } }
+.rep-count { position: absolute; right: clamp(16px, 3vw, 34px); top: clamp(18px, 3vw, 36px); display: flex; align-items: baseline; gap: 5px; color: var(--muted); }
+.rep-count strong { color: var(--ink); font-size: 34px; }
+.trainer__copy { min-height: 0; display: flex; justify-content: center; flex-direction: column; padding: clamp(28px, 5vw, 76px); overflow: auto; }
+.trainer__category { display: flex; flex-wrap: wrap; align-items: center; gap: 5px 10px; margin: 0 0 8px; color: var(--orange); font-size: 14px; font-weight: 900; letter-spacing: .09em; }
+.trainer__view { color: var(--muted); font-size: 12px; letter-spacing: 0; }
+.trainer__view::before { content: "视角："; color: var(--green); }
+.trainer__copy h2 { font-size: clamp(40px, 4.6vw, 68px); }
+.trainer__purpose { margin: 16px 0; color: var(--green); font-size: clamp(18px, 1.5vw, 23px); font-weight: 800; line-height: 1.55; }
+.trainer__copy ol { margin: 0; padding-left: 1.4em; font-size: clamp(17px, 1.3vw, 21px); line-height: 1.72; }
+.trainer__cue { margin: 18px 0 0; padding: 13px 15px; border-left: 5px solid var(--orange); background: var(--white); line-height: 1.55; }
+.trainer__cue span { margin-right: 10px; color: var(--orange); font-weight: 900; }
+.trainer__cue b { font-weight: 600; }
+.trainer__controls { padding: 10px clamp(14px, 3vw, 34px) max(10px, env(safe-area-inset-bottom)); display: grid; grid-template-columns: 1fr minmax(150px, 1.5fr) 1fr; gap: 10px; border-top: 1px solid var(--line); background: var(--white); }
+.trainer__controls button { min-height: 56px; border: 1px solid var(--line); border-radius: 10px; background: transparent; font-weight: 900; }
+.trainer__controls .control-main { color: white; border-color: var(--green); background: var(--green); }
+.transition { position: absolute; inset: 0; z-index: 5; display: none; place-content: center; text-align: center; color: var(--white); background: rgba(23,58,52,.97); }
+.transition.is-open { display: grid; }
+.transition p { margin: 0 0 14px; color: var(--yellow); font-weight: 900; }
+.transition h2 { font-size: clamp(44px, 8vw, 92px); }
+.transition strong { margin-top: 20px; color: var(--yellow); font-family: var(--display); font-size: 76px; }
+
+@media (max-width: 900px) {
+  body { font-size: 17px; }
+  .topbar { height: 68px; }
+  .hero { min-height: auto; grid-template-columns: 1fr; }
+  .hero__copy { padding: 64px 24px 58px; }
+  .hero__visual { min-height: 470px; }
+  .hero-figure { left: 52%; transform: scale(.8); transform-origin: bottom; }
+  .hero-chair { left: 5%; transform: scale(.7); transform-origin: bottom left; }
+  .section-heading, .safety { grid-template-columns: 1fr; gap: 34px; }
+  .coverage__columns { grid-template-columns: 1fr; gap: 30px; }
+  .plan-list li { grid-template-columns: 50px 1fr; padding: 14px 0; }
+  .plan-list li span { grid-column: 2; }
+  footer { grid-template-columns: 1fr; }
+  .trainer__screen { grid-template-columns: 1fr; grid-template-rows: minmax(220px, 47%) minmax(0, 53%); }
+  .trainer__copy { padding: 20px 24px; }
+}
+
+@media (max-width: 560px) {
+  .topbar__note { display: none; }
+  h1 { font-size: clamp(43px, 13vw, 54px); }
+  .hero__lead { margin-top: 22px; font-size: 19px; }
+  .hero__actions, .today__actions { display: grid; }
+  .sound-check { align-items: flex-start; flex-direction: column; gap: 7px; }
+  .sound-check button { width: 100%; }
+  .sound-check__player { width: 100%; max-width: none; }
+  .button { width: 100%; }
+  .hero__visual { min-height: 390px; }
+  .sun { width: 290px; }
+  .rhythm { left: 18px; top: 18px; }
+  .rhythm span { width: 38px; height: 38px; }
+  .hero-figure { left: 47%; bottom: 2%; transform: scale(.66); }
+  .hero-chair { bottom: 2%; transform: scale(.54); }
+  .today, .coverage, .safety { padding: 72px 20px; }
+  h2 { font-size: 42px; }
+  .plan-list { margin-top: 38px; }
+
+  .trainer__header { min-height: 54px; padding: max(6px, env(safe-area-inset-top)) 10px 6px; grid-template-columns: 68px minmax(0,1fr) 68px; gap: 8px; }
+  .icon-button { min-height: 42px; padding: 0 6px; font-size: 14px; }
+  .trainer__progress { gap: 5px; font-size: 13px; }
+  .progress-track { height: 6px; }
+  .trainer__screen { grid-template-rows: minmax(200px, 43%) minmax(0, 57%); }
+  .count-orb { left: 12px; top: 12px; width: 76px; height: 76px; box-shadow: 0 0 0 5px rgba(255,253,248,.72); }
+  .count-orb span { font-size: 40px; }
+  .count-orb small { font-size: 10px; }
+  .rep-count { right: 12px; top: 14px; font-size: 13px; }
+  .rep-count strong { font-size: 27px; }
+  .trainer__copy { justify-content: flex-start; padding: 14px 18px 10px; }
+  .trainer__category { margin-bottom: 4px; gap: 4px 8px; font-size: 12px; }
+  .trainer__view { font-size: 11px; }
+  .trainer__copy h2 { font-size: clamp(32px, 9vw, 42px); line-height: 1.02; }
+  .trainer__purpose { margin: 8px 0; font-size: 16px; line-height: 1.4; }
+  .trainer__copy ol { font-size: 15px; line-height: 1.48; }
+  .trainer__cue { margin-top: 8px; padding: 8px 10px; font-size: 14px; line-height: 1.35; }
+  .trainer__controls { padding: 7px 10px max(7px, env(safe-area-inset-bottom)); grid-template-columns: .8fr 1.35fr .8fr; gap: 7px; }
+  .trainer__controls button { min-height: 48px; padding: 0 6px; font-size: 15px; }
+}
+
+@media (max-width: 390px), (max-height: 700px) and (max-width: 700px) {
+  .trainer__screen { grid-template-rows: minmax(190px, 42%) minmax(0, 58%); }
+  .trainer__copy { padding: 10px 16px 8px; }
+  .trainer__copy h2 { font-size: 30px; }
+  .trainer__purpose { font-size: 15px; }
+  .trainer__copy ol { font-size: 14px; line-height: 1.4; }
+  .trainer__cue { font-size: 13px; }
+}
+
+@media (orientation: landscape) and (max-height: 650px) {
+  .orientation-gate { position: fixed; inset: 0; z-index: 999; display: flex; align-items: center; justify-content: center; flex-direction: column; padding: 28px; text-align: center; color: var(--white); background: var(--green); }
+  .orientation-gate strong { margin-top: 18px; font-family: var(--display); font-size: clamp(32px, 7vw, 54px); }
+  .orientation-gate p { margin: 10px 0 0; color: #dce9e5; font-size: 17px; }
+  .orientation-gate__phone { width: 48px; height: 78px; border: 5px solid var(--yellow); border-radius: 10px; box-shadow: inset 0 -10px 0 rgba(239,199,94,.2); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .01ms !important; transition-duration: .01ms !important; }
+}
+
+    </style>
     <title>常青动一动｜70+ 每日全身保肌</title>
   </head>
   <body>
@@ -41,10 +260,7 @@
           <div class="sound-check" aria-live="polite">
             <button id="test-sound" type="button">🔊 先测试声音</button>
             <span id="sound-status">按钮无声时，直接点播放器的 ▶</span>
-            <audio id="count-cycle" class="sound-check__player" controls preload="auto" aria-label="计数声音播放器">
-              <source src="audio/count-cycle.mp3" type="audio/mpeg" />
-              <source src="audio/count-cycle.wav" type="audio/wav" />
-            </audio>
+            <audio id="count-cycle" class="sound-check__player" controls preload="auto" aria-label="计数声音播放器" src="data:audio/mpeg;base64,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AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA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AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA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msUb8qKijahYRmXf/wEEkxBTUUDAAkIAAQAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAA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ISFaRgv/+v9wsEhGGTISamIKaigYAEhAACAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA//NIxAAAAANIAAAAAExBTUUDAAkIAAQAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA"></audio>
           </div>
           <p class="hero__note"><span aria-hidden="true">●</span> 全程能自然说话、不憋气，就是合适的强度。</p>
         </div>
@@ -147,6 +363,332 @@
       </div>
     </section>
 
-    <script src="app.js?v=android-mp3-audio-3"></script>
+    <script>
+const INK = "#173a34";
+const ORANGE = "#df714d";
+const WHITE = "#fffdf8";
+const GUIDE = "rgba(23,58,52,.22)";
+const YELLOW = "#efc75e";
+const FAR = "#8da19a";
+
+const CATEGORIES = [
+  { key: "warm", label: "热身活动" },
+  { key: "lower", label: "腿与臀" },
+  { key: "push", label: "胸与手臂" },
+  { key: "pull", label: "背与肩" },
+  { key: "core", label: "核心与姿势" },
+  { key: "ankle", label: "小腿与脚踝" },
+  { key: "balance", label: "髋部与平衡" }
+];
+
+const VIEW_META = {
+  march:"正面视角 · 橙色腿交替抬起", seatedJack:"正面视角 · 双侧同时开合", reachTap:"侧面视角 · 前方在右 →",
+  stand:"侧面视角 · 向上站起", miniSquat:"斜侧视角 · 臀部向后", extend:"侧面视角 · 脚向前 →",
+  wallPush:"侧面视角 · 墙在前方 →", palmPress:"正面视角 · 双掌在胸前", forwardPress:"侧面视角 · 双手向前 →",
+  elbowPull:"正面视角 · 手肘向后拉", towelPull:"正面视角 · 双手向左右拉", lowRow:"正面视角 · 手肘贴身后拉",
+  crossMarch:"正面视角 · 对侧手膝靠近", kneePress:"正面视角 · 橙色侧发力", sideReach:"正面视角 · 左右交替",
+  heel:"正面视角 · 脚跟向上", toeLift:"正面视角 · 脚尖向上", seatedHeel:"正面视角 · 脚跟向上",
+  side:"正面视角 · 腿向左或右", weightShift:"正面视角 · 重心左右移动", backLeg:"侧面视角 · 后方在左 ←"
+};
+
+const LIBRARY = {
+  warm: [
+    { id:"march", name:"坐姿踏步", purpose:"温和带动心肺，唤醒髋部和大腿。", steps:["坐在椅子前半部，身体坐直。","左右轮流抬脚，同时自然摆臂。"], cue:"脚轻轻落地；抬到舒服的高度即可。", alternating:true },
+    { id:"seatedJack", name:"坐姿开合", purpose:"活动肩、髋和腿，让全身暖起来。", steps:["坐稳，双脚并拢，双手放在腿旁。","双脚向两旁点开，双臂抬到肩高，再收回。"], cue:"手臂不必举过头；全程保持顺畅呼吸。" },
+    { id:"reachTap", name:"坐姿前点脚", purpose:"活动髋、膝和肩部，温和提高身体活动量。", steps:["坐在椅子前半部，双脚踩稳。","一只脚向前点，同时双手向前送，再换边。"], cue:"脚跟轻点地面；身体保持直，不向后倒。", alternating:true }
+  ],
+  lower: [
+    { id:"stand", name:"扶椅起身", purpose:"练大腿和臀部，帮助起床、如厕和上下车。", steps:["椅子靠墙，双脚放在膝盖下方。","身体稍向前，站直后有控制地坐回。"], cue:"弯髋、弯膝；膝盖始终朝向脚尖。" },
+    { id:"miniSquat", name:"扶椅小蹲", purpose:"练大腿、臀部和髋部，增强站立力量。", steps:["双手扶稳椅背，双脚与髋同宽。","臀部向后坐一小段，再用腿站直。"], cue:"背部保持长直；膝盖不向内夹。" },
+    { id:"extend", name:"坐姿伸膝", purpose:"练大腿前侧，帮助膝盖在站立和走路时稳定。", steps:["坐直，双手扶住椅子两侧。","一侧小腿向前伸，再慢慢放回换边。"], cue:"膝盖不要锁死；不用甩腿或追求很高。", alternating:true }
+  ],
+  push: [
+    { id:"wallPush", name:"墙面俯卧撑", purpose:"练胸、肩和手臂，让推门和撑起身体更有力。", steps:["面对墙站立，双手与肩同高。","弯手肘靠近墙，再把墙推远。"], cue:"只弯手肘；头、背、髋始终保持一条直线。" },
+    { id:"palmPress", name:"坐姿合掌推压", purpose:"温和练胸、肩和手臂，不需要器械。", steps:["坐直，双掌在胸前相对。","数到 2 时互相推压，数到 4 时放松。"], cue:"肩膀放松，不耸肩；不要憋气。" },
+    { id:"forwardPress", name:"坐姿向前推", purpose:"练胸、肩和手臂，帮助完成日常推送动作。", steps:["坐直，双手握拳放在胸前。","双臂向前推到微弯，再有控制地收回。"], cue:"手肘不要锁死；腰部不后仰。" }
+  ],
+  pull: [
+    { id:"elbowPull", name:"坐姿拉肘夹背", purpose:"练上背和肩后侧，帮助维持挺拔姿势。", steps:["坐直，双臂向前伸到肩高。","弯手肘向后拉，轻轻夹背，再伸回。"], cue:"肘保持在肩膀下方；腰部不要后仰。" },
+    { id:"towelPull", name:"坐姿毛巾拉开", purpose:"练上背、肩和手臂，帮助拿物更稳。", steps:["双手握毛巾两端，在胸前伸直。","向两边拉紧毛巾，再缓缓放松。"], cue:"手肘保持微弯，不锁死；毛巾不用拉得很紧。" },
+    { id:"lowRow", name:"坐姿低位划臂", purpose:"练背部和手臂，帮助保持肩膀打开。", steps:["坐直，双手向前下方伸出。","弯手肘贴近身体向后拉，再慢慢伸回。"], cue:"先向后拉肩胛骨；不要耸肩或挺肚子。" }
+  ],
+  core: [
+    { id:"crossMarch", name:"坐姿对侧触膝", purpose:"练腹部、髋部和身体协调。", steps:["坐直，右脚抬起，同时左手靠近右膝。","放回后换边，身体不要后倒。"], cue:"动作来自抬膝和轻微转身，不要猛拉颈部。", alternating:true },
+    { id:"kneePress", name:"坐姿手膝相推", purpose:"温和唤醒腹部深层肌肉，帮助躯干稳定。", steps:["坐直，抬起一侧膝盖，双手扶住膝上方。","手向下、膝向上轻轻相推，再放回换边。"], cue:"只用三四成力；背部保持直，不憋气。", alternating:true },
+    { id:"sideReach", name:"坐姿侧向伸手", purpose:"练躯干两侧和姿势控制，帮助弯身取物。", steps:["坐稳，双脚踩地，一只手扶住椅边。","另一只手向身体侧下方伸，再回正换边。"], cue:"幅度要小；臀部两侧始终压在椅面。", alternating:true }
+  ],
+  ankle: [
+    { id:"heel", name:"扶椅踮脚", purpose:"练小腿和脚踝，帮助迈步和站稳。", steps:["双手扶稳椅背，双脚朝前。","脚跟抬起，再有控制地落地。"], cue:"脚趾始终着地；膝盖保持柔软，不锁死。" },
+    { id:"toeLift", name:"坐姿抬脚尖", purpose:"练小腿前侧和脚踝，帮助减少走路绊脚。", steps:["坐稳，双脚平放，膝盖约九十度。","脚跟不动，抬起脚尖，再慢慢放下。"], cue:"只动脚踝；不要抬起整条腿。" },
+    { id:"seatedHeel", name:"坐姿提脚跟", purpose:"练小腿后侧和脚踝，帮助迈步时向前推地。", steps:["坐稳，双脚平放，脚尖朝前。","脚尖不动，抬起脚跟，再慢慢落下。"], cue:"膝盖保持在脚尖上方；不要让脚踝向外倒。" }
+  ],
+  balance: [
+    { id:"side", name:"扶椅侧抬腿", purpose:"练髋部两侧和单脚稳定，帮助走路少摇晃。", steps:["一手扶稳椅背，双脚朝前。","外侧腿向旁抬一小段，再慢慢收回。"], cue:"抬起腿保持直；支撑腿微弯，不锁膝。", alternating:true },
+    { id:"weightShift", name:"扶椅左右移重心", purpose:"练脚踝、髋部和平衡反应，帮助转身与迈步。", steps:["双手轻扶椅背，双脚比髋稍宽。","把重心移到一侧，再回中间换边。"], cue:"两脚不离地；承重侧膝盖保持微弯。", alternating:true },
+    { id:"backLeg", name:"扶椅向后抬腿", purpose:"练臀部和髋后侧，帮助站稳和迈步。", steps:["双手扶稳椅背，身体站直。","一条腿保持直，向后抬一小段，再换边。"], cue:"不要前倾或塌腰；支撑腿微弯。", alternating:true }
+  ]
+};
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+function ease(t) { return .5 - Math.cos(Math.PI * t) / 2; }
+function point(a, b, t) { return { x: lerp(a.x, b.x, t), y: lerp(a.y, b.y, t) }; }
+function limb(ctx, a, b, width = 18, color = INK) {
+  ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+}
+function ghostLimb(ctx,a,b,width=14){ctx.save();ctx.globalAlpha=.32;ctx.strokeStyle=FAR;ctx.lineWidth=width;ctx.lineCap="round";ctx.setLineDash([7,8]);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();}
+function joint(ctx, p, r = 8) { ctx.fillStyle = ORANGE; ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill(); }
+function head(ctx, p, r = 27) { ctx.fillStyle = WHITE; ctx.strokeStyle = INK; ctx.lineWidth = 8; ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
+function chair(ctx, x, y, scale = 1) {
+  ctx.strokeStyle = INK; ctx.lineWidth = 11 * scale; ctx.lineCap = "round";
+  ctx.beginPath(); ctx.moveTo(x, y - 155*scale); ctx.lineTo(x, y - 20*scale); ctx.moveTo(x, y - 75*scale); ctx.lineTo(x + 105*scale, y - 75*scale); ctx.lineTo(x + 105*scale, y); ctx.moveTo(x + 18*scale, y - 72*scale); ctx.lineTo(x + 18*scale, y); ctx.stroke();
+}
+function arrow(ctx, x1, y1, x2, y2) {
+  const angle = Math.atan2(y2-y1, x2-x1);
+  ctx.save(); ctx.strokeStyle = ORANGE; ctx.fillStyle = ORANGE; ctx.lineWidth = 6; ctx.setLineDash([10,10]);
+  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.setLineDash([]);
+  ctx.beginPath(); ctx.moveTo(x2,y2); ctx.lineTo(x2-17*Math.cos(angle-.55),y2-17*Math.sin(angle-.55)); ctx.lineTo(x2-17*Math.cos(angle+.55),y2-17*Math.sin(angle+.55)); ctx.closePath(); ctx.fill(); ctx.restore();
+}
+function drawGround(ctx) { ctx.strokeStyle=GUIDE; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(-240,430);ctx.lineTo(240,430);ctx.stroke(); }
+function drawTorso(ctx, hip, shoulder) { limb(ctx, hip, shoulder, 23); joint(ctx, hip); head(ctx, {x:shoulder.x,y:shoulder.y-52}); }
+
+function seatedPose(ctx, c, options = {}) {
+  chair(ctx,c.x-92,c.y,1); const hip={x:c.x,y:c.y-82}, shoulder={x:c.x,y:c.y-205}; drawTorso(ctx,hip,shoulder);
+  const leftKnee=options.leftKnee || {x:c.x-42,y:c.y-34};
+  const rightKnee=options.rightKnee || {x:c.x+55,y:c.y-34};
+  const leftFoot=options.leftFoot || {x:c.x-45,y:c.y};
+  const rightFoot=options.rightFoot || {x:c.x+58,y:c.y};
+  const leftColor=options.activeSide==="left"?ORANGE:FAR,rightColor=options.activeSide==="left"?FAR:ORANGE;
+  limb(ctx,hip,leftKnee,16,leftColor);limb(ctx,leftKnee,leftFoot,16,leftColor);limb(ctx,hip,rightKnee,18,rightColor);limb(ctx,rightKnee,rightFoot,18,rightColor);
+  joint(ctx,leftKnee,7);joint(ctx,rightKnee,7);
+  return {hip,shoulder,leftKnee,rightKnee,leftFoot,rightFoot};
+}
+function standingPose(ctx,c,options={}) {
+  const hip={x:c.x+(options.shift||0),y:c.y-145+(options.drop||0)}, shoulder={x:c.x+(options.shift||0)+(options.lean||0),y:c.y-260+(options.drop||0)};
+  const footL={x:c.x-38+(options.sideL||0),y:c.y+(options.ankleRise||0)}, footR={x:c.x+38+(options.sideR||0),y:c.y+(options.ankleRise||0)};
+  const kneeL=options.kneeL||point(hip,footL,.53), kneeR=options.kneeR||point(hip,footR,.53);
+  const leftColor=options.activeSide==="left"?ORANGE:FAR,rightColor=options.activeSide==="left"?FAR:ORANGE;
+  drawTorso(ctx,hip,shoulder); limb(ctx,hip,kneeL,16,leftColor);limb(ctx,kneeL,footL,16,leftColor);limb(ctx,hip,kneeR,18,rightColor);limb(ctx,kneeR,footR,18,rightColor);joint(ctx,kneeL,7);joint(ctx,kneeR,7);
+  return {hip,shoulder,footL,footR,kneeL,kneeR};
+}
+
+const DRAWERS = {
+  march(ctx,c,t,side){
+    const lift = 48*t; const right = side > 0;
+    const pose=seatedPose(ctx,c,{activeSide:right?"right":"left",rightKnee:right?{x:c.x+62,y:c.y-34-lift*.5}:undefined,rightFoot:right?{x:c.x+62,y:c.y-lift}:undefined,leftKnee:!right?{x:c.x-48,y:c.y-34-lift*.5}:undefined,leftFoot:!right?{x:c.x-48,y:c.y-lift}:undefined});
+    const movingShoulder=pose.shoulder; const handA={x:c.x+(right?-42:42),y:c.y-130-25*t},handB={x:c.x+(right?42:-42),y:c.y-130};limb(ctx,movingShoulder,handA,15,ORANGE);limb(ctx,movingShoulder,handB,15);arrow(ctx,c.x+(right?105:-105),c.y-4,c.x+(right?105:-105),c.y-68);
+  },
+  seatedJack(ctx,c,t){
+    const pose=seatedPose(ctx,c,{leftFoot:{x:c.x-45-52*t,y:c.y},rightFoot:{x:c.x+58+52*t,y:c.y}});
+    const leftElbow={x:c.x-48-34*t,y:c.y-160-35*t},rightElbow={x:c.x+48+34*t,y:c.y-160-35*t};
+    const leftHand={x:c.x-48-70*t,y:c.y-105-92*t},rightHand={x:c.x+48+70*t,y:c.y-105-92*t};
+    limb(ctx,pose.shoulder,leftElbow,16);limb(ctx,leftElbow,leftHand,16,ORANGE);limb(ctx,pose.shoulder,rightElbow,16);limb(ctx,rightElbow,rightHand,16,ORANGE);joint(ctx,leftElbow);joint(ctx,rightElbow);
+  },
+  reachTap(ctx,c,t,side){
+    chair(ctx,c.x-105,c.y,1);const hip={x:c.x-8,y:c.y-82},shoulder={x:c.x-8,y:c.y-205};drawTorso(ctx,hip,shoulder);const farKnee={x:c.x+35,y:c.y-38},farFoot={x:c.x+48,y:c.y},knee={x:c.x+48,y:c.y-42},foot={x:c.x+65+92*t,y:c.y};ghostLimb(ctx,knee,{x:c.x+65,y:c.y});limb(ctx,hip,farKnee,15,FAR);limb(ctx,farKnee,farFoot,15,FAR);limb(ctx,hip,knee,18,ORANGE);limb(ctx,knee,foot,18,ORANGE);joint(ctx,knee,7);const elbow={x:c.x+38,y:c.y-170},hand={x:c.x+65+62*t,y:c.y-150};limb(ctx,shoulder,elbow,15,FAR);limb(ctx,elbow,hand,17,ORANGE);joint(ctx,elbow);arrow(ctx,c.x+78,c.y-16,c.x+170,c.y-16);
+  },
+  stand(ctx,c,t){
+    chair(ctx,c.x-135,c.y,1); const hip={x:c.x-45+45*t,y:c.y-82-63*t}, shoulder={x:c.x-42+42*t,y:c.y-205-55*t};
+    const footL={x:c.x-18,y:c.y},footR={x:c.x+48,y:c.y}; const kneeL={x:c.x+16,y:c.y-44-35*t},kneeR={x:c.x+58,y:c.y-46-33*t};
+    drawTorso(ctx,hip,shoulder);limb(ctx,hip,kneeL,18,ORANGE);limb(ctx,kneeL,footL,18,ORANGE);limb(ctx,hip,kneeR);limb(ctx,kneeR,footR);joint(ctx,kneeL);joint(ctx,kneeR);
+    const hand={x:c.x-104+34*t,y:c.y-112-63*t};limb(ctx,shoulder,hand,15);arrow(ctx,c.x+135,c.y-90,c.x+135,c.y-215);
+  },
+  miniSquat(ctx,c,t){
+    chair(ctx,c.x+98,c.y,1); const hip={x:c.x+12*t,y:c.y-145+48*t},shoulder={x:c.x+28*t,y:c.y-260+48*t};
+    const footL={x:c.x-42,y:c.y},footR={x:c.x+42,y:c.y}; const kneeL={x:c.x-50+18*t,y:c.y-72+27*t},kneeR={x:c.x+50+18*t,y:c.y-72+27*t};
+    drawTorso(ctx,hip,shoulder);limb(ctx,hip,kneeL);limb(ctx,kneeL,footL);limb(ctx,hip,kneeR,18,ORANGE);limb(ctx,kneeR,footR,18,ORANGE);joint(ctx,kneeL);joint(ctx,kneeR);
+    const hand={x:c.x+105,y:c.y-190};limb(ctx,shoulder,hand,15);joint(ctx,hand,6);arrow(ctx,c.x-110,c.y-165,c.x-110,c.y-95);
+  },
+  extend(ctx,c,t,side){
+    chair(ctx,c.x-105,c.y,1);const hip={x:c.x-8,y:c.y-82},shoulder={x:c.x-8,y:c.y-205};drawTorso(ctx,hip,shoulder);const farKnee={x:c.x+34,y:c.y-38},farFoot={x:c.x+45,y:c.y},knee={x:c.x+52,y:c.y-45},foot={x:c.x+62+105*t,y:c.y-4-72*t};ghostLimb(ctx,knee,{x:c.x+62,y:c.y});limb(ctx,hip,farKnee,15,FAR);limb(ctx,farKnee,farFoot,15,FAR);limb(ctx,hip,knee,18,ORANGE);limb(ctx,knee,foot,18,ORANGE);joint(ctx,knee,7);const hand={x:c.x+24,y:c.y-112};limb(ctx,shoulder,hand,15);arrow(ctx,c.x+80,c.y-58,c.x+174,c.y-100);
+  },
+  wallPush(ctx,c,t){
+    const wallX=c.x+150; ctx.strokeStyle=INK;ctx.lineWidth=10;ctx.beginPath();ctx.moveTo(wallX,c.y-340);ctx.lineTo(wallX,c.y+5);ctx.stroke();
+    const foot={x:c.x-86,y:c.y}, shoulder={x:c.x-78+48*t,y:c.y-255}, hip={x:c.x-82+26*t,y:c.y-138}; const knee=point(hip,foot,.52);
+    drawTorso(ctx,hip,shoulder);limb(ctx,foot,knee);limb(ctx,knee,hip);joint(ctx,knee,7);
+    const hand={x:wallX,y:c.y-245},elbow={x:lerp(shoulder.x,wallX,.55),y:c.y-218+28*t};limb(ctx,shoulder,elbow,18,ORANGE);limb(ctx,elbow,hand,18,ORANGE);joint(ctx,elbow);joint(ctx,hand,7);arrow(ctx,c.x+10,c.y-310,c.x+88,c.y-310);
+  },
+  palmPress(ctx,c,t){
+    const pose=seatedPose(ctx,c); const hand={x:c.x,y:c.y-178},leftElbow={x:c.x-82+24*t,y:c.y-170},rightElbow={x:c.x+82-24*t,y:c.y-170};
+    limb(ctx,pose.shoulder,leftElbow,16);limb(ctx,leftElbow,hand,17,ORANGE);limb(ctx,pose.shoulder,rightElbow,16);limb(ctx,rightElbow,hand,17,ORANGE);joint(ctx,leftElbow);joint(ctx,rightElbow);joint(ctx,hand,8);ctx.strokeStyle=YELLOW;ctx.lineWidth=5;ctx.beginPath();ctx.arc(hand.x,hand.y,22+8*t,0,Math.PI*2);ctx.stroke();
+  },
+  forwardPress(ctx,c,t){
+    chair(ctx,c.x-105,c.y,1);const hip={x:c.x-8,y:c.y-82},shoulder={x:c.x-8,y:c.y-205};drawTorso(ctx,hip,shoulder);const knee={x:c.x+40,y:c.y-38},foot={x:c.x+48,y:c.y};limb(ctx,hip,knee,16,FAR);limb(ctx,knee,foot,16,FAR);const elbow={x:c.x+42+28*t,y:c.y-180},hand={x:c.x+58+105*t,y:c.y-180};ghostLimb(ctx,elbow,{x:c.x+58,y:c.y-180});limb(ctx,shoulder,elbow,17,FAR);limb(ctx,elbow,hand,19,ORANGE);joint(ctx,elbow);joint(ctx,hand,7);arrow(ctx,c.x+74,c.y-238,c.x+176,c.y-238);
+  },
+  elbowPull(ctx,c,t){
+    const pose=seatedPose(ctx,c); const leftElbow={x:c.x-58-42*t,y:c.y-178},rightElbow={x:c.x+58+42*t,y:c.y-178}; const leftHand={x:c.x-82+70*(1-t),y:c.y-177},rightHand={x:c.x+82-70*(1-t),y:c.y-177};
+    limb(ctx,pose.shoulder,leftElbow,17);limb(ctx,leftElbow,leftHand,17,ORANGE);limb(ctx,pose.shoulder,rightElbow,17);limb(ctx,rightElbow,rightHand,17,ORANGE);joint(ctx,leftElbow);joint(ctx,rightElbow);arrow(ctx,c.x-18,c.y-242,c.x-102,c.y-242);arrow(ctx,c.x+18,c.y-242,c.x+102,c.y-242);
+  },
+  towelPull(ctx,c,t){
+    const pose=seatedPose(ctx,c); const leftHand={x:c.x-52-45*t,y:c.y-178},rightHand={x:c.x+52+45*t,y:c.y-178};
+    limb(ctx,pose.shoulder,leftHand,17,ORANGE);limb(ctx,pose.shoulder,rightHand,17,ORANGE);ctx.strokeStyle=YELLOW;ctx.lineWidth=9;ctx.beginPath();ctx.moveTo(leftHand.x,leftHand.y);ctx.lineTo(rightHand.x,rightHand.y);ctx.stroke();joint(ctx,leftHand,7);joint(ctx,rightHand,7);
+  },
+  lowRow(ctx,c,t){
+    const pose=seatedPose(ctx,c);const leftElbow={x:c.x-52-55*t,y:c.y-148+12*t},rightElbow={x:c.x+52+55*t,y:c.y-148+12*t};const leftHand={x:c.x-78+55*(1-t),y:c.y-116},rightHand={x:c.x+78-55*(1-t),y:c.y-116};
+    limb(ctx,pose.shoulder,leftElbow,16);limb(ctx,leftElbow,leftHand,17,ORANGE);limb(ctx,pose.shoulder,rightElbow,16);limb(ctx,rightElbow,rightHand,17,ORANGE);joint(ctx,leftElbow);joint(ctx,rightElbow);arrow(ctx,c.x-25,c.y-102,c.x-112,c.y-102);arrow(ctx,c.x+25,c.y-102,c.x+112,c.y-102);
+  },
+  crossMarch(ctx,c,t,side){
+    const right=side>0, lift=50*t; const pose=seatedPose(ctx,c,{activeSide:right?"right":"left",rightKnee:right?{x:c.x+58,y:c.y-34-lift*.45}:undefined,rightFoot:right?{x:c.x+58,y:c.y-lift}:undefined,leftKnee:!right?{x:c.x-45,y:c.y-34-lift*.45}:undefined,leftFoot:!right?{x:c.x-45,y:c.y-lift}:undefined});
+    const hand={x:c.x+(right?35:-30),y:c.y-110-18*t};limb(ctx,pose.shoulder,hand,17,ORANGE);joint(ctx,hand,7);
+  },
+  kneePress(ctx,c,t,side){
+    const right=side>0, lift=45*t; const pose=seatedPose(ctx,c,{activeSide:right?"right":"left",rightKnee:right?{x:c.x+55,y:c.y-34-lift*.5}:undefined,rightFoot:right?{x:c.x+55,y:c.y-lift}:undefined,leftKnee:!right?{x:c.x-45,y:c.y-34-lift*.5}:undefined,leftFoot:!right?{x:c.x-45,y:c.y-lift}:undefined});
+    const target=right?pose.rightKnee:pose.leftKnee; const hand={x:target.x,y:target.y-18};limb(ctx,pose.shoulder,hand,17,ORANGE);joint(ctx,hand,7);ctx.strokeStyle=YELLOW;ctx.lineWidth=5;ctx.beginPath();ctx.arc(target.x,target.y,16+7*t,0,Math.PI*2);ctx.stroke();
+  },
+  sideReach(ctx,c,t,side){
+    chair(ctx,c.x-92,c.y,1);const hip={x:c.x,y:c.y-82},shoulder={x:c.x+side*24*t,y:c.y-205+8*t};drawTorso(ctx,hip,shoulder);const kneeL={x:c.x-42,y:c.y-34},kneeR={x:c.x+55,y:c.y-34},footL={x:c.x-45,y:c.y},footR={x:c.x+58,y:c.y};limb(ctx,hip,kneeL);limb(ctx,kneeL,footL);limb(ctx,hip,kneeR,18,ORANGE);limb(ctx,kneeR,footR,18,ORANGE);joint(ctx,kneeL,7);joint(ctx,kneeR,7);
+    const reachingHand={x:c.x+side*(78+58*t),y:c.y-122+42*t},supportHand={x:c.x-side*42,y:c.y-112};limb(ctx,shoulder,reachingHand,17,ORANGE);limb(ctx,shoulder,supportHand,15);joint(ctx,reachingHand,7);arrow(ctx,c.x+side*70,c.y-125,c.x+side*145,c.y-75);
+  },
+  heel(ctx,c,t){
+    chair(ctx,c.x+100,c.y,1); const pose=standingPose(ctx,c,{drop:-20*t,ankleRise:-22*t}); const toeL={x:pose.footL.x+20,y:c.y},toeR={x:pose.footR.x+20,y:c.y};limb(ctx,pose.footL,toeL,8);limb(ctx,pose.footR,toeR,8);const hand={x:c.x+106,y:c.y-186};limb(ctx,pose.shoulder,hand,15);joint(ctx,hand,6);arrow(ctx,c.x-115,c.y-8,c.x-115,c.y-70);
+  },
+  toeLift(ctx,c,t){
+    const pose=seatedPose(ctx,c); const heelL={x:pose.leftFoot.x,y:c.y},heelR={x:pose.rightFoot.x,y:c.y};const toeL={x:heelL.x+34,y:c.y-25*t},toeR={x:heelR.x+34,y:c.y-25*t};limb(ctx,heelL,toeL,10,ORANGE);limb(ctx,heelR,toeR,10,ORANGE);arrow(ctx,c.x+120,c.y-4,c.x+120,c.y-45);
+  },
+  seatedHeel(ctx,c,t){
+    const pose=seatedPose(ctx,c);const toeL={x:pose.leftFoot.x+30,y:c.y},toeR={x:pose.rightFoot.x+30,y:c.y},heelL={x:pose.leftFoot.x,y:c.y-25*t},heelR={x:pose.rightFoot.x,y:c.y-25*t};limb(ctx,heelL,toeL,10,ORANGE);limb(ctx,heelR,toeR,10,ORANGE);arrow(ctx,c.x-120,c.y-3,c.x-120,c.y-46);
+  },
+  side(ctx,c,t,side){
+    chair(ctx,c.x+108,c.y,1); const move=side>0?"sideR":"sideL"; const opts={activeSide:side>0?"right":"left"};opts[move]=(side>0?82:-82)*t;const pose=standingPose(ctx,c,opts);const hand={x:c.x+114,y:c.y-185};limb(ctx,pose.shoulder,hand,15);joint(ctx,hand,6);arrow(ctx,c.x+(side>0?55:-55),c.y-46,c.x+(side>0?145:-145),c.y-46);
+  },
+  weightShift(ctx,c,t,side){
+    chair(ctx,c.x+102,c.y,1); const shift=side*38*t;const pose=standingPose(ctx,c,{activeSide:side>0?"right":"left",shift,kneeL:{x:c.x-48+shift*.6,y:c.y-72+5*t},kneeR:{x:c.x+48+shift*.6,y:c.y-72+5*t}});const hand={x:c.x+108,y:c.y-185};limb(ctx,pose.shoulder,hand,15);joint(ctx,hand,6);arrow(ctx,c.x-80,c.y-310,c.x+80,c.y-310);
+  },
+  backLeg(ctx,c,t,side){
+    chair(ctx,c.x+112,c.y,1);const hip={x:c.x,y:c.y-145},shoulder={x:c.x,y:c.y-260};drawTorso(ctx,hip,shoulder);const supportKnee={x:c.x+18,y:c.y-74},supportFoot={x:c.x+20,y:c.y},movingKnee={x:c.x-18-26*t,y:c.y-76-12*t},movingFoot={x:c.x-24-88*t,y:c.y-3-20*t};ghostLimb(ctx,hip,{x:c.x-18,y:c.y-76});ghostLimb(ctx,{x:c.x-18,y:c.y-76},{x:c.x-24,y:c.y-3});limb(ctx,hip,supportKnee,16,FAR);limb(ctx,supportKnee,supportFoot,16,FAR);limb(ctx,hip,movingKnee,19,ORANGE);limb(ctx,movingKnee,movingFoot,19,ORANGE);joint(ctx,supportKnee,7);joint(ctx,movingKnee,7);const hand={x:c.x+118,y:c.y-185};limb(ctx,shoulder,hand,16,ORANGE);joint(ctx,hand,6);arrow(ctx,c.x-60,c.y-45,c.x-158,c.y-66);
+  }
+};
+
+const els = {
+  planList:document.querySelector("#plan-list"), trainer:document.querySelector("#trainer"), canvas:document.querySelector("#trainer-canvas"),
+  progressLabel:document.querySelector("#progress-label"), progressFill:document.querySelector("#progress-fill"), beat:document.querySelector("#beat-count"), rep:document.querySelector("#rep-count"),
+  category:document.querySelector("#exercise-category"), name:document.querySelector("#exercise-name"), purpose:document.querySelector("#exercise-purpose"), steps:document.querySelector("#exercise-steps"), cue:document.querySelector("#exercise-cue"),
+  view:document.querySelector("#view-label"), pause:document.querySelector("#pause-workout"), voice:document.querySelector("#voice-toggle"), countCycle:document.querySelector("#count-cycle"), soundTest:document.querySelector("#test-sound"), soundStatus:document.querySelector("#sound-status"), transition:document.querySelector("#transition"), transitionKicker:document.querySelector("#transition-kicker"), transitionTitle:document.querySelector("#transition-title"), transitionCount:document.querySelector("#transition-count")
+};
+const ctx = els.canvas.getContext("2d");
+const todayKey = new Date().toISOString().slice(0,10);
+const daySeed = [...todayKey].reduce((sum,ch)=>sum+ch.charCodeAt(0),0);
+let planOffset = Number(localStorage.getItem("planOffset") || 0);
+let plan = [];
+const state = { open:false, index:0, paused:false, voice:true, elapsed:0, lastNow:0, lastBeat:-1, transitioning:false, transitionTimers:[] };
+let preferredVoice = null;
+let countCyclePlayable = false;
+let soundTestTimer = null;
+
+function setSoundStatus(message,stateName="") {
+  els.soundStatus.textContent=message;els.soundStatus.dataset.state=stateName;
+}
+function stopCountCycle(reset=false) {
+  clearTimeout(soundTestTimer);soundTestTimer=null;els.countCycle.pause();if(reset){try{els.countCycle.currentTime=0;}catch{}}
+}
+function startCountCycle({fromStart=false,testing=false}={}) {
+  if(!testing&&!state.voice)return Promise.resolve(false);
+  clearTimeout(soundTestTimer);els.countCycle.loop=!testing;els.countCycle.muted=false;els.countCycle.volume=1;
+  try{els.countCycle.currentTime=fromStart?0:Math.min(3.95,(state.elapsed%4000)/1000);}catch{}
+  const playResult=els.countCycle.play();
+  if(!playResult){countCyclePlayable=true;return Promise.resolve(true);}
+  return playResult.then(()=>{
+    countCyclePlayable=true;
+    if(testing){setSoundStatus("正在播放：一、二、三、四","playing");soundTestTimer=setTimeout(()=>{stopCountCycle(true);setSoundStatus("声音正常，可以开始锻炼","ready");},4100);}
+    return true;
+  }).catch(()=>{
+    countCyclePlayable=false;stopCountCycle(true);setSoundStatus("媒体播放被拦截，正在尝试 Android 系统朗读","blocked");
+    if(testing)speak("一，二，三，四",{interrupt:true});
+    return false;
+  });
+}
+function testSound() { stopCountCycle(true);startCountCycle({fromStart:true,testing:true}); }
+
+function refreshVoices() {
+  if(!("speechSynthesis" in window))return;
+  const voices=window.speechSynthesis.getVoices();
+  preferredVoice=voices.find(voice=>/^zh[-_]CN$/i.test(voice.lang))||voices.find(voice=>/^zh/i.test(voice.lang))||null;
+}
+function makeUtterance(text) {
+  const utterance=new SpeechSynthesisUtterance(text);
+  if(preferredVoice)utterance.voice=preferredVoice;
+  utterance.lang=preferredVoice?.lang||"zh-CN";utterance.rate=.92;utterance.pitch=1;utterance.volume=1;
+  return utterance;
+}
+function speak(text,{interrupt=false}={}) {
+  if(!state.voice||!("speechSynthesis" in window))return;
+  const synth=window.speechSynthesis;if(interrupt)synth.cancel();synth.resume();synth.speak(makeUtterance(text));
+  window.setTimeout(()=>{if(synth.paused)synth.resume();},80);
+}
+function startVoiceFromTap() {
+  if(!state.voice)return;
+  state.lastBeat=0;startCountCycle({fromStart:true});
+}
+
+function makePlan() {
+  plan = CATEGORIES.map((category,index) => {
+    const choices=LIBRARY[category.key]; const exercise=choices[(daySeed+planOffset+index)%choices.length];
+    return {...exercise,category:category.label};
+  });
+}
+function renderPlan() {
+  els.planList.innerHTML=plan.map(item=>`<li><strong>${item.name}</strong><span>${item.category} · ${item.purpose}</span></li>`).join("");
+}
+function generateNewPlan() {
+  planOffset += 1; localStorage.setItem("planOffset",String(planOffset)); makePlan(); renderPlan();
+  const first=els.planList.querySelector("li"); if(first){first.animate([{background:"rgba(239,199,94,.55)"},{background:"transparent"}],{duration:800});}
+}
+
+function currentExercise(){ return plan[state.index]; }
+function setExercise(index) {
+  clearTransitions(); state.index=Math.max(0,Math.min(plan.length-1,index));state.elapsed=0;state.lastBeat=-1;state.lastNow=performance.now();state.paused=false;state.transitioning=false;
+  const item=currentExercise();els.progressLabel.textContent=`动作 ${state.index+1} / ${plan.length}`;els.progressFill.style.width=`${((state.index+1)/plan.length)*100}%`;els.category.textContent=item.category;els.name.textContent=item.name;els.purpose.textContent=item.purpose;els.steps.innerHTML=item.steps.map(step=>`<li>${step}</li>`).join("");els.cue.textContent=item.cue;els.view.textContent=VIEW_META[item.id]||"橙色表示动作侧";els.canvas.setAttribute("aria-label",`${item.name}标准速度动画演示，${VIEW_META[item.id]||"橙色表示动作侧"}`);els.rep.textContent="1";els.beat.textContent="1";els.pause.textContent="暂停";els.transition.classList.remove("is-open");els.transition.setAttribute("aria-hidden","true");
+}
+function openTrainer() {
+  state.open=true;document.body.classList.add("is-training");els.trainer.classList.add("is-open");els.trainer.setAttribute("aria-hidden","false");setExercise(0);startVoiceFromTap();els.pause.focus();
+}
+function closeTrainer() {
+  clearTransitions();stopCountCycle(true);state.open=false;state.paused=false;state.transitioning=false;document.body.classList.remove("is-training");els.trainer.classList.remove("is-open");els.trainer.setAttribute("aria-hidden","true");if("speechSynthesis" in window)speechSynthesis.cancel();document.querySelector("#start-workout").focus();
+}
+function togglePause(forcePause=false) {
+  if(!state.open||state.transitioning)return;state.paused=forcePause||!state.paused;state.lastNow=performance.now();els.pause.textContent=state.paused?"继续":"暂停";if(state.paused){stopCountCycle();if("speechSynthesis" in window)speechSynthesis.cancel();}else{startCountCycle();speak("继续",{interrupt:true});}
+}
+function speakBeat(number) { speak(["一","二","三","四"][number-1]); }
+function clearTransitions(){state.transitionTimers.forEach(id=>{clearTimeout(id);clearInterval(id);});state.transitionTimers=[];}
+function completeExercise() {
+  if(state.transitioning)return;state.transitioning=true;stopCountCycle(true);if("speechSynthesis" in window)speechSynthesis.cancel();els.transition.classList.add("is-open");els.transition.setAttribute("aria-hidden","false");
+  if(state.index===plan.length-1){els.transitionKicker.textContent="七个动作全部完成";els.transitionTitle.textContent="今天练完了";els.transitionCount.textContent="✓";speak("今天的七个动作完成了，做得很好",{interrupt:true});state.transitionTimers.push(setTimeout(closeTrainer,4200));return;}
+  const next=plan[state.index+1];els.transitionKicker.textContent="这个动作完成";els.transitionTitle.textContent=`下一个：${next.name}`;let remaining=3;els.transitionCount.textContent=String(remaining);speak(`完成。下一个，${next.name}`,{interrupt:true});
+  const timer=setInterval(()=>{remaining-=1;els.transitionCount.textContent=String(Math.max(remaining,1));if(remaining<=0){clearInterval(timer);setExercise(state.index+1);startCountCycle({fromStart:true});}},1000);state.transitionTimers.push(timer);
+}
+
+function drawCurrent(motion, repNumber) {
+  const rect=els.canvas.getBoundingClientRect();const dpr=Math.min(window.devicePixelRatio||1,2);const width=Math.max(1,Math.round(rect.width*dpr)),height=Math.max(1,Math.round(rect.height*dpr));if(els.canvas.width!==width||els.canvas.height!==height){els.canvas.width=width;els.canvas.height=height;}
+  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,rect.width,rect.height);ctx.save();const scale=Math.min(rect.width/620,rect.height/520);ctx.translate(rect.width/2,rect.height*.91);ctx.scale(scale,scale);ctx.translate(0,-430);drawGround(ctx);const item=currentExercise();const side=repNumber%2===0?-1:1;DRAWERS[item.id](ctx,{x:0,y:430},motion,side);ctx.restore();
+}
+function frame(now) {
+  if(state.open&&!state.transitioning){
+    if(!state.paused){const delta=Math.min(100,Math.max(0,now-state.lastNow));state.elapsed+=delta;}state.lastNow=now;
+    const beatIndex=Math.floor(state.elapsed/1000);const repNumber=Math.min(8,Math.floor(beatIndex/4)+1);const beatNumber=(beatIndex%4)+1;
+    if(beatIndex!==state.lastBeat&&beatIndex<32&&!state.paused){state.lastBeat=beatIndex;els.beat.textContent=String(beatNumber);els.rep.textContent=String(repNumber);const orb=els.beat.parentElement;orb.classList.remove("is-beat");void orb.offsetWidth;orb.classList.add("is-beat");if(!countCyclePlayable)speakBeat(beatNumber);}
+    const phase=(state.elapsed%4000)/4000;const motion=phase<.5?ease(phase*2):ease((1-phase)*2);drawCurrent(motion,repNumber);
+    if(state.elapsed>=32000)completeExercise();
+  }
+  requestAnimationFrame(frame);
+}
+
+document.querySelectorAll("#start-workout, #start-workout-2").forEach(button=>button.addEventListener("click",openTrainer));
+document.querySelectorAll("#new-plan, #new-plan-2").forEach(button=>button.addEventListener("click",generateNewPlan));
+document.querySelector("#close-trainer").addEventListener("click",closeTrainer);
+document.querySelector("#pause-workout").addEventListener("click",()=>togglePause());
+document.querySelector("#previous-exercise").addEventListener("click",()=>{setExercise(state.index-1);startCountCycle({fromStart:true});});
+document.querySelector("#next-exercise").addEventListener("click",()=>{if(state.index===plan.length-1)completeExercise();else{setExercise(state.index+1);startCountCycle({fromStart:true});}});
+els.voice.addEventListener("click",()=>{state.voice=!state.voice;els.voice.textContent=state.voice?"语音开":"语音关";els.voice.setAttribute("aria-pressed",String(state.voice));if(!state.voice){stopCountCycle();if("speechSynthesis" in window)speechSynthesis.cancel();}else{startCountCycle();speak("语音已开启",{interrupt:true});}});
+els.soundTest.addEventListener("click",testSound);
+els.countCycle.addEventListener("playing",()=>{countCyclePlayable=true;if(!state.open)setSoundStatus("声音正常，可以开始锻炼","ready");});
+els.countCycle.addEventListener("error",()=>setSoundStatus("音频没有加载成功，请刷新页面后重试","blocked"));
+document.addEventListener("visibilitychange",()=>{if(document.hidden&&state.open&&!state.paused)togglePause(true);});
+document.addEventListener("keydown",event=>{if(event.key==="Escape"&&state.open)closeTrainer();if(event.code==="Space"&&state.open){event.preventDefault();togglePause();}});
+if("speechSynthesis" in window){refreshVoices();window.speechSynthesis.addEventListener?.("voiceschanged",refreshVoices);}
+if(!("speechSynthesis" in window)&&!els.countCycle.canPlayType("audio/mpeg")&&!els.countCycle.canPlayType("audio/wav")){state.voice=false;els.voice.textContent="无语音";els.voice.disabled=true;els.voice.setAttribute("aria-pressed","false");}
+
+makePlan();renderPlan();requestAnimationFrame(frame);
+
+    </script>
   </body>
 </html>
