@@ -205,6 +205,28 @@ const daySeed = [...todayKey].reduce((sum,ch)=>sum+ch.charCodeAt(0),0);
 let planOffset = Number(localStorage.getItem("planOffset") || 0);
 let plan = [];
 const state = { open:false, index:0, paused:false, voice:true, elapsed:0, lastNow:0, lastBeat:-1, transitioning:false, transitionTimers:[] };
+let preferredVoice = null;
+
+function refreshVoices() {
+  if(!("speechSynthesis" in window))return;
+  const voices=window.speechSynthesis.getVoices();
+  preferredVoice=voices.find(voice=>/^zh[-_]CN$/i.test(voice.lang))||voices.find(voice=>/^zh/i.test(voice.lang))||null;
+}
+function makeUtterance(text) {
+  const utterance=new SpeechSynthesisUtterance(text);
+  if(preferredVoice)utterance.voice=preferredVoice;
+  utterance.lang=preferredVoice?.lang||"zh-CN";utterance.rate=.92;utterance.pitch=1;utterance.volume=1;
+  return utterance;
+}
+function speak(text,{interrupt=false}={}) {
+  if(!state.voice||!("speechSynthesis" in window))return;
+  const synth=window.speechSynthesis;if(interrupt)synth.cancel();synth.resume();synth.speak(makeUtterance(text));
+  window.setTimeout(()=>{if(synth.paused)synth.resume();},80);
+}
+function startVoiceFromTap() {
+  if(!state.voice||!("speechSynthesis" in window))return;
+  refreshVoices();const synth=window.speechSynthesis;synth.cancel();synth.resume();synth.speak(makeUtterance("一"));state.lastBeat=0;
+}
 
 function makePlan() {
   plan = CATEGORIES.map((category,index) => {
@@ -226,24 +248,20 @@ function setExercise(index) {
   const item=currentExercise();els.progressLabel.textContent=`动作 ${state.index+1} / ${plan.length}`;els.progressFill.style.width=`${((state.index+1)/plan.length)*100}%`;els.category.textContent=item.category;els.name.textContent=item.name;els.purpose.textContent=item.purpose;els.steps.innerHTML=item.steps.map(step=>`<li>${step}</li>`).join("");els.cue.textContent=item.cue;els.view.textContent=VIEW_META[item.id]||"橙色表示动作侧";els.canvas.setAttribute("aria-label",`${item.name}标准速度动画演示，${VIEW_META[item.id]||"橙色表示动作侧"}`);els.rep.textContent="1";els.beat.textContent="1";els.pause.textContent="暂停";els.transition.classList.remove("is-open");els.transition.setAttribute("aria-hidden","true");
 }
 function openTrainer() {
-  state.open=true;document.body.classList.add("is-training");els.trainer.classList.add("is-open");els.trainer.setAttribute("aria-hidden","false");setExercise(0);els.pause.focus();
-  if("speechSynthesis" in window){speechSynthesis.resume();}
+  state.open=true;document.body.classList.add("is-training");els.trainer.classList.add("is-open");els.trainer.setAttribute("aria-hidden","false");setExercise(0);startVoiceFromTap();els.pause.focus();
 }
 function closeTrainer() {
   clearTransitions();state.open=false;state.paused=false;state.transitioning=false;document.body.classList.remove("is-training");els.trainer.classList.remove("is-open");els.trainer.setAttribute("aria-hidden","true");if("speechSynthesis" in window)speechSynthesis.cancel();document.querySelector("#start-workout").focus();
 }
 function togglePause(forcePause=false) {
-  if(!state.open||state.transitioning)return;state.paused=forcePause||!state.paused;state.lastNow=performance.now();els.pause.textContent=state.paused?"继续":"暂停";if(state.paused&&"speechSynthesis" in window)speechSynthesis.cancel();else if(!state.paused)speak("继续");
-}
-function speak(text) {
-  if(!state.voice||!("speechSynthesis" in window))return;speechSynthesis.cancel();const utterance=new SpeechSynthesisUtterance(text);utterance.lang="zh-CN";utterance.rate=.92;utterance.pitch=1;speechSynthesis.speak(utterance);
+  if(!state.open||state.transitioning)return;state.paused=forcePause||!state.paused;state.lastNow=performance.now();els.pause.textContent=state.paused?"继续":"暂停";if(state.paused&&"speechSynthesis" in window)speechSynthesis.cancel();else if(!state.paused)speak("继续",{interrupt:true});
 }
 function speakBeat(number) { speak(["一","二","三","四"][number-1]); }
 function clearTransitions(){state.transitionTimers.forEach(id=>{clearTimeout(id);clearInterval(id);});state.transitionTimers=[];}
 function completeExercise() {
   if(state.transitioning)return;state.transitioning=true;if("speechSynthesis" in window)speechSynthesis.cancel();els.transition.classList.add("is-open");els.transition.setAttribute("aria-hidden","false");
-  if(state.index===plan.length-1){els.transitionKicker.textContent="七个动作全部完成";els.transitionTitle.textContent="今天练完了";els.transitionCount.textContent="✓";speak("今天的七个动作完成了，做得很好");state.transitionTimers.push(setTimeout(closeTrainer,4200));return;}
-  const next=plan[state.index+1];els.transitionKicker.textContent="这个动作完成";els.transitionTitle.textContent=`下一个：${next.name}`;let remaining=3;els.transitionCount.textContent=String(remaining);speak(`完成。下一个，${next.name}`);
+  if(state.index===plan.length-1){els.transitionKicker.textContent="七个动作全部完成";els.transitionTitle.textContent="今天练完了";els.transitionCount.textContent="✓";speak("今天的七个动作完成了，做得很好",{interrupt:true});state.transitionTimers.push(setTimeout(closeTrainer,4200));return;}
+  const next=plan[state.index+1];els.transitionKicker.textContent="这个动作完成";els.transitionTitle.textContent=`下一个：${next.name}`;let remaining=3;els.transitionCount.textContent=String(remaining);speak(`完成。下一个，${next.name}`,{interrupt:true});
   const timer=setInterval(()=>{remaining-=1;els.transitionCount.textContent=String(Math.max(remaining,1));if(remaining<=0){clearInterval(timer);setExercise(state.index+1);}},1000);state.transitionTimers.push(timer);
 }
 
@@ -268,9 +286,10 @@ document.querySelector("#close-trainer").addEventListener("click",closeTrainer);
 document.querySelector("#pause-workout").addEventListener("click",()=>togglePause());
 document.querySelector("#previous-exercise").addEventListener("click",()=>setExercise(state.index-1));
 document.querySelector("#next-exercise").addEventListener("click",()=>state.index===plan.length-1?completeExercise():setExercise(state.index+1));
-els.voice.addEventListener("click",()=>{state.voice=!state.voice;els.voice.textContent=state.voice?"语音开":"语音关";els.voice.setAttribute("aria-pressed",String(state.voice));if(!state.voice&&"speechSynthesis" in window)speechSynthesis.cancel();else speak("语音已开启");});
+els.voice.addEventListener("click",()=>{state.voice=!state.voice;els.voice.textContent=state.voice?"语音开":"语音关";els.voice.setAttribute("aria-pressed",String(state.voice));if(!state.voice&&"speechSynthesis" in window)speechSynthesis.cancel();else speak("语音已开启",{interrupt:true});});
 document.addEventListener("visibilitychange",()=>{if(document.hidden&&state.open&&!state.paused)togglePause(true);});
 document.addEventListener("keydown",event=>{if(event.key==="Escape"&&state.open)closeTrainer();if(event.code==="Space"&&state.open){event.preventDefault();togglePause();}});
-if(!("speechSynthesis" in window)){state.voice=false;els.voice.textContent="无语音";els.voice.disabled=true;els.voice.setAttribute("aria-pressed","false");}
+if("speechSynthesis" in window){refreshVoices();window.speechSynthesis.addEventListener?.("voiceschanged",refreshVoices);}
+else{state.voice=false;els.voice.textContent="无语音";els.voice.disabled=true;els.voice.setAttribute("aria-pressed","false");}
 
 makePlan();renderPlan();requestAnimationFrame(frame);
