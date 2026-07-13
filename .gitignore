@@ -1,4 +1,8 @@
 node_modules/
 dist/
+.next/
+.wrangler/
+.pnpm-store/
+*.tsbuildinfo
 .DS_Store
 *.tar.gz

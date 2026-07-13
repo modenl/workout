@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f4efe5" />
+    <meta name="description" content="为 70 岁以上长者设计的低强度每日保肌练习：六个坐着或扶椅完成的动作，配慢速动画和清楚说明。" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="常青动一动｜70+ 每日保肌六式" />
+    <meta property="og:description" content="六个坐着或扶椅完成的温和动作，慢速动画，一看就会。" />
+    <meta property="og:image" content="/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="stylesheet" href="styles.css" />
+    <title>常青动一动｜70+ 每日保肌练习</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#daily">直接看今日动作</a>
+
+    <header class="topbar" aria-label="网站导航">
+      <a class="brand" href="#top" aria-label="常青动一动，回到顶部">
+        <span class="brand__mark" aria-hidden="true">长</span>
+        <span>常青动一动</span>
+      </a>
+      <nav>
+        <a href="#why">为什么练</a>
+        <a href="#daily">今日六式</a>
+        <a href="#safe">安全提醒</a>
+      </nav>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero__copy">
+          <p class="eyebrow">为 70+ 长者设计 · 坐着或扶椅完成</p>
+          <h1 id="hero-title">每天十分钟，<br /><em>把力气留在身上。</em></h1>
+          <p class="hero__lead">六个温和动作，顺序固定、容易记。练腿、练手、练平衡，让起身、走路、拿东西更有底气。</p>
+          <div class="hero__actions">
+            <a class="button button--primary" href="#daily">开始今日六式</a>
+            <button class="button button--quiet" id="read-guide" type="button">听使用说明</button>
+          </div>
+          <p class="hero__note"><span aria-hidden="true">●</span> 不追求累；能顺畅说话，就是合适的速度。</p>
+        </div>
+
+        <div class="hero__visual" aria-hidden="true">
+          <div class="sun"></div>
+          <div class="hero-figure">
+            <span class="head"></span><span class="body"></span>
+            <span class="arm arm--left"></span><span class="arm arm--right"></span>
+            <span class="leg leg--left"></span><span class="leg leg--right"></span>
+          </div>
+          <div class="hero-chair"><span></span></div>
+          <p>今天也<br /><strong>稳稳地动</strong></p>
+        </div>
+      </section>
+
+      <section class="why" id="why" aria-labelledby="why-title">
+        <div>
+          <p class="section-no">01 / 为什么要练</p>
+          <h2 id="why-title">肌肉，是晚年生活的“行动存款”。</h2>
+        </div>
+        <div class="why__copy">
+          <p>年纪增长时，肌肉量和力量会逐渐下降。温和而规律的力量活动，可以帮助维持走路、起身、上楼和提东西的能力，也有助于保持独立生活。</p>
+          <p>平衡练习和腿部力量还能降低跌倒风险。重点不是练得很重，而是从小量开始，按自己的能力慢慢做。</p>
+          <div class="why__facts" aria-label="练习原则">
+            <div><strong>小</strong><span>动作幅度小一点</span></div>
+            <div><strong>慢</strong><span>用力时不憋气</span></div>
+            <div><strong>稳</strong><span>始终靠近牢固椅子</span></div>
+          </div>
+        </div>
+      </section>
+
+      <section class="routine-intro" id="daily" aria-labelledby="daily-title">
+        <p class="section-no">02 / 今日六式</p>
+        <div class="routine-intro__title">
+          <h2 id="daily-title">记住六个字：<br /><em>抬、起、推、伸、踮、侧。</em></h2>
+          <div class="routine-summary">
+            <p><strong>每个动作 5–8 次</strong><br />动作之间休息 20–30 秒。第一周先做 1 轮；感觉轻松，再慢慢增加。</p>
+            <div class="motion-control" role="group" aria-label="动画速度">
+              <button type="button" class="is-active" data-speed="slow">慢速演示</button>
+              <button type="button" data-speed="normal">正常速度</button>
+              <button type="button" id="pause-all">全部暂停</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="exercise-list" aria-label="六个每日动作">
+        <article class="exercise" data-exercise="march">
+          <div class="exercise__visual">
+            <canvas aria-label="坐姿抬脚慢速动画演示" role="img"></canvas>
+            <div class="phase" aria-live="polite">准备：坐稳</div>
+            <button class="play-toggle" type="button" aria-label="暂停坐姿抬脚动画">暂停</button>
+          </div>
+          <div class="exercise__text">
+            <p class="exercise__number">动作 1 · 抬</p><h3>坐姿抬脚</h3>
+            <p class="purpose">唤醒髋部和大腿，让走路抬脚更轻松。</p>
+            <ol><li>坐在椅子前半部，双脚踩稳。</li><li>一只脚缓缓抬起，再轻轻放下。</li><li>左右交替，各做 5–8 次。</li></ol>
+            <p class="cue"><span>记住</span> 身体坐直，脚落地不要砸。</p>
+          </div>
+        </article>
+
+        <article class="exercise exercise--reverse" data-exercise="stand">
+          <div class="exercise__visual">
+            <canvas aria-label="扶椅起身慢速动画演示" role="img"></canvas>
+            <div class="phase" aria-live="polite">准备：脚踩稳</div>
+            <button class="play-toggle" type="button" aria-label="暂停扶椅起身动画">暂停</button>
+          </div>
+          <div class="exercise__text">
+            <p class="exercise__number">动作 2 · 起</p><h3>扶椅起身</h3>
+            <p class="purpose">练大腿和臀部，是起床、如厕、上下车的基础力量。</p>
+            <ol><li>椅子靠墙，双脚放在膝盖下方。</li><li>身体稍向前，扶住扶手或大腿。</li><li>慢慢站直，再慢慢坐回。</li></ol>
+            <p class="cue"><span>记住</span> 膝盖朝脚尖方向；不用猛冲。</p>
+          </div>
+        </article>
+
+        <article class="exercise" data-exercise="push">
+          <div class="exercise__visual">
+            <canvas aria-label="墙面俯卧撑慢速动画演示" role="img"></canvas>
+            <div class="phase" aria-live="polite">准备：手扶墙</div>
+            <button class="play-toggle" type="button" aria-label="暂停墙面俯卧撑动画">暂停</button>
+          </div>
+          <div class="exercise__text">
+            <p class="exercise__number">动作 3 · 推</p><h3>墙面俯卧撑</h3>
+            <p class="purpose">练胸、肩和手臂，让推门、撑起身体更有力。</p>
+            <ol><li>面对墙站立，双手与肩同高。</li><li>身体保持一条直线，慢慢靠近墙。</li><li>双手推墙，回到站直。</li></ol>
+            <p class="cue"><span>记住</span> 脚离墙越近越轻松；全程自然呼吸。</p>
+          </div>
+        </article>
+
+        <article class="exercise exercise--reverse" data-exercise="extend">
+          <div class="exercise__visual">
+            <canvas aria-label="坐姿伸膝慢速动画演示" role="img"></canvas>
+            <div class="phase" aria-live="polite">准备：坐稳</div>
+            <button class="play-toggle" type="button" aria-label="暂停坐姿伸膝动画">暂停</button>
+          </div>
+          <div class="exercise__text">
+            <p class="exercise__number">动作 4 · 伸</p><h3>坐姿伸膝</h3>
+            <p class="purpose">强化大腿前侧，帮助膝盖在站立和走路时更稳定。</p>
+            <ol><li>坐直，双手扶住椅子两侧。</li><li>一侧小腿慢慢伸直，停一秒。</li><li>轻轻放回，再换另一边。</li></ol>
+            <p class="cue"><span>记住</span> 伸到舒服即可，不要甩腿或锁死膝盖。</p>
+          </div>
+        </article>
+
+        <article class="exercise" data-exercise="heel">
+          <div class="exercise__visual">
+            <canvas aria-label="扶椅踮脚慢速动画演示" role="img"></canvas>
+            <div class="phase" aria-live="polite">准备：扶稳椅背</div>
+            <button class="play-toggle" type="button" aria-label="暂停扶椅踮脚动画">暂停</button>
+          </div>
+          <div class="exercise__text">
+            <p class="exercise__number">动作 5 · 踮</p><h3>扶椅踮脚</h3>
+            <p class="purpose">练小腿和脚踝，帮助迈步、站稳和保持平衡。</p>
+            <ol><li>双手扶住牢固椅背，站直。</li><li>脚跟慢慢抬高，停一秒。</li><li>脚跟慢慢落地，不要弹。</li></ol>
+            <p class="cue"><span>记住</span> 身体垂直向上，不要向前扑。</p>
+          </div>
+        </article>
+
+        <article class="exercise exercise--reverse" data-exercise="side">
+          <div class="exercise__visual">
+            <canvas aria-label="扶椅侧抬腿慢速动画演示" role="img"></canvas>
+            <div class="phase" aria-live="polite">准备：扶稳椅背</div>
+            <button class="play-toggle" type="button" aria-label="暂停扶椅侧抬腿动画">暂停</button>
+          </div>
+          <div class="exercise__text">
+            <p class="exercise__number">动作 6 · 侧</p><h3>扶椅侧抬腿</h3>
+            <p class="purpose">练髋部两侧，帮助走路时骨盆稳定、减少左右摇晃。</p>
+            <ol><li>一手扶椅，双脚朝前。</li><li>外侧腿向旁边抬一小段。</li><li>慢慢收回，做完再换边。</li></ol>
+            <p class="cue"><span>记住</span> 身体保持直，不用追求抬得高。</p>
+          </div>
+        </article>
+      </section>
+
+      <section class="memory" aria-labelledby="memory-title">
+        <p class="section-no">03 / 每天怎么记</p>
+        <h2 id="memory-title">饭后休息一会儿，<br />找一把稳椅子：<br /><em>抬、起、推、伸、踮、侧。</em></h2>
+        <a class="button button--primary" href="#daily">从第一个动作开始</a>
+      </section>
+
+      <section class="safety" id="safe" aria-labelledby="safe-title">
+        <div>
+          <p class="section-no">04 / 安全第一</p>
+          <h2 id="safe-title">今天不舒服，<br />就不练。</h2>
+        </div>
+        <div class="safety__list">
+          <p><strong>开始前</strong> 使用不带轮、不会滑动的牢固椅子；穿防滑鞋；旁边最好有人照看。</p>
+          <p><strong>马上停止</strong> 若出现胸痛、明显气短、头晕、心慌、恶心或异常疼痛，立即停下并寻求医疗帮助。</p>
+          <p><strong>先问医生</strong> 最近跌倒、手术、骨折，或有不稳定的心脏病、血压问题、严重关节疼痛时，请先咨询医生或物理治疗师。</p>
+          <p class="disclaimer">本网站提供一般健康教育，不替代个人诊断、治疗或康复处方。</p>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="brand"><span class="brand__mark" aria-hidden="true">长</span><span>常青动一动</span></div>
+      <p>少一点难度，多一点坚持。</p>
+      <p class="sources">内容参考：美国国家老龄化研究所（NIA）、美国疾控中心（CDC）关于老年人力量与平衡活动的公开建议。</p>
+    </footer>
+    <script src="app.js"></script>
+  </body>
+</html>
