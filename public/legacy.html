@@ -40,7 +40,11 @@
           </div>
           <div class="sound-check" aria-live="polite">
             <button id="test-sound" type="button">🔊 先测试声音</button>
-            <span id="sound-status">听到“一、二、三、四”即可开始</span>
+            <span id="sound-status">按钮无声时，直接点播放器的 ▶</span>
+            <audio id="count-cycle" class="sound-check__player" controls preload="auto" aria-label="计数声音播放器">
+              <source src="audio/count-cycle.mp3" type="audio/mpeg" />
+              <source src="audio/count-cycle.wav" type="audio/wav" />
+            </audio>
           </div>
           <p class="hero__note"><span aria-hidden="true">●</span> 全程能自然说话、不憋气，就是合适的强度。</p>
         </div>
@@ -143,7 +147,6 @@
       </div>
     </section>
 
-    <audio id="count-cycle" preload="auto" src="audio/count-cycle.wav" aria-hidden="true"></audio>
-    <script src="app.js?v=android-native-audio-2"></script>
+    <script src="app.js?v=android-mp3-audio-3"></script>
   </body>
 </html>
