@@ -3,19 +3,17 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   metadataBase: new URL("https://changqing-dongyidong-70.shermanlie.chatgpt.site"),
-  title: "常青动一动｜70+ 每日保肌六式",
-  description: "六个坐着或扶椅完成的温和动作，配慢速动画和清楚说明。",
+  title: "常青动一动｜70+ 每日全身保肌",
+  description: "七个温和动作覆盖全身，标准节奏语音计数，做完自动进入下一项。",
   openGraph: {
     type: "website",
-    title: "常青动一动｜70+ 每日保肌六式",
-    description: "六个坐着或扶椅完成的温和动作，慢速动画，一看就会。",
-    images: [{ url: "/og.png", width: 1200, height: 630 }],
+    title: "常青动一动｜70+ 每日全身保肌",
+    description: "七个温和动作覆盖全身，语音数拍，自动跟练。",
   },
   twitter: {
-    card: "summary_large_image",
-    title: "常青动一动｜70+ 每日保肌六式",
-    description: "六个坐着或扶椅完成的温和动作，慢速动画，一看就会。",
-    images: ["/og.png"],
+    card: "summary",
+    title: "常青动一动｜70+ 每日全身保肌",
+    description: "七个温和动作覆盖全身，语音数拍，自动跟练。",
   },
 };
 
