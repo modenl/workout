@@ -1,6 +1,7 @@
 {
   "name": "light-workout-pwa",
   "private": true,
+  "type": "module",
   "version": "1.0.0",
   "description": "70+ senior-friendly daily muscle maintenance exercise site.",
   "license": "UNLICENSED",
