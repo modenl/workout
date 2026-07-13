@@ -314,10 +314,11 @@ document.querySelector("#previous-exercise").addEventListener("click",()=>{setEx
 document.querySelector("#next-exercise").addEventListener("click",()=>{if(state.index===plan.length-1)completeExercise();else{setExercise(state.index+1);startCountCycle({fromStart:true});}});
 els.voice.addEventListener("click",()=>{state.voice=!state.voice;els.voice.textContent=state.voice?"语音开":"语音关";els.voice.setAttribute("aria-pressed",String(state.voice));if(!state.voice){stopCountCycle();if("speechSynthesis" in window)speechSynthesis.cancel();}else{startCountCycle();speak("语音已开启",{interrupt:true});}});
 els.soundTest.addEventListener("click",testSound);
+els.countCycle.addEventListener("playing",()=>{countCyclePlayable=true;if(!state.open)setSoundStatus("声音正常，可以开始锻炼","ready");});
 els.countCycle.addEventListener("error",()=>setSoundStatus("音频没有加载成功，请刷新页面后重试","blocked"));
 document.addEventListener("visibilitychange",()=>{if(document.hidden&&state.open&&!state.paused)togglePause(true);});
 document.addEventListener("keydown",event=>{if(event.key==="Escape"&&state.open)closeTrainer();if(event.code==="Space"&&state.open){event.preventDefault();togglePause();}});
 if("speechSynthesis" in window){refreshVoices();window.speechSynthesis.addEventListener?.("voiceschanged",refreshVoices);}
-if(!("speechSynthesis" in window)&&!els.countCycle.canPlayType("audio/wav")){state.voice=false;els.voice.textContent="无语音";els.voice.disabled=true;els.voice.setAttribute("aria-pressed","false");}
+if(!("speechSynthesis" in window)&&!els.countCycle.canPlayType("audio/mpeg")&&!els.countCycle.canPlayType("audio/wav")){state.voice=false;els.voice.textContent="无语音";els.voice.disabled=true;els.voice.setAttribute("aria-pressed","false");}
 
 makePlan();renderPlan();requestAnimationFrame(frame);
