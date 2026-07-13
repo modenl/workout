@@ -1,0 +1,11 @@
+{
+  "name": "light-workout-pwa",
+  "private": true,
+  "version": "1.0.0",
+  "description": "70+ senior-friendly daily muscle maintenance exercise site.",
+  "license": "UNLICENSED",
+  "scripts": {
+    "dev": "python3 -m http.server 8000",
+    "build": "node build.mjs"
+  }
+}
