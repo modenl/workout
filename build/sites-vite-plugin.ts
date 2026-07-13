@@ -1,4 +1,4 @@
-import { access, cp, mkdir, rm, writeFile } from "node:fs/promises";
+import { access, cp, mkdir, rm } from "node:fs/promises";
 import { resolve } from "node:path";
 import type { Plugin } from "vite";
 
@@ -41,13 +41,6 @@ export function sites(): Plugin {
         });
       }
 
-      // The current page has no social image; omit the retired 1.1 MB asset
-      // from the deployable client payload while keeping source history intact.
-      await rm(resolve(root, "dist", "client", "og.png"), { force: true });
-      await writeFile(
-        resolve(root, "dist", "client", "_headers"),
-        "# Long-lived caches for versioned static assets\n/assets/*\n  Cache-Control: public, max-age=31536000, immutable\n/app.js\n  Cache-Control: public, max-age=31536000, immutable\n/styles.css\n  Cache-Control: public, max-age=31536000, immutable\n",
-      );
     },
   };
 }
