@@ -35,6 +35,11 @@ h1 { max-width: 790px; font-size: clamp(50px, 6.2vw, 94px); line-height: 1.04; l
 h1 em, h2 em { color: var(--orange); font-style: normal; }
 .hero__lead { max-width: 680px; margin: 30px 0 0; font-size: clamp(20px, 1.55vw, 25px); line-height: 1.72; }
 .hero__actions, .today__actions { display: flex; gap: 13px; flex-wrap: wrap; margin-top: 34px; }
+.sound-check { display: flex; align-items: center; gap: 12px; margin-top: 13px; color: var(--muted); font-size: 14px; }
+.sound-check button { min-height: 44px; padding: 0 16px; border: 1px solid var(--line); border-radius: 999px; color: var(--green); background: var(--white); font-weight: 900; }
+.sound-check span { line-height: 1.4; }
+.sound-check span[data-state="ready"] { color: var(--green); font-weight: 800; }
+.sound-check span[data-state="blocked"] { color: #9b3d28; font-weight: 800; }
 .button { min-height: 58px; padding: 0 25px; border: 2px solid var(--green); border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; font-weight: 900; background: transparent; }
 .button:hover { transform: translateY(-1px); }
 .button:focus-visible, button:focus-visible, a:focus-visible { outline: 4px solid var(--yellow); outline-offset: 3px; }
@@ -154,6 +159,8 @@ footer p { margin: 0; }
   h1 { font-size: clamp(43px, 13vw, 54px); }
   .hero__lead { margin-top: 22px; font-size: 19px; }
   .hero__actions, .today__actions { display: grid; }
+  .sound-check { align-items: flex-start; flex-direction: column; gap: 7px; }
+  .sound-check button { width: 100%; }
   .button { width: 100%; }
   .hero__visual { min-height: 390px; }
   .sun { width: 290px; }
