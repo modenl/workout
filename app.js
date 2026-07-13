@@ -197,7 +197,7 @@ const els = {
   planList:document.querySelector("#plan-list"), trainer:document.querySelector("#trainer"), canvas:document.querySelector("#trainer-canvas"),
   progressLabel:document.querySelector("#progress-label"), progressFill:document.querySelector("#progress-fill"), beat:document.querySelector("#beat-count"), rep:document.querySelector("#rep-count"),
   category:document.querySelector("#exercise-category"), name:document.querySelector("#exercise-name"), purpose:document.querySelector("#exercise-purpose"), steps:document.querySelector("#exercise-steps"), cue:document.querySelector("#exercise-cue"),
-  view:document.querySelector("#view-label"), pause:document.querySelector("#pause-workout"), voice:document.querySelector("#voice-toggle"), transition:document.querySelector("#transition"), transitionKicker:document.querySelector("#transition-kicker"), transitionTitle:document.querySelector("#transition-title"), transitionCount:document.querySelector("#transition-count")
+  view:document.querySelector("#view-label"), pause:document.querySelector("#pause-workout"), voice:document.querySelector("#voice-toggle"), countCycle:document.querySelector("#count-cycle"), soundTest:document.querySelector("#test-sound"), soundStatus:document.querySelector("#sound-status"), transition:document.querySelector("#transition"), transitionKicker:document.querySelector("#transition-kicker"), transitionTitle:document.querySelector("#transition-title"), transitionCount:document.querySelector("#transition-count")
 };
 const ctx = els.canvas.getContext("2d");
 const todayKey = new Date().toISOString().slice(0,10);
@@ -205,40 +205,33 @@ const daySeed = [...todayKey].reduce((sum,ch)=>sum+ch.charCodeAt(0),0);
 let planOffset = Number(localStorage.getItem("planOffset") || 0);
 let plan = [];
 const state = { open:false, index:0, paused:false, voice:true, elapsed:0, lastNow:0, lastBeat:-1, transitioning:false, transitionTimers:[] };
-const CountAudioContext = window.AudioContext || window.webkitAudioContext;
-const countAudioUrls = [1,2,3,4].map(number=>new URL(`audio/count-${number}.wav`,document.baseURI).href);
-const countAudioBytesPromise = CountAudioContext
-  ? Promise.all(countAudioUrls.map(url=>fetch(url,{cache:"force-cache"}).then(response=>{if(!response.ok)throw new Error("count audio unavailable");return response.arrayBuffer();}))).catch(()=>null)
-  : Promise.resolve(null);
 let preferredVoice = null;
-let countAudioContext = null;
-let countAudioBuffers = null;
-let countAudioPreparing = null;
-let activeCountSource = null;
+let countCyclePlayable = false;
+let soundTestTimer = null;
 
-function prepareCountAudioFromTap() {
-  if(!CountAudioContext)return Promise.resolve(false);
-  if(!countAudioContext)countAudioContext=new CountAudioContext();
-  const resume=countAudioContext.state==="suspended"?countAudioContext.resume():Promise.resolve();
-  if(!countAudioPreparing){
-    countAudioPreparing=Promise.all([resume,countAudioBytesPromise]).then(async([,bytes])=>{
-      if(!bytes)return false;
-      countAudioBuffers=await Promise.all(bytes.map(bytesItem=>countAudioContext.decodeAudioData(bytesItem.slice(0))));
-      return true;
-    }).catch(()=>false);
-  }
-  return resume.then(()=>countAudioPreparing);
+function setSoundStatus(message,stateName="") {
+  els.soundStatus.textContent=message;els.soundStatus.dataset.state=stateName;
 }
-function stopCountAudio() {
-  if(!activeCountSource)return;
-  try{activeCountSource.stop();}catch{}
-  activeCountSource=null;
+function stopCountCycle(reset=false) {
+  clearTimeout(soundTestTimer);soundTestTimer=null;els.countCycle.pause();if(reset){try{els.countCycle.currentTime=0;}catch{}}
 }
-function playRecordedBeat(number) {
-  const buffer=countAudioBuffers?.[number-1];
-  if(!state.voice||!buffer||!countAudioContext||countAudioContext.state!=="running")return false;
-  stopCountAudio();const source=countAudioContext.createBufferSource();source.buffer=buffer;source.connect(countAudioContext.destination);source.onended=()=>{if(activeCountSource===source)activeCountSource=null;};activeCountSource=source;source.start();return true;
+function startCountCycle({fromStart=false,testing=false}={}) {
+  if(!testing&&!state.voice)return Promise.resolve(false);
+  clearTimeout(soundTestTimer);els.countCycle.loop=!testing;els.countCycle.muted=false;els.countCycle.volume=1;
+  try{els.countCycle.currentTime=fromStart?0:Math.min(3.95,(state.elapsed%4000)/1000);}catch{}
+  const playResult=els.countCycle.play();
+  if(!playResult){countCyclePlayable=true;return Promise.resolve(true);}
+  return playResult.then(()=>{
+    countCyclePlayable=true;
+    if(testing){setSoundStatus("正在播放：一、二、三、四","playing");soundTestTimer=setTimeout(()=>{stopCountCycle(true);setSoundStatus("声音正常，可以开始锻炼","ready");},4100);}
+    return true;
+  }).catch(()=>{
+    countCyclePlayable=false;stopCountCycle(true);setSoundStatus("声音被手机拦截，请调高媒体音量并再点一次","blocked");
+    if(!testing&&state.open){state.voice=false;els.voice.textContent="点此开声音";els.voice.setAttribute("aria-pressed","false");}
+    return false;
+  });
 }
+function testSound() { stopCountCycle(true);startCountCycle({fromStart:true,testing:true}); }
 
 function refreshVoices() {
   if(!("speechSynthesis" in window))return;
@@ -258,7 +251,7 @@ function speak(text,{interrupt=false}={}) {
 }
 function startVoiceFromTap() {
   if(!state.voice)return;
-  state.lastBeat=0;prepareCountAudioFromTap().then(()=>{if(state.open&&!state.paused&&state.elapsed<900)speakBeat(1);});
+  state.lastBeat=0;startCountCycle({fromStart:true});
 }
 
 function makePlan() {
@@ -284,18 +277,18 @@ function openTrainer() {
   state.open=true;document.body.classList.add("is-training");els.trainer.classList.add("is-open");els.trainer.setAttribute("aria-hidden","false");setExercise(0);startVoiceFromTap();els.pause.focus();
 }
 function closeTrainer() {
-  clearTransitions();stopCountAudio();state.open=false;state.paused=false;state.transitioning=false;document.body.classList.remove("is-training");els.trainer.classList.remove("is-open");els.trainer.setAttribute("aria-hidden","true");if("speechSynthesis" in window)speechSynthesis.cancel();document.querySelector("#start-workout").focus();
+  clearTransitions();stopCountCycle(true);state.open=false;state.paused=false;state.transitioning=false;document.body.classList.remove("is-training");els.trainer.classList.remove("is-open");els.trainer.setAttribute("aria-hidden","true");if("speechSynthesis" in window)speechSynthesis.cancel();document.querySelector("#start-workout").focus();
 }
 function togglePause(forcePause=false) {
-  if(!state.open||state.transitioning)return;state.paused=forcePause||!state.paused;state.lastNow=performance.now();els.pause.textContent=state.paused?"继续":"暂停";if(state.paused){stopCountAudio();if("speechSynthesis" in window)speechSynthesis.cancel();}else{prepareCountAudioFromTap();speak("继续",{interrupt:true});}
+  if(!state.open||state.transitioning)return;state.paused=forcePause||!state.paused;state.lastNow=performance.now();els.pause.textContent=state.paused?"继续":"暂停";if(state.paused){stopCountCycle();if("speechSynthesis" in window)speechSynthesis.cancel();}else{startCountCycle();speak("继续",{interrupt:true});}
 }
-function speakBeat(number) { if(!playRecordedBeat(number))speak(["一","二","三","四"][number-1]); }
+function speakBeat(number) { speak(["一","二","三","四"][number-1]); }
 function clearTransitions(){state.transitionTimers.forEach(id=>{clearTimeout(id);clearInterval(id);});state.transitionTimers=[];}
 function completeExercise() {
-  if(state.transitioning)return;state.transitioning=true;stopCountAudio();if("speechSynthesis" in window)speechSynthesis.cancel();els.transition.classList.add("is-open");els.transition.setAttribute("aria-hidden","false");
+  if(state.transitioning)return;state.transitioning=true;stopCountCycle(true);if("speechSynthesis" in window)speechSynthesis.cancel();els.transition.classList.add("is-open");els.transition.setAttribute("aria-hidden","false");
   if(state.index===plan.length-1){els.transitionKicker.textContent="七个动作全部完成";els.transitionTitle.textContent="今天练完了";els.transitionCount.textContent="✓";speak("今天的七个动作完成了，做得很好",{interrupt:true});state.transitionTimers.push(setTimeout(closeTrainer,4200));return;}
   const next=plan[state.index+1];els.transitionKicker.textContent="这个动作完成";els.transitionTitle.textContent=`下一个：${next.name}`;let remaining=3;els.transitionCount.textContent=String(remaining);speak(`完成。下一个，${next.name}`,{interrupt:true});
-  const timer=setInterval(()=>{remaining-=1;els.transitionCount.textContent=String(Math.max(remaining,1));if(remaining<=0){clearInterval(timer);setExercise(state.index+1);}},1000);state.transitionTimers.push(timer);
+  const timer=setInterval(()=>{remaining-=1;els.transitionCount.textContent=String(Math.max(remaining,1));if(remaining<=0){clearInterval(timer);setExercise(state.index+1);startCountCycle({fromStart:true});}},1000);state.transitionTimers.push(timer);
 }
 
 function drawCurrent(motion, repNumber) {
@@ -306,7 +299,7 @@ function frame(now) {
   if(state.open&&!state.transitioning){
     if(!state.paused){const delta=Math.min(100,Math.max(0,now-state.lastNow));state.elapsed+=delta;}state.lastNow=now;
     const beatIndex=Math.floor(state.elapsed/1000);const repNumber=Math.min(8,Math.floor(beatIndex/4)+1);const beatNumber=(beatIndex%4)+1;
-    if(beatIndex!==state.lastBeat&&beatIndex<32&&!state.paused){state.lastBeat=beatIndex;els.beat.textContent=String(beatNumber);els.rep.textContent=String(repNumber);const orb=els.beat.parentElement;orb.classList.remove("is-beat");void orb.offsetWidth;orb.classList.add("is-beat");speakBeat(beatNumber);}
+    if(beatIndex!==state.lastBeat&&beatIndex<32&&!state.paused){state.lastBeat=beatIndex;els.beat.textContent=String(beatNumber);els.rep.textContent=String(repNumber);const orb=els.beat.parentElement;orb.classList.remove("is-beat");void orb.offsetWidth;orb.classList.add("is-beat");if(!countCyclePlayable)speakBeat(beatNumber);}
     const phase=(state.elapsed%4000)/4000;const motion=phase<.5?ease(phase*2):ease((1-phase)*2);drawCurrent(motion,repNumber);
     if(state.elapsed>=32000)completeExercise();
   }
@@ -317,12 +310,14 @@ document.querySelectorAll("#start-workout, #start-workout-2").forEach(button=>bu
 document.querySelectorAll("#new-plan, #new-plan-2").forEach(button=>button.addEventListener("click",generateNewPlan));
 document.querySelector("#close-trainer").addEventListener("click",closeTrainer);
 document.querySelector("#pause-workout").addEventListener("click",()=>togglePause());
-document.querySelector("#previous-exercise").addEventListener("click",()=>setExercise(state.index-1));
-document.querySelector("#next-exercise").addEventListener("click",()=>state.index===plan.length-1?completeExercise():setExercise(state.index+1));
-els.voice.addEventListener("click",()=>{state.voice=!state.voice;els.voice.textContent=state.voice?"语音开":"语音关";els.voice.setAttribute("aria-pressed",String(state.voice));if(!state.voice){stopCountAudio();if("speechSynthesis" in window)speechSynthesis.cancel();}else{prepareCountAudioFromTap();speak("语音已开启",{interrupt:true});}});
+document.querySelector("#previous-exercise").addEventListener("click",()=>{setExercise(state.index-1);startCountCycle({fromStart:true});});
+document.querySelector("#next-exercise").addEventListener("click",()=>{if(state.index===plan.length-1)completeExercise();else{setExercise(state.index+1);startCountCycle({fromStart:true});}});
+els.voice.addEventListener("click",()=>{state.voice=!state.voice;els.voice.textContent=state.voice?"语音开":"语音关";els.voice.setAttribute("aria-pressed",String(state.voice));if(!state.voice){stopCountCycle();if("speechSynthesis" in window)speechSynthesis.cancel();}else{startCountCycle();speak("语音已开启",{interrupt:true});}});
+els.soundTest.addEventListener("click",testSound);
+els.countCycle.addEventListener("error",()=>setSoundStatus("音频没有加载成功，请刷新页面后重试","blocked"));
 document.addEventListener("visibilitychange",()=>{if(document.hidden&&state.open&&!state.paused)togglePause(true);});
 document.addEventListener("keydown",event=>{if(event.key==="Escape"&&state.open)closeTrainer();if(event.code==="Space"&&state.open){event.preventDefault();togglePause();}});
 if("speechSynthesis" in window){refreshVoices();window.speechSynthesis.addEventListener?.("voiceschanged",refreshVoices);}
-if(!("speechSynthesis" in window)&&!CountAudioContext){state.voice=false;els.voice.textContent="无语音";els.voice.disabled=true;els.voice.setAttribute("aria-pressed","false");}
+if(!("speechSynthesis" in window)&&!els.countCycle.canPlayType("audio/wav")){state.voice=false;els.voice.textContent="无语音";els.voice.disabled=true;els.voice.setAttribute("aria-pressed","false");}
 
 makePlan();renderPlan();requestAnimationFrame(frame);
