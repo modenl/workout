@@ -113,6 +113,8 @@ footer p { margin: 0; }
 @keyframes beat { 50% { transform: scale(1.11); } }
 .rep-count { position: absolute; right: clamp(16px, 3vw, 34px); top: clamp(18px, 3vw, 36px); display: flex; align-items: baseline; gap: 5px; color: var(--muted); }
 .rep-count strong { color: var(--ink); font-size: 34px; }
+.view-badge { position: absolute; left: 50%; bottom: 16px; transform: translateX(-50%); display: flex; align-items: center; gap: 8px; max-width: calc(100% - 28px); padding: 8px 13px; border: 1px solid rgba(23,58,52,.16); border-radius: 999px; white-space: nowrap; color: var(--ink); background: rgba(255,253,248,.9); font-size: 14px; box-shadow: 0 4px 18px rgba(23,58,52,.08); }
+.view-badge__dot { flex: 0 0 auto; width: 11px; height: 11px; border-radius: 50%; background: var(--orange); box-shadow: 14px 0 0 #8da19a; margin-right: 14px; }
 .trainer__copy { min-height: 0; display: flex; justify-content: center; flex-direction: column; padding: clamp(28px, 5vw, 76px); overflow: auto; }
 .trainer__category { margin: 0 0 8px; color: var(--orange); font-size: 14px; font-weight: 900; letter-spacing: .09em; }
 .trainer__copy h2 { font-size: clamp(40px, 4.6vw, 68px); }
@@ -173,6 +175,7 @@ footer p { margin: 0; }
   .count-orb small { font-size: 10px; }
   .rep-count { right: 12px; top: 14px; font-size: 13px; }
   .rep-count strong { font-size: 27px; }
+  .view-badge { bottom: 8px; padding: 6px 10px; font-size: 12px; }
   .trainer__copy { justify-content: flex-start; padding: 14px 18px 10px; }
   .trainer__category { margin-bottom: 4px; font-size: 12px; }
   .trainer__copy h2 { font-size: clamp(32px, 9vw, 42px); line-height: 1.02; }

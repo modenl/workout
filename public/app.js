@@ -3,6 +3,7 @@ const ORANGE = "#df714d";
 const WHITE = "#fffdf8";
 const GUIDE = "rgba(23,58,52,.22)";
 const YELLOW = "#efc75e";
+const FAR = "#8da19a";
 
 const CATEGORIES = [
   { key: "warm", label: "热身活动" },
@@ -13,6 +14,16 @@ const CATEGORIES = [
   { key: "ankle", label: "小腿与脚踝" },
   { key: "balance", label: "髋部与平衡" }
 ];
+
+const VIEW_META = {
+  march:"正面视角 · 橙色腿交替抬起", seatedJack:"正面视角 · 双侧同时开合", reachTap:"侧面视角 · 前方在右 →",
+  stand:"侧面视角 · 向上站起", miniSquat:"斜侧视角 · 臀部向后", extend:"侧面视角 · 脚向前 →",
+  wallPush:"侧面视角 · 墙在前方 →", palmPress:"正面视角 · 双掌在胸前", forwardPress:"侧面视角 · 双手向前 →",
+  elbowPull:"正面视角 · 手肘向后拉", towelPull:"正面视角 · 双手向左右拉", lowRow:"正面视角 · 手肘贴身后拉",
+  crossMarch:"正面视角 · 对侧手膝靠近", kneePress:"正面视角 · 橙色侧发力", sideReach:"正面视角 · 左右交替",
+  heel:"正面视角 · 脚跟向上", toeLift:"正面视角 · 脚尖向上", seatedHeel:"正面视角 · 脚跟向上",
+  side:"正面视角 · 腿向左或右", weightShift:"正面视角 · 重心左右移动", backLeg:"侧面视角 · 后方在左 ←"
+};
 
 const LIBRARY = {
   warm: [
@@ -59,6 +70,7 @@ function limb(ctx, a, b, width = 18, color = INK) {
   ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineCap = "round";
   ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
 }
+function ghostLimb(ctx,a,b,width=14){ctx.save();ctx.globalAlpha=.32;ctx.strokeStyle=FAR;ctx.lineWidth=width;ctx.lineCap="round";ctx.setLineDash([7,8]);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();}
 function joint(ctx, p, r = 8) { ctx.fillStyle = ORANGE; ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill(); }
 function head(ctx, p, r = 27) { ctx.fillStyle = WHITE; ctx.strokeStyle = INK; ctx.lineWidth = 8; ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
 function chair(ctx, x, y, scale = 1) {
@@ -80,7 +92,8 @@ function seatedPose(ctx, c, options = {}) {
   const rightKnee=options.rightKnee || {x:c.x+55,y:c.y-34};
   const leftFoot=options.leftFoot || {x:c.x-45,y:c.y};
   const rightFoot=options.rightFoot || {x:c.x+58,y:c.y};
-  limb(ctx,hip,leftKnee);limb(ctx,leftKnee,leftFoot);limb(ctx,hip,rightKnee,18,ORANGE);limb(ctx,rightKnee,rightFoot,18,ORANGE);
+  const leftColor=options.activeSide==="left"?ORANGE:FAR,rightColor=options.activeSide==="left"?FAR:ORANGE;
+  limb(ctx,hip,leftKnee,16,leftColor);limb(ctx,leftKnee,leftFoot,16,leftColor);limb(ctx,hip,rightKnee,18,rightColor);limb(ctx,rightKnee,rightFoot,18,rightColor);
   joint(ctx,leftKnee,7);joint(ctx,rightKnee,7);
   return {hip,shoulder,leftKnee,rightKnee,leftFoot,rightFoot};
 }
@@ -88,14 +101,15 @@ function standingPose(ctx,c,options={}) {
   const hip={x:c.x+(options.shift||0),y:c.y-145+(options.drop||0)}, shoulder={x:c.x+(options.shift||0)+(options.lean||0),y:c.y-260+(options.drop||0)};
   const footL={x:c.x-38+(options.sideL||0),y:c.y+(options.ankleRise||0)}, footR={x:c.x+38+(options.sideR||0),y:c.y+(options.ankleRise||0)};
   const kneeL=options.kneeL||point(hip,footL,.53), kneeR=options.kneeR||point(hip,footR,.53);
-  drawTorso(ctx,hip,shoulder); limb(ctx,hip,kneeL);limb(ctx,kneeL,footL);limb(ctx,hip,kneeR,18,ORANGE);limb(ctx,kneeR,footR,18,ORANGE);joint(ctx,kneeL,7);joint(ctx,kneeR,7);
+  const leftColor=options.activeSide==="left"?ORANGE:FAR,rightColor=options.activeSide==="left"?FAR:ORANGE;
+  drawTorso(ctx,hip,shoulder); limb(ctx,hip,kneeL,16,leftColor);limb(ctx,kneeL,footL,16,leftColor);limb(ctx,hip,kneeR,18,rightColor);limb(ctx,kneeR,footR,18,rightColor);joint(ctx,kneeL,7);joint(ctx,kneeR,7);
   return {hip,shoulder,footL,footR,kneeL,kneeR};
 }
 
 const DRAWERS = {
   march(ctx,c,t,side){
     const lift = 48*t; const right = side > 0;
-    const pose=seatedPose(ctx,c,{rightKnee:right?{x:c.x+62,y:c.y-34-lift*.5}:undefined,rightFoot:right?{x:c.x+62,y:c.y-lift}:undefined,leftKnee:!right?{x:c.x-48,y:c.y-34-lift*.5}:undefined,leftFoot:!right?{x:c.x-48,y:c.y-lift}:undefined});
+    const pose=seatedPose(ctx,c,{activeSide:right?"right":"left",rightKnee:right?{x:c.x+62,y:c.y-34-lift*.5}:undefined,rightFoot:right?{x:c.x+62,y:c.y-lift}:undefined,leftKnee:!right?{x:c.x-48,y:c.y-34-lift*.5}:undefined,leftFoot:!right?{x:c.x-48,y:c.y-lift}:undefined});
     const movingShoulder=pose.shoulder; const handA={x:c.x+(right?-42:42),y:c.y-130-25*t},handB={x:c.x+(right?42:-42),y:c.y-130};limb(ctx,movingShoulder,handA,15,ORANGE);limb(ctx,movingShoulder,handB,15);arrow(ctx,c.x+(right?105:-105),c.y-4,c.x+(right?105:-105),c.y-68);
   },
   seatedJack(ctx,c,t){
@@ -105,9 +119,7 @@ const DRAWERS = {
     limb(ctx,pose.shoulder,leftElbow,16);limb(ctx,leftElbow,leftHand,16,ORANGE);limb(ctx,pose.shoulder,rightElbow,16);limb(ctx,rightElbow,rightHand,16,ORANGE);joint(ctx,leftElbow);joint(ctx,rightElbow);
   },
   reachTap(ctx,c,t,side){
-    const right=side>0; const pose=seatedPose(ctx,c,{rightFoot:right?{x:c.x+58+72*t,y:c.y}:undefined,leftFoot:!right?{x:c.x-45-72*t,y:c.y}:undefined});
-    const leftElbow={x:c.x-38,y:c.y-168},rightElbow={x:c.x+38,y:c.y-168};const leftHand={x:c.x-58-34*t,y:c.y-145-24*t},rightHand={x:c.x+58+34*t,y:c.y-145-24*t};
-    limb(ctx,pose.shoulder,leftElbow,15);limb(ctx,leftElbow,leftHand,16,ORANGE);limb(ctx,pose.shoulder,rightElbow,15);limb(ctx,rightElbow,rightHand,16,ORANGE);joint(ctx,leftElbow);joint(ctx,rightElbow);arrow(ctx,c.x+(right?90:-90),c.y-12,c.x+(right?155:-155),c.y-12);
+    chair(ctx,c.x-105,c.y,1);const hip={x:c.x-8,y:c.y-82},shoulder={x:c.x-8,y:c.y-205};drawTorso(ctx,hip,shoulder);const farKnee={x:c.x+35,y:c.y-38},farFoot={x:c.x+48,y:c.y},knee={x:c.x+48,y:c.y-42},foot={x:c.x+65+92*t,y:c.y};ghostLimb(ctx,knee,{x:c.x+65,y:c.y});limb(ctx,hip,farKnee,15,FAR);limb(ctx,farKnee,farFoot,15,FAR);limb(ctx,hip,knee,18,ORANGE);limb(ctx,knee,foot,18,ORANGE);joint(ctx,knee,7);const elbow={x:c.x+38,y:c.y-170},hand={x:c.x+65+62*t,y:c.y-150};limb(ctx,shoulder,elbow,15,FAR);limb(ctx,elbow,hand,17,ORANGE);joint(ctx,elbow);arrow(ctx,c.x+78,c.y-16,c.x+170,c.y-16);
   },
   stand(ctx,c,t){
     chair(ctx,c.x-135,c.y,1); const hip={x:c.x-45+45*t,y:c.y-82-63*t}, shoulder={x:c.x-42+42*t,y:c.y-205-55*t};
@@ -122,8 +134,7 @@ const DRAWERS = {
     const hand={x:c.x+105,y:c.y-190};limb(ctx,shoulder,hand,15);joint(ctx,hand,6);arrow(ctx,c.x-110,c.y-165,c.x-110,c.y-95);
   },
   extend(ctx,c,t,side){
-    const right=side>0;const pose=seatedPose(ctx,c,{rightKnee:right?{x:c.x+58,y:c.y-43}:undefined,rightFoot:right?{x:c.x+58+96*t,y:c.y-5-68*t}:undefined,leftKnee:!right?{x:c.x-45,y:c.y-43}:undefined,leftFoot:!right?{x:c.x-45-96*t,y:c.y-5-68*t}:undefined});
-    const handL={x:c.x-48,y:c.y-112},handR={x:c.x+48,y:c.y-112};limb(ctx,pose.shoulder,handL,15);limb(ctx,pose.shoulder,handR,15);arrow(ctx,c.x+(right?88:-88),c.y-52,c.x+(right?170:-170),c.y-92);
+    chair(ctx,c.x-105,c.y,1);const hip={x:c.x-8,y:c.y-82},shoulder={x:c.x-8,y:c.y-205};drawTorso(ctx,hip,shoulder);const farKnee={x:c.x+34,y:c.y-38},farFoot={x:c.x+45,y:c.y},knee={x:c.x+52,y:c.y-45},foot={x:c.x+62+105*t,y:c.y-4-72*t};ghostLimb(ctx,knee,{x:c.x+62,y:c.y});limb(ctx,hip,farKnee,15,FAR);limb(ctx,farKnee,farFoot,15,FAR);limb(ctx,hip,knee,18,ORANGE);limb(ctx,knee,foot,18,ORANGE);joint(ctx,knee,7);const hand={x:c.x+24,y:c.y-112};limb(ctx,shoulder,hand,15);arrow(ctx,c.x+80,c.y-58,c.x+174,c.y-100);
   },
   wallPush(ctx,c,t){
     const wallX=c.x+150; ctx.strokeStyle=INK;ctx.lineWidth=10;ctx.beginPath();ctx.moveTo(wallX,c.y-340);ctx.lineTo(wallX,c.y+5);ctx.stroke();
@@ -136,8 +147,7 @@ const DRAWERS = {
     limb(ctx,pose.shoulder,leftElbow,16);limb(ctx,leftElbow,hand,17,ORANGE);limb(ctx,pose.shoulder,rightElbow,16);limb(ctx,rightElbow,hand,17,ORANGE);joint(ctx,leftElbow);joint(ctx,rightElbow);joint(ctx,hand,8);ctx.strokeStyle=YELLOW;ctx.lineWidth=5;ctx.beginPath();ctx.arc(hand.x,hand.y,22+8*t,0,Math.PI*2);ctx.stroke();
   },
   forwardPress(ctx,c,t){
-    const pose=seatedPose(ctx,c);const leftElbow={x:c.x-62+26*t,y:c.y-160-18*t},rightElbow={x:c.x+62-26*t,y:c.y-160-18*t};const leftHand={x:c.x-48-42*t,y:c.y-140-70*t},rightHand={x:c.x+48+42*t,y:c.y-140-70*t};
-    limb(ctx,pose.shoulder,leftElbow,16);limb(ctx,leftElbow,leftHand,17,ORANGE);limb(ctx,pose.shoulder,rightElbow,16);limb(ctx,rightElbow,rightHand,17,ORANGE);joint(ctx,leftElbow);joint(ctx,rightElbow);arrow(ctx,c.x,c.y-145,c.x,c.y-245);
+    chair(ctx,c.x-105,c.y,1);const hip={x:c.x-8,y:c.y-82},shoulder={x:c.x-8,y:c.y-205};drawTorso(ctx,hip,shoulder);const knee={x:c.x+40,y:c.y-38},foot={x:c.x+48,y:c.y};limb(ctx,hip,knee,16,FAR);limb(ctx,knee,foot,16,FAR);const elbow={x:c.x+42+28*t,y:c.y-180},hand={x:c.x+58+105*t,y:c.y-180};ghostLimb(ctx,elbow,{x:c.x+58,y:c.y-180});limb(ctx,shoulder,elbow,17,FAR);limb(ctx,elbow,hand,19,ORANGE);joint(ctx,elbow);joint(ctx,hand,7);arrow(ctx,c.x+74,c.y-238,c.x+176,c.y-238);
   },
   elbowPull(ctx,c,t){
     const pose=seatedPose(ctx,c); const leftElbow={x:c.x-58-42*t,y:c.y-178},rightElbow={x:c.x+58+42*t,y:c.y-178}; const leftHand={x:c.x-82+70*(1-t),y:c.y-177},rightHand={x:c.x+82-70*(1-t),y:c.y-177};
@@ -152,11 +162,11 @@ const DRAWERS = {
     limb(ctx,pose.shoulder,leftElbow,16);limb(ctx,leftElbow,leftHand,17,ORANGE);limb(ctx,pose.shoulder,rightElbow,16);limb(ctx,rightElbow,rightHand,17,ORANGE);joint(ctx,leftElbow);joint(ctx,rightElbow);arrow(ctx,c.x-25,c.y-102,c.x-112,c.y-102);arrow(ctx,c.x+25,c.y-102,c.x+112,c.y-102);
   },
   crossMarch(ctx,c,t,side){
-    const right=side>0, lift=50*t; const pose=seatedPose(ctx,c,{rightKnee:right?{x:c.x+58,y:c.y-34-lift*.45}:undefined,rightFoot:right?{x:c.x+58,y:c.y-lift}:undefined,leftKnee:!right?{x:c.x-45,y:c.y-34-lift*.45}:undefined,leftFoot:!right?{x:c.x-45,y:c.y-lift}:undefined});
+    const right=side>0, lift=50*t; const pose=seatedPose(ctx,c,{activeSide:right?"right":"left",rightKnee:right?{x:c.x+58,y:c.y-34-lift*.45}:undefined,rightFoot:right?{x:c.x+58,y:c.y-lift}:undefined,leftKnee:!right?{x:c.x-45,y:c.y-34-lift*.45}:undefined,leftFoot:!right?{x:c.x-45,y:c.y-lift}:undefined});
     const hand={x:c.x+(right?35:-30),y:c.y-110-18*t};limb(ctx,pose.shoulder,hand,17,ORANGE);joint(ctx,hand,7);
   },
   kneePress(ctx,c,t,side){
-    const right=side>0, lift=45*t; const pose=seatedPose(ctx,c,{rightKnee:right?{x:c.x+55,y:c.y-34-lift*.5}:undefined,rightFoot:right?{x:c.x+55,y:c.y-lift}:undefined,leftKnee:!right?{x:c.x-45,y:c.y-34-lift*.5}:undefined,leftFoot:!right?{x:c.x-45,y:c.y-lift}:undefined});
+    const right=side>0, lift=45*t; const pose=seatedPose(ctx,c,{activeSide:right?"right":"left",rightKnee:right?{x:c.x+55,y:c.y-34-lift*.5}:undefined,rightFoot:right?{x:c.x+55,y:c.y-lift}:undefined,leftKnee:!right?{x:c.x-45,y:c.y-34-lift*.5}:undefined,leftFoot:!right?{x:c.x-45,y:c.y-lift}:undefined});
     const target=right?pose.rightKnee:pose.leftKnee; const hand={x:target.x,y:target.y-18};limb(ctx,pose.shoulder,hand,17,ORANGE);joint(ctx,hand,7);ctx.strokeStyle=YELLOW;ctx.lineWidth=5;ctx.beginPath();ctx.arc(target.x,target.y,16+7*t,0,Math.PI*2);ctx.stroke();
   },
   sideReach(ctx,c,t,side){
@@ -173,13 +183,13 @@ const DRAWERS = {
     const pose=seatedPose(ctx,c);const toeL={x:pose.leftFoot.x+30,y:c.y},toeR={x:pose.rightFoot.x+30,y:c.y},heelL={x:pose.leftFoot.x,y:c.y-25*t},heelR={x:pose.rightFoot.x,y:c.y-25*t};limb(ctx,heelL,toeL,10,ORANGE);limb(ctx,heelR,toeR,10,ORANGE);arrow(ctx,c.x-120,c.y-3,c.x-120,c.y-46);
   },
   side(ctx,c,t,side){
-    chair(ctx,c.x+108,c.y,1); const move=side>0?"sideR":"sideL"; const opts={};opts[move]=(side>0?82:-82)*t;const pose=standingPose(ctx,c,opts);const hand={x:c.x+114,y:c.y-185};limb(ctx,pose.shoulder,hand,15);joint(ctx,hand,6);arrow(ctx,c.x+(side>0?55:-55),c.y-46,c.x+(side>0?145:-145),c.y-46);
+    chair(ctx,c.x+108,c.y,1); const move=side>0?"sideR":"sideL"; const opts={activeSide:side>0?"right":"left"};opts[move]=(side>0?82:-82)*t;const pose=standingPose(ctx,c,opts);const hand={x:c.x+114,y:c.y-185};limb(ctx,pose.shoulder,hand,15);joint(ctx,hand,6);arrow(ctx,c.x+(side>0?55:-55),c.y-46,c.x+(side>0?145:-145),c.y-46);
   },
   weightShift(ctx,c,t,side){
-    chair(ctx,c.x+102,c.y,1); const shift=side*38*t;const pose=standingPose(ctx,c,{shift,kneeL:{x:c.x-48+shift*.6,y:c.y-72+5*t},kneeR:{x:c.x+48+shift*.6,y:c.y-72+5*t}});const hand={x:c.x+108,y:c.y-185};limb(ctx,pose.shoulder,hand,15);joint(ctx,hand,6);arrow(ctx,c.x-80,c.y-310,c.x+80,c.y-310);
+    chair(ctx,c.x+102,c.y,1); const shift=side*38*t;const pose=standingPose(ctx,c,{activeSide:side>0?"right":"left",shift,kneeL:{x:c.x-48+shift*.6,y:c.y-72+5*t},kneeR:{x:c.x+48+shift*.6,y:c.y-72+5*t}});const hand={x:c.x+108,y:c.y-185};limb(ctx,pose.shoulder,hand,15);joint(ctx,hand,6);arrow(ctx,c.x-80,c.y-310,c.x+80,c.y-310);
   },
   backLeg(ctx,c,t,side){
-    chair(ctx,c.x+112,c.y,1);const pose=standingPose(ctx,c);const hand={x:c.x+118,y:c.y-185};limb(ctx,pose.shoulder,hand,15);joint(ctx,hand,6);const movingHip={x:pose.hip.x,y:pose.hip.y},movingKnee={x:c.x+side*(-35-28*t),y:c.y-76-12*t},movingFoot={x:c.x+side*(-42-78*t),y:c.y-4-18*t};ctx.save();ctx.strokeStyle="#e9e1d2";ctx.lineWidth=24;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(movingHip.x,movingHip.y);ctx.lineTo(side>0?pose.kneeR.x:pose.kneeL.x,side>0?pose.kneeR.y:pose.kneeL.y);ctx.lineTo(side>0?pose.footR.x:pose.footL.x,side>0?pose.footR.y:pose.footL.y);ctx.stroke();ctx.restore();limb(ctx,movingHip,movingKnee,18,ORANGE);limb(ctx,movingKnee,movingFoot,18,ORANGE);joint(ctx,movingKnee,7);arrow(ctx,c.x+side*70,c.y-42,c.x+side*150,c.y-62);
+    chair(ctx,c.x+112,c.y,1);const hip={x:c.x,y:c.y-145},shoulder={x:c.x,y:c.y-260};drawTorso(ctx,hip,shoulder);const supportKnee={x:c.x+18,y:c.y-74},supportFoot={x:c.x+20,y:c.y},movingKnee={x:c.x-18-26*t,y:c.y-76-12*t},movingFoot={x:c.x-24-88*t,y:c.y-3-20*t};ghostLimb(ctx,hip,{x:c.x-18,y:c.y-76});ghostLimb(ctx,{x:c.x-18,y:c.y-76},{x:c.x-24,y:c.y-3});limb(ctx,hip,supportKnee,16,FAR);limb(ctx,supportKnee,supportFoot,16,FAR);limb(ctx,hip,movingKnee,19,ORANGE);limb(ctx,movingKnee,movingFoot,19,ORANGE);joint(ctx,supportKnee,7);joint(ctx,movingKnee,7);const hand={x:c.x+118,y:c.y-185};limb(ctx,shoulder,hand,16,ORANGE);joint(ctx,hand,6);arrow(ctx,c.x-60,c.y-45,c.x-158,c.y-66);
   }
 };
 
@@ -187,7 +197,7 @@ const els = {
   planList:document.querySelector("#plan-list"), trainer:document.querySelector("#trainer"), canvas:document.querySelector("#trainer-canvas"),
   progressLabel:document.querySelector("#progress-label"), progressFill:document.querySelector("#progress-fill"), beat:document.querySelector("#beat-count"), rep:document.querySelector("#rep-count"),
   category:document.querySelector("#exercise-category"), name:document.querySelector("#exercise-name"), purpose:document.querySelector("#exercise-purpose"), steps:document.querySelector("#exercise-steps"), cue:document.querySelector("#exercise-cue"),
-  pause:document.querySelector("#pause-workout"), voice:document.querySelector("#voice-toggle"), transition:document.querySelector("#transition"), transitionKicker:document.querySelector("#transition-kicker"), transitionTitle:document.querySelector("#transition-title"), transitionCount:document.querySelector("#transition-count")
+  view:document.querySelector("#view-label"), pause:document.querySelector("#pause-workout"), voice:document.querySelector("#voice-toggle"), transition:document.querySelector("#transition"), transitionKicker:document.querySelector("#transition-kicker"), transitionTitle:document.querySelector("#transition-title"), transitionCount:document.querySelector("#transition-count")
 };
 const ctx = els.canvas.getContext("2d");
 const todayKey = new Date().toISOString().slice(0,10);
@@ -213,7 +223,7 @@ function generateNewPlan() {
 function currentExercise(){ return plan[state.index]; }
 function setExercise(index) {
   clearTransitions(); state.index=Math.max(0,Math.min(plan.length-1,index));state.elapsed=0;state.lastBeat=-1;state.lastNow=performance.now();state.paused=false;state.transitioning=false;
-  const item=currentExercise();els.progressLabel.textContent=`动作 ${state.index+1} / ${plan.length}`;els.progressFill.style.width=`${((state.index+1)/plan.length)*100}%`;els.category.textContent=item.category;els.name.textContent=item.name;els.purpose.textContent=item.purpose;els.steps.innerHTML=item.steps.map(step=>`<li>${step}</li>`).join("");els.cue.textContent=item.cue;els.canvas.setAttribute("aria-label",`${item.name}标准速度动画演示`);els.rep.textContent="1";els.beat.textContent="1";els.pause.textContent="暂停";els.transition.classList.remove("is-open");els.transition.setAttribute("aria-hidden","true");
+  const item=currentExercise();els.progressLabel.textContent=`动作 ${state.index+1} / ${plan.length}`;els.progressFill.style.width=`${((state.index+1)/plan.length)*100}%`;els.category.textContent=item.category;els.name.textContent=item.name;els.purpose.textContent=item.purpose;els.steps.innerHTML=item.steps.map(step=>`<li>${step}</li>`).join("");els.cue.textContent=item.cue;els.view.textContent=VIEW_META[item.id]||"橙色表示动作侧";els.canvas.setAttribute("aria-label",`${item.name}标准速度动画演示，${VIEW_META[item.id]||"橙色表示动作侧"}`);els.rep.textContent="1";els.beat.textContent="1";els.pause.textContent="暂停";els.transition.classList.remove("is-open");els.transition.setAttribute("aria-hidden","true");
 }
 function openTrainer() {
   state.open=true;document.body.classList.add("is-training");els.trainer.classList.add("is-open");els.trainer.setAttribute("aria-hidden","false");setExercise(0);els.pause.focus();
