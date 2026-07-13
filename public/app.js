@@ -17,31 +17,38 @@ const CATEGORIES = [
 const LIBRARY = {
   warm: [
     { id:"march", name:"坐姿踏步", purpose:"温和带动心肺，唤醒髋部和大腿。", steps:["坐在椅子前半部，身体坐直。","左右轮流抬脚，同时自然摆臂。"], cue:"脚轻轻落地；抬到舒服的高度即可。", alternating:true },
-    { id:"seatedJack", name:"坐姿开合", purpose:"活动肩、髋和腿，让全身暖起来。", steps:["坐稳，双脚并拢，双手放在腿旁。","双脚向两旁点开，双臂抬到肩高，再收回。"], cue:"手臂不必举过头；全程保持顺畅呼吸。" }
+    { id:"seatedJack", name:"坐姿开合", purpose:"活动肩、髋和腿，让全身暖起来。", steps:["坐稳，双脚并拢，双手放在腿旁。","双脚向两旁点开，双臂抬到肩高，再收回。"], cue:"手臂不必举过头；全程保持顺畅呼吸。" },
+    { id:"reachTap", name:"坐姿前点脚", purpose:"活动髋、膝和肩部，温和提高身体活动量。", steps:["坐在椅子前半部，双脚踩稳。","一只脚向前点，同时双手向前送，再换边。"], cue:"脚跟轻点地面；身体保持直，不向后倒。", alternating:true }
   ],
   lower: [
     { id:"stand", name:"扶椅起身", purpose:"练大腿和臀部，帮助起床、如厕和上下车。", steps:["椅子靠墙，双脚放在膝盖下方。","身体稍向前，站直后有控制地坐回。"], cue:"弯髋、弯膝；膝盖始终朝向脚尖。" },
-    { id:"miniSquat", name:"扶椅小蹲", purpose:"练大腿、臀部和髋部，增强站立力量。", steps:["双手扶稳椅背，双脚与髋同宽。","臀部向后坐一小段，再用腿站直。"], cue:"背部保持长直；膝盖不向内夹。" }
+    { id:"miniSquat", name:"扶椅小蹲", purpose:"练大腿、臀部和髋部，增强站立力量。", steps:["双手扶稳椅背，双脚与髋同宽。","臀部向后坐一小段，再用腿站直。"], cue:"背部保持长直；膝盖不向内夹。" },
+    { id:"extend", name:"坐姿伸膝", purpose:"练大腿前侧，帮助膝盖在站立和走路时稳定。", steps:["坐直，双手扶住椅子两侧。","一侧小腿向前伸，再慢慢放回换边。"], cue:"膝盖不要锁死；不用甩腿或追求很高。", alternating:true }
   ],
   push: [
     { id:"wallPush", name:"墙面俯卧撑", purpose:"练胸、肩和手臂，让推门和撑起身体更有力。", steps:["面对墙站立，双手与肩同高。","弯手肘靠近墙，再把墙推远。"], cue:"只弯手肘；头、背、髋始终保持一条直线。" },
-    { id:"palmPress", name:"坐姿合掌推压", purpose:"温和练胸、肩和手臂，不需要器械。", steps:["坐直，双掌在胸前相对。","数到 2 时互相推压，数到 4 时放松。"], cue:"肩膀放松，不耸肩；不要憋气。" }
+    { id:"palmPress", name:"坐姿合掌推压", purpose:"温和练胸、肩和手臂，不需要器械。", steps:["坐直，双掌在胸前相对。","数到 2 时互相推压，数到 4 时放松。"], cue:"肩膀放松，不耸肩；不要憋气。" },
+    { id:"forwardPress", name:"坐姿向前推", purpose:"练胸、肩和手臂，帮助完成日常推送动作。", steps:["坐直，双手握拳放在胸前。","双臂向前推到微弯，再有控制地收回。"], cue:"手肘不要锁死；腰部不后仰。" }
   ],
   pull: [
     { id:"elbowPull", name:"坐姿拉肘夹背", purpose:"练上背和肩后侧，帮助维持挺拔姿势。", steps:["坐直，双臂向前伸到肩高。","弯手肘向后拉，轻轻夹背，再伸回。"], cue:"肘保持在肩膀下方；腰部不要后仰。" },
-    { id:"towelPull", name:"坐姿毛巾拉开", purpose:"练上背、肩和手臂，帮助拿物更稳。", steps:["双手握毛巾两端，在胸前伸直。","向两边拉紧毛巾，再缓缓放松。"], cue:"手肘保持微弯，不锁死；毛巾不用拉得很紧。" }
+    { id:"towelPull", name:"坐姿毛巾拉开", purpose:"练上背、肩和手臂，帮助拿物更稳。", steps:["双手握毛巾两端，在胸前伸直。","向两边拉紧毛巾，再缓缓放松。"], cue:"手肘保持微弯，不锁死；毛巾不用拉得很紧。" },
+    { id:"lowRow", name:"坐姿低位划臂", purpose:"练背部和手臂，帮助保持肩膀打开。", steps:["坐直，双手向前下方伸出。","弯手肘贴近身体向后拉，再慢慢伸回。"], cue:"先向后拉肩胛骨；不要耸肩或挺肚子。" }
   ],
   core: [
     { id:"crossMarch", name:"坐姿对侧触膝", purpose:"练腹部、髋部和身体协调。", steps:["坐直，右脚抬起，同时左手靠近右膝。","放回后换边，身体不要后倒。"], cue:"动作来自抬膝和轻微转身，不要猛拉颈部。", alternating:true },
-    { id:"kneePress", name:"坐姿手膝相推", purpose:"温和唤醒腹部深层肌肉，帮助躯干稳定。", steps:["坐直，抬起一侧膝盖，双手扶住膝上方。","手向下、膝向上轻轻相推，再放回换边。"], cue:"只用三四成力；背部保持直，不憋气。", alternating:true }
+    { id:"kneePress", name:"坐姿手膝相推", purpose:"温和唤醒腹部深层肌肉，帮助躯干稳定。", steps:["坐直，抬起一侧膝盖，双手扶住膝上方。","手向下、膝向上轻轻相推，再放回换边。"], cue:"只用三四成力；背部保持直，不憋气。", alternating:true },
+    { id:"sideReach", name:"坐姿侧向伸手", purpose:"练躯干两侧和姿势控制，帮助弯身取物。", steps:["坐稳，双脚踩地，一只手扶住椅边。","另一只手向身体侧下方伸，再回正换边。"], cue:"幅度要小；臀部两侧始终压在椅面。", alternating:true }
   ],
   ankle: [
     { id:"heel", name:"扶椅踮脚", purpose:"练小腿和脚踝，帮助迈步和站稳。", steps:["双手扶稳椅背，双脚朝前。","脚跟抬起，再有控制地落地。"], cue:"脚趾始终着地；膝盖保持柔软，不锁死。" },
-    { id:"toeLift", name:"坐姿抬脚尖", purpose:"练小腿前侧和脚踝，帮助减少走路绊脚。", steps:["坐稳，双脚平放，膝盖约九十度。","脚跟不动，抬起脚尖，再慢慢放下。"], cue:"只动脚踝；不要抬起整条腿。" }
+    { id:"toeLift", name:"坐姿抬脚尖", purpose:"练小腿前侧和脚踝，帮助减少走路绊脚。", steps:["坐稳，双脚平放，膝盖约九十度。","脚跟不动，抬起脚尖，再慢慢放下。"], cue:"只动脚踝；不要抬起整条腿。" },
+    { id:"seatedHeel", name:"坐姿提脚跟", purpose:"练小腿后侧和脚踝，帮助迈步时向前推地。", steps:["坐稳，双脚平放，脚尖朝前。","脚尖不动，抬起脚跟，再慢慢落下。"], cue:"膝盖保持在脚尖上方；不要让脚踝向外倒。" }
   ],
   balance: [
     { id:"side", name:"扶椅侧抬腿", purpose:"练髋部两侧和单脚稳定，帮助走路少摇晃。", steps:["一手扶稳椅背，双脚朝前。","外侧腿向旁抬一小段，再慢慢收回。"], cue:"抬起腿保持直；支撑腿微弯，不锁膝。", alternating:true },
-    { id:"weightShift", name:"扶椅左右移重心", purpose:"练脚踝、髋部和平衡反应，帮助转身与迈步。", steps:["双手轻扶椅背，双脚比髋稍宽。","把重心移到一侧，再回中间换边。"], cue:"两脚不离地；承重侧膝盖保持微弯。", alternating:true }
+    { id:"weightShift", name:"扶椅左右移重心", purpose:"练脚踝、髋部和平衡反应，帮助转身与迈步。", steps:["双手轻扶椅背，双脚比髋稍宽。","把重心移到一侧，再回中间换边。"], cue:"两脚不离地；承重侧膝盖保持微弯。", alternating:true },
+    { id:"backLeg", name:"扶椅向后抬腿", purpose:"练臀部和髋后侧，帮助站稳和迈步。", steps:["双手扶稳椅背，身体站直。","一条腿保持直，向后抬一小段，再换边。"], cue:"不要前倾或塌腰；支撑腿微弯。", alternating:true }
   ]
 };
 
@@ -97,6 +104,11 @@ const DRAWERS = {
     const leftHand={x:c.x-48-70*t,y:c.y-105-92*t},rightHand={x:c.x+48+70*t,y:c.y-105-92*t};
     limb(ctx,pose.shoulder,leftElbow,16);limb(ctx,leftElbow,leftHand,16,ORANGE);limb(ctx,pose.shoulder,rightElbow,16);limb(ctx,rightElbow,rightHand,16,ORANGE);joint(ctx,leftElbow);joint(ctx,rightElbow);
   },
+  reachTap(ctx,c,t,side){
+    const right=side>0; const pose=seatedPose(ctx,c,{rightFoot:right?{x:c.x+58+72*t,y:c.y}:undefined,leftFoot:!right?{x:c.x-45-72*t,y:c.y}:undefined});
+    const leftElbow={x:c.x-38,y:c.y-168},rightElbow={x:c.x+38,y:c.y-168};const leftHand={x:c.x-58-34*t,y:c.y-145-24*t},rightHand={x:c.x+58+34*t,y:c.y-145-24*t};
+    limb(ctx,pose.shoulder,leftElbow,15);limb(ctx,leftElbow,leftHand,16,ORANGE);limb(ctx,pose.shoulder,rightElbow,15);limb(ctx,rightElbow,rightHand,16,ORANGE);joint(ctx,leftElbow);joint(ctx,rightElbow);arrow(ctx,c.x+(right?90:-90),c.y-12,c.x+(right?155:-155),c.y-12);
+  },
   stand(ctx,c,t){
     chair(ctx,c.x-135,c.y,1); const hip={x:c.x-45+45*t,y:c.y-82-63*t}, shoulder={x:c.x-42+42*t,y:c.y-205-55*t};
     const footL={x:c.x-18,y:c.y},footR={x:c.x+48,y:c.y}; const kneeL={x:c.x+16,y:c.y-44-35*t},kneeR={x:c.x+58,y:c.y-46-33*t};
@@ -109,6 +121,10 @@ const DRAWERS = {
     drawTorso(ctx,hip,shoulder);limb(ctx,hip,kneeL);limb(ctx,kneeL,footL);limb(ctx,hip,kneeR,18,ORANGE);limb(ctx,kneeR,footR,18,ORANGE);joint(ctx,kneeL);joint(ctx,kneeR);
     const hand={x:c.x+105,y:c.y-190};limb(ctx,shoulder,hand,15);joint(ctx,hand,6);arrow(ctx,c.x-110,c.y-165,c.x-110,c.y-95);
   },
+  extend(ctx,c,t,side){
+    const right=side>0;const pose=seatedPose(ctx,c,{rightKnee:right?{x:c.x+58,y:c.y-43}:undefined,rightFoot:right?{x:c.x+58+96*t,y:c.y-5-68*t}:undefined,leftKnee:!right?{x:c.x-45,y:c.y-43}:undefined,leftFoot:!right?{x:c.x-45-96*t,y:c.y-5-68*t}:undefined});
+    const handL={x:c.x-48,y:c.y-112},handR={x:c.x+48,y:c.y-112};limb(ctx,pose.shoulder,handL,15);limb(ctx,pose.shoulder,handR,15);arrow(ctx,c.x+(right?88:-88),c.y-52,c.x+(right?170:-170),c.y-92);
+  },
   wallPush(ctx,c,t){
     const wallX=c.x+150; ctx.strokeStyle=INK;ctx.lineWidth=10;ctx.beginPath();ctx.moveTo(wallX,c.y-340);ctx.lineTo(wallX,c.y+5);ctx.stroke();
     const foot={x:c.x-86,y:c.y}, shoulder={x:c.x-78+48*t,y:c.y-255}, hip={x:c.x-82+26*t,y:c.y-138}; const knee=point(hip,foot,.52);
@@ -119,6 +135,10 @@ const DRAWERS = {
     const pose=seatedPose(ctx,c); const hand={x:c.x,y:c.y-178},leftElbow={x:c.x-82+24*t,y:c.y-170},rightElbow={x:c.x+82-24*t,y:c.y-170};
     limb(ctx,pose.shoulder,leftElbow,16);limb(ctx,leftElbow,hand,17,ORANGE);limb(ctx,pose.shoulder,rightElbow,16);limb(ctx,rightElbow,hand,17,ORANGE);joint(ctx,leftElbow);joint(ctx,rightElbow);joint(ctx,hand,8);ctx.strokeStyle=YELLOW;ctx.lineWidth=5;ctx.beginPath();ctx.arc(hand.x,hand.y,22+8*t,0,Math.PI*2);ctx.stroke();
   },
+  forwardPress(ctx,c,t){
+    const pose=seatedPose(ctx,c);const leftElbow={x:c.x-62+26*t,y:c.y-160-18*t},rightElbow={x:c.x+62-26*t,y:c.y-160-18*t};const leftHand={x:c.x-48-42*t,y:c.y-140-70*t},rightHand={x:c.x+48+42*t,y:c.y-140-70*t};
+    limb(ctx,pose.shoulder,leftElbow,16);limb(ctx,leftElbow,leftHand,17,ORANGE);limb(ctx,pose.shoulder,rightElbow,16);limb(ctx,rightElbow,rightHand,17,ORANGE);joint(ctx,leftElbow);joint(ctx,rightElbow);arrow(ctx,c.x,c.y-145,c.x,c.y-245);
+  },
   elbowPull(ctx,c,t){
     const pose=seatedPose(ctx,c); const leftElbow={x:c.x-58-42*t,y:c.y-178},rightElbow={x:c.x+58+42*t,y:c.y-178}; const leftHand={x:c.x-82+70*(1-t),y:c.y-177},rightHand={x:c.x+82-70*(1-t),y:c.y-177};
     limb(ctx,pose.shoulder,leftElbow,17);limb(ctx,leftElbow,leftHand,17,ORANGE);limb(ctx,pose.shoulder,rightElbow,17);limb(ctx,rightElbow,rightHand,17,ORANGE);joint(ctx,leftElbow);joint(ctx,rightElbow);arrow(ctx,c.x-18,c.y-242,c.x-102,c.y-242);arrow(ctx,c.x+18,c.y-242,c.x+102,c.y-242);
@@ -126,6 +146,10 @@ const DRAWERS = {
   towelPull(ctx,c,t){
     const pose=seatedPose(ctx,c); const leftHand={x:c.x-52-45*t,y:c.y-178},rightHand={x:c.x+52+45*t,y:c.y-178};
     limb(ctx,pose.shoulder,leftHand,17,ORANGE);limb(ctx,pose.shoulder,rightHand,17,ORANGE);ctx.strokeStyle=YELLOW;ctx.lineWidth=9;ctx.beginPath();ctx.moveTo(leftHand.x,leftHand.y);ctx.lineTo(rightHand.x,rightHand.y);ctx.stroke();joint(ctx,leftHand,7);joint(ctx,rightHand,7);
+  },
+  lowRow(ctx,c,t){
+    const pose=seatedPose(ctx,c);const leftElbow={x:c.x-52-55*t,y:c.y-148+12*t},rightElbow={x:c.x+52+55*t,y:c.y-148+12*t};const leftHand={x:c.x-78+55*(1-t),y:c.y-116},rightHand={x:c.x+78-55*(1-t),y:c.y-116};
+    limb(ctx,pose.shoulder,leftElbow,16);limb(ctx,leftElbow,leftHand,17,ORANGE);limb(ctx,pose.shoulder,rightElbow,16);limb(ctx,rightElbow,rightHand,17,ORANGE);joint(ctx,leftElbow);joint(ctx,rightElbow);arrow(ctx,c.x-25,c.y-102,c.x-112,c.y-102);arrow(ctx,c.x+25,c.y-102,c.x+112,c.y-102);
   },
   crossMarch(ctx,c,t,side){
     const right=side>0, lift=50*t; const pose=seatedPose(ctx,c,{rightKnee:right?{x:c.x+58,y:c.y-34-lift*.45}:undefined,rightFoot:right?{x:c.x+58,y:c.y-lift}:undefined,leftKnee:!right?{x:c.x-45,y:c.y-34-lift*.45}:undefined,leftFoot:!right?{x:c.x-45,y:c.y-lift}:undefined});
@@ -135,17 +159,27 @@ const DRAWERS = {
     const right=side>0, lift=45*t; const pose=seatedPose(ctx,c,{rightKnee:right?{x:c.x+55,y:c.y-34-lift*.5}:undefined,rightFoot:right?{x:c.x+55,y:c.y-lift}:undefined,leftKnee:!right?{x:c.x-45,y:c.y-34-lift*.5}:undefined,leftFoot:!right?{x:c.x-45,y:c.y-lift}:undefined});
     const target=right?pose.rightKnee:pose.leftKnee; const hand={x:target.x,y:target.y-18};limb(ctx,pose.shoulder,hand,17,ORANGE);joint(ctx,hand,7);ctx.strokeStyle=YELLOW;ctx.lineWidth=5;ctx.beginPath();ctx.arc(target.x,target.y,16+7*t,0,Math.PI*2);ctx.stroke();
   },
+  sideReach(ctx,c,t,side){
+    chair(ctx,c.x-92,c.y,1);const hip={x:c.x,y:c.y-82},shoulder={x:c.x+side*24*t,y:c.y-205+8*t};drawTorso(ctx,hip,shoulder);const kneeL={x:c.x-42,y:c.y-34},kneeR={x:c.x+55,y:c.y-34},footL={x:c.x-45,y:c.y},footR={x:c.x+58,y:c.y};limb(ctx,hip,kneeL);limb(ctx,kneeL,footL);limb(ctx,hip,kneeR,18,ORANGE);limb(ctx,kneeR,footR,18,ORANGE);joint(ctx,kneeL,7);joint(ctx,kneeR,7);
+    const reachingHand={x:c.x+side*(78+58*t),y:c.y-122+42*t},supportHand={x:c.x-side*42,y:c.y-112};limb(ctx,shoulder,reachingHand,17,ORANGE);limb(ctx,shoulder,supportHand,15);joint(ctx,reachingHand,7);arrow(ctx,c.x+side*70,c.y-125,c.x+side*145,c.y-75);
+  },
   heel(ctx,c,t){
     chair(ctx,c.x+100,c.y,1); const pose=standingPose(ctx,c,{drop:-20*t,ankleRise:-22*t}); const toeL={x:pose.footL.x+20,y:c.y},toeR={x:pose.footR.x+20,y:c.y};limb(ctx,pose.footL,toeL,8);limb(ctx,pose.footR,toeR,8);const hand={x:c.x+106,y:c.y-186};limb(ctx,pose.shoulder,hand,15);joint(ctx,hand,6);arrow(ctx,c.x-115,c.y-8,c.x-115,c.y-70);
   },
   toeLift(ctx,c,t){
     const pose=seatedPose(ctx,c); const heelL={x:pose.leftFoot.x,y:c.y},heelR={x:pose.rightFoot.x,y:c.y};const toeL={x:heelL.x+34,y:c.y-25*t},toeR={x:heelR.x+34,y:c.y-25*t};limb(ctx,heelL,toeL,10,ORANGE);limb(ctx,heelR,toeR,10,ORANGE);arrow(ctx,c.x+120,c.y-4,c.x+120,c.y-45);
   },
+  seatedHeel(ctx,c,t){
+    const pose=seatedPose(ctx,c);const toeL={x:pose.leftFoot.x+30,y:c.y},toeR={x:pose.rightFoot.x+30,y:c.y},heelL={x:pose.leftFoot.x,y:c.y-25*t},heelR={x:pose.rightFoot.x,y:c.y-25*t};limb(ctx,heelL,toeL,10,ORANGE);limb(ctx,heelR,toeR,10,ORANGE);arrow(ctx,c.x-120,c.y-3,c.x-120,c.y-46);
+  },
   side(ctx,c,t,side){
     chair(ctx,c.x+108,c.y,1); const move=side>0?"sideR":"sideL"; const opts={};opts[move]=(side>0?82:-82)*t;const pose=standingPose(ctx,c,opts);const hand={x:c.x+114,y:c.y-185};limb(ctx,pose.shoulder,hand,15);joint(ctx,hand,6);arrow(ctx,c.x+(side>0?55:-55),c.y-46,c.x+(side>0?145:-145),c.y-46);
   },
   weightShift(ctx,c,t,side){
     chair(ctx,c.x+102,c.y,1); const shift=side*38*t;const pose=standingPose(ctx,c,{shift,kneeL:{x:c.x-48+shift*.6,y:c.y-72+5*t},kneeR:{x:c.x+48+shift*.6,y:c.y-72+5*t}});const hand={x:c.x+108,y:c.y-185};limb(ctx,pose.shoulder,hand,15);joint(ctx,hand,6);arrow(ctx,c.x-80,c.y-310,c.x+80,c.y-310);
+  },
+  backLeg(ctx,c,t,side){
+    chair(ctx,c.x+112,c.y,1);const pose=standingPose(ctx,c);const hand={x:c.x+118,y:c.y-185};limb(ctx,pose.shoulder,hand,15);joint(ctx,hand,6);const movingHip={x:pose.hip.x,y:pose.hip.y},movingKnee={x:c.x+side*(-35-28*t),y:c.y-76-12*t},movingFoot={x:c.x+side*(-42-78*t),y:c.y-4-18*t};ctx.save();ctx.strokeStyle="#e9e1d2";ctx.lineWidth=24;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(movingHip.x,movingHip.y);ctx.lineTo(side>0?pose.kneeR.x:pose.kneeL.x,side>0?pose.kneeR.y:pose.kneeL.y);ctx.lineTo(side>0?pose.footR.x:pose.footL.x,side>0?pose.footR.y:pose.footL.y);ctx.stroke();ctx.restore();limb(ctx,movingHip,movingKnee,18,ORANGE);limb(ctx,movingKnee,movingFoot,18,ORANGE);joint(ctx,movingKnee,7);arrow(ctx,c.x+side*70,c.y-42,c.x+side*150,c.y-62);
   }
 };
 
