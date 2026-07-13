@@ -38,6 +38,10 @@
             <button class="button button--primary" id="start-workout" type="button">开始今天的 7 个动作</button>
             <button class="button button--quiet" id="new-plan" type="button">换一组新动作</button>
           </div>
+          <div class="sound-check" aria-live="polite">
+            <button id="test-sound" type="button">🔊 先测试声音</button>
+            <span id="sound-status">听到“一、二、三、四”即可开始</span>
+          </div>
           <p class="hero__note"><span aria-hidden="true">●</span> 全程能自然说话、不憋气，就是合适的强度。</p>
         </div>
 
@@ -139,6 +143,7 @@
       </div>
     </section>
 
-    <script src="app.js?v=android-audio-1"></script>
+    <audio id="count-cycle" preload="auto" src="audio/count-cycle.wav" aria-hidden="true"></audio>
+    <script src="app.js?v=android-native-audio-2"></script>
   </body>
 </html>
