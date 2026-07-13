@@ -20,6 +20,7 @@ button, a { color: inherit; font: inherit; -webkit-tap-highlight-color: transpar
 button { cursor: pointer; }
 .skip-link { position: fixed; left: 16px; top: -80px; z-index: 300; padding: 14px 20px; background: var(--white); border-radius: 8px; }
 .skip-link:focus { top: 16px; }
+.orientation-gate { display: none; }
 
 .topbar { height: 80px; padding: 0 clamp(20px, 5vw, 72px); display: flex; align-items: center; justify-content: space-between; border-bottom: 1px solid var(--line); background: rgba(244,239,229,.94); }
 .brand { display: inline-flex; align-items: center; gap: 12px; text-decoration: none; font-size: 20px; font-weight: 900; }
@@ -191,19 +192,11 @@ footer p { margin: 0; }
   .trainer__cue { font-size: 13px; }
 }
 
-@media (orientation: landscape) and (max-height: 560px) {
-  .trainer__header { min-height: 48px; grid-template-columns: 68px 1fr 68px; padding: 4px 10px; }
-  .icon-button { min-height: 38px; }
-  .trainer__screen { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr; }
-  .trainer__copy { padding: 12px 22px; }
-  .trainer__copy h2 { font-size: 34px; }
-  .trainer__purpose { margin: 7px 0; font-size: 15px; }
-  .trainer__copy ol { font-size: 14px; line-height: 1.42; }
-  .trainer__cue { margin-top: 7px; padding: 7px 9px; font-size: 13px; }
-  .trainer__controls { padding: 5px 10px; }
-  .trainer__controls button { min-height: 42px; }
-  .count-orb { width: 68px; height: 68px; }
-  .count-orb span { font-size: 36px; }
+@media (orientation: landscape) and (max-height: 650px) {
+  .orientation-gate { position: fixed; inset: 0; z-index: 999; display: flex; align-items: center; justify-content: center; flex-direction: column; padding: 28px; text-align: center; color: var(--white); background: var(--green); }
+  .orientation-gate strong { margin-top: 18px; font-family: var(--display); font-size: clamp(32px, 7vw, 54px); }
+  .orientation-gate p { margin: 10px 0 0; color: #dce9e5; font-size: 17px; }
+  .orientation-gate__phone { width: 48px; height: 78px; border: 5px solid var(--yellow); border-radius: 10px; box-shadow: inset 0 -10px 0 rgba(239,199,94,.2); }
 }
 
 @media (prefers-reduced-motion: reduce) {
