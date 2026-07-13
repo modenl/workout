@@ -38,7 +38,6 @@ h1 em, h2 em { color: var(--orange); font-style: normal; }
 .sound-check { display: flex; flex-wrap: wrap; align-items: center; gap: 10px 12px; margin-top: 13px; color: var(--muted); font-size: 14px; }
 .sound-check button { min-height: 44px; padding: 0 16px; border: 1px solid var(--line); border-radius: 999px; color: var(--green); background: var(--white); font-weight: 900; }
 .sound-check span { line-height: 1.4; }
-.sound-check__player { flex: 0 0 100%; width: min(100%, 360px); max-width: 360px; height: 44px; }
 .sound-check span[data-state="ready"] { color: var(--green); font-weight: 800; }
 .sound-check span[data-state="blocked"] { color: #9b3d28; font-weight: 800; }
 .button { min-height: 58px; padding: 0 25px; border: 2px solid var(--green); border-radius: 10px; display: inline-flex; align-items: center; justify-content: center; font-weight: 900; background: transparent; }
@@ -162,7 +161,6 @@ footer p { margin: 0; }
   .hero__actions, .today__actions { display: grid; }
   .sound-check { align-items: flex-start; flex-direction: column; gap: 7px; }
   .sound-check button { width: 100%; }
-  .sound-check__player { width: 100%; max-width: none; }
   .button { width: 100%; }
   .hero__visual { min-height: 390px; }
   .sun { width: 290px; }
