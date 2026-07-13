@@ -1,0 +1,144 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#f4efe5" />
+    <meta name="description" content="为 70+ 长者设计的每日全身保肌跟练：标准节奏语音计数、自动换动作，并可一键生成新的一组。" />
+    <meta property="og:type" content="website" />
+    <meta property="og:title" content="常青动一动｜70+ 每日全身保肌" />
+    <meta property="og:description" content="七个温和动作覆盖全身，语音数拍，自动跟练。" />
+    <meta name="twitter:card" content="summary" />
+    <link rel="stylesheet" href="styles.css" />
+    <title>常青动一动｜70+ 每日全身保肌</title>
+  </head>
+  <body>
+    <div class="orientation-gate" role="status" aria-live="polite">
+      <span class="orientation-gate__phone" aria-hidden="true"></span>
+      <strong>请把手机竖起来</strong>
+      <p>竖屏可以同时看清动作、说明和计数。</p>
+    </div>
+    <a class="skip-link" href="#today">直接看今日动作</a>
+
+    <header class="topbar" aria-label="网站导航">
+      <a class="brand" href="#top" aria-label="常青动一动，回到顶部">
+        <span class="brand__mark" aria-hidden="true">长</span>
+        <span>常青动一动</span>
+      </a>
+      <span class="topbar__note">全球一个链接 · 打开就练</span>
+    </header>
+
+    <main id="top">
+      <section class="hero" aria-labelledby="hero-title">
+        <div class="hero__copy">
+          <p class="eyebrow">一个链接，全球打开 · 无需安装</p>
+          <h1 id="hero-title">听着节拍，<br /><em>稳稳练完全身。</em></h1>
+          <p class="hero__lead">每个动作一屏看完。语音按 1、2、3、4 数拍，做完自动进入下一个，不用记顺序。</p>
+          <div class="hero__actions">
+            <button class="button button--primary" id="start-workout" type="button">开始今天的 7 个动作</button>
+            <button class="button button--quiet" id="new-plan" type="button">换一组新动作</button>
+          </div>
+          <p class="hero__note"><span aria-hidden="true">●</span> 全程能自然说话、不憋气，就是合适的强度。</p>
+        </div>
+
+        <div class="hero__visual" aria-hidden="true">
+          <div class="sun"></div>
+          <div class="rhythm">
+            <span>1</span><span>2</span><span>3</span><span>4</span>
+          </div>
+          <div class="hero-figure">
+            <span class="head"></span><span class="body"></span>
+            <span class="arm arm--left"></span><span class="arm arm--right"></span>
+            <span class="leg leg--left"></span><span class="leg leg--right"></span>
+          </div>
+          <div class="hero-chair"><span></span></div>
+        </div>
+      </section>
+
+      <section class="today" id="today" aria-labelledby="today-title">
+        <div class="section-heading">
+          <div>
+            <p class="section-no">今日完整一组</p>
+            <h2 id="today-title">七类都练到，<br />换动作也不漏项。</h2>
+          </div>
+          <p>系统每次从 21 个低强度动作中，为七个训练类别各选一个。每个动作 8 次，左右动作会自动交替。</p>
+        </div>
+        <ol class="plan-list" id="plan-list" aria-live="polite"></ol>
+        <div class="today__actions">
+          <button class="button button--primary" id="start-workout-2" type="button">从第 1 个动作开始</button>
+          <button class="button button--quiet" id="new-plan-2" type="button">一键重新生成</button>
+        </div>
+      </section>
+
+      <section class="coverage" aria-labelledby="coverage-title">
+        <p class="section-no">为什么这样组合</p>
+        <h2 id="coverage-title">肌肉、平衡、活动量，<br /><em>一个都不能少。</em></h2>
+        <div class="coverage__columns">
+          <p><strong>全身力量</strong><span>腿、髋、背、腹、胸、肩和手臂都会练到，帮助保持起身、走路、推门和拿东西的能力。</span></p>
+          <p><strong>功能平衡</strong><span>每天安排扶椅平衡动作。椅子始终在手边，支撑腿保持微弯，不锁死关节。</span></p>
+          <p><strong>还要走一走</strong><span>这组是每日保肌起点，不能代替整周有氧活动。能力允许时，另加分段步行或医生建议的活动。</span></p>
+        </div>
+      </section>
+
+      <section class="safety" id="safe" aria-labelledby="safe-title">
+        <div>
+          <p class="section-no">开始前先看</p>
+          <h2 id="safe-title">今天不舒服，<br />就先不练。</h2>
+        </div>
+        <div class="safety__list">
+          <p><strong>准备好</strong> 使用不带轮、不会滑动的牢固椅子；穿防滑鞋；初次练习最好有人在旁。</p>
+          <p><strong>马上停止</strong> 若出现胸痛、明显气短、头晕、心慌、恶心或异常疼痛，立即停止并寻求医疗帮助。</p>
+          <p><strong>先问医生</strong> 最近跌倒、手术或骨折，或有不稳定的心脏病、血压问题、严重关节疼痛时，先咨询医生或物理治疗师。</p>
+          <p class="disclaimer">本网站提供一般健康教育，不替代个人诊断、治疗或康复处方。</p>
+        </div>
+      </section>
+    </main>
+
+    <footer>
+      <div class="brand"><span class="brand__mark" aria-hidden="true">长</span><span>常青动一动</span></div>
+      <p>少一点难度，多一点坚持。</p>
+      <p class="sources">组合依据：<a href="https://www.cdc.gov/physical-activity-basics/guidelines/older-adults.html" target="_blank" rel="noreferrer">CDC 老年活动建议</a>、<a href="https://www.nia.nih.gov/health/exercise-and-physical-activity/three-types-exercise-can-improve-your-health-and-physical" target="_blank" rel="noreferrer">NIA 三类运动建议</a>；本组作为温和的每日起点。</p>
+    </footer>
+
+    <section class="trainer" id="trainer" aria-hidden="true" aria-label="跟练模式">
+      <header class="trainer__header">
+        <button class="icon-button" id="close-trainer" type="button" aria-label="退出跟练">退出</button>
+        <div class="trainer__progress" aria-label="训练进度">
+          <span id="progress-label">动作 1 / 7</span>
+          <div class="progress-track"><i id="progress-fill"></i></div>
+        </div>
+        <button class="icon-button" id="voice-toggle" type="button" aria-pressed="true">语音开</button>
+      </header>
+
+      <div class="trainer__screen">
+        <div class="trainer__visual">
+          <canvas id="trainer-canvas" role="img" aria-label="动作动画演示"></canvas>
+          <div class="count-orb" aria-hidden="true"><span id="beat-count">1</span><small>跟着数</small></div>
+          <div class="rep-count"><strong id="rep-count">1</strong><span>/ 8 次</span></div>
+        </div>
+
+        <div class="trainer__copy">
+          <p class="trainer__category"><span id="exercise-category">热身活动</span><span class="trainer__view" id="view-label">正面视角 · 左右交替</span></p>
+          <h2 id="exercise-name">坐姿踏步</h2>
+          <p class="trainer__purpose" id="exercise-purpose"></p>
+          <ol id="exercise-steps"></ol>
+          <p class="trainer__cue"><span>注意</span><b id="exercise-cue"></b></p>
+        </div>
+      </div>
+
+      <div class="trainer__controls">
+        <button type="button" id="previous-exercise">上一个</button>
+        <button class="control-main" type="button" id="pause-workout">暂停</button>
+        <button type="button" id="next-exercise">下一个</button>
+      </div>
+
+      <div class="transition" id="transition" aria-hidden="true" aria-live="polite">
+        <p id="transition-kicker">这个动作完成</p>
+        <h2 id="transition-title">准备下一个</h2>
+        <strong id="transition-count">3</strong>
+      </div>
+    </section>
+
+    <script src="app.js"></script>
+  </body>
+</html>
