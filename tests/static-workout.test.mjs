@@ -22,10 +22,22 @@ function harness({deferred=false,blockedStorage=false}={}) {
   }
   const document={hidden:false,getElementById:el,querySelectorAll(){return []},addEventListener(){},activeElement:makeElement(),body:makeElement()};
   const context=vm.createContext({document,window:{AudioContext,crypto:webcrypto,matchMedia:()=>({matches:false}),addEventListener(){}},localStorage:{getItem(){if(blockedStorage)throw Error('blocked');return null},setItem(){if(blockedStorage)throw Error('blocked')}},performance:{now:()=>now*1000},requestAnimationFrame(){},atob:s=>Buffer.from(s,'base64').toString('binary'),setTimeout(fn){const id=++timerId;timers.set(id,fn);return id},clearTimeout:id=>timers.delete(id),console});
-  vm.runInContext(library+'\n'+motion+'\n'+app+'\n;globalThis.subject={Motion,ITEMS,state,audio,newPlan,openPractice,closePractice,resumePractice,pausePractice,toggleVoice,navigateExercise,frame,holdRest,restNext,testSound,getPlan:()=>plan};',context);
+  vm.runInContext(library+'\n'+motion+'\n'+app+'\n;globalThis.subject={Motion,ITEMS,state,audio,newPlan,openPractice,closePractice,resumePractice,pausePractice,toggleVoice,navigateExercise,frame,holdRest,restNext,testSound,selectAvatar,getPlan:()=>plan};',context);
   return {s:context.subject,el,nodes,resumers,timers,setNow(t){now=t}};
 }
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
+
+test('both avatars render every exercise without changing rig or playback',async()=>{
+  const {s,el}=harness();s.openPractice();await settle();const node=s.audio.node,mode=s.state.mode;
+  const poses=s.ITEMS.map(item=>JSON.stringify(s.Motion.pose(item.id,.5)));
+  const ctx=new Proxy({},{get:(target,key)=>target[key]??(()=>{}),set:(target,key,value)=>{target[key]=value;return true}});
+  const canvas={width:360,height:260,getBoundingClientRect:()=>({width:360,height:260}),getContext:()=>ctx};
+  for(const avatar of ['male','female']){
+    s.selectAvatar(avatar);assert.equal(s.Motion.getAvatar(),avatar);assert.equal(el('trainer-avatar').value,avatar);assert.equal(s.audio.node,node);assert.equal(s.state.mode,mode);
+    s.ITEMS.forEach((item,i)=>{assert.equal(JSON.stringify(s.Motion.pose(item.id,.5)),poses[i]);s.Motion.draw(canvas,item.id,.5);s.Motion.draw(canvas,item.id,.5,1,{comparison:true})});
+  }
+  s.selectAvatar('invalid');assert.equal(s.Motion.getAvatar(),'male');
+});
 
 test('21 poses have connected, fixed-length limbs and finite joints',()=>{
   const {s}=harness();assert.equal(s.ITEMS.length,21);

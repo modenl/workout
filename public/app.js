@@ -13,6 +13,16 @@ const PHASES={
 };
 const DEFAULT_IDS=["march","stand","wallPush","elbowPull","kneePress","seatedHeel","weightShift"];
 const storage={get(key){try{return localStorage.getItem(key);}catch{return null;}},set(key,value){try{localStorage.setItem(key,value);}catch{}}};
+Motion.setAvatar(storage.get("cq-avatar-v1"));
+function selectAvatar(value){
+  Motion.setAvatar(value);storage.set("cq-avatar-v1",Motion.getAvatar());syncAvatar();observeThumbnails();renderPractice();
+  Motion.draw($("hero-canvas"),"stand",.5);
+}
+function syncAvatar(){
+  const value=Motion.getAvatar();document.querySelectorAll("[data-avatar]").forEach(button=>button.setAttribute("aria-pressed",String(button.dataset.avatar===value)));
+  $("trainer-avatar").value=value;
+  $("hero-canvas").setAttribute("aria-label",(value==="female"?"女":"男")+"示范人物，坐站起身关节动画");
+}
 let plan=DEFAULT_IDS.map(id=>ITEM_BY_ID[id]);
 try{const saved=JSON.parse(storage.get("cq-plan-v2"));if(Array.isArray(saved)&&saved.length===7&&saved.every((id,i)=>ITEM_BY_ID[id]?.key===CATEGORIES[i].key))plan=saved.map(id=>ITEM_BY_ID[id]);}catch{}
 const state={open:false,preview:false,index:0,list:plan,mode:"closed",elapsed:0,clockStart:0,clockBase:0,clockAudio:false,voice:true,operation:0,reference:false,restUntil:0,restRemaining:20,holdRest:false,beat:-1,opener:null};
@@ -141,7 +151,8 @@ function frame(now){
   }else{const t=reducedMotion?.5:(1-Math.cos(now/4000*Math.PI*2))/2;if(heroVisible)Motion.draw($("hero-canvas"),"stand",t);if(!reducedMotion)visibleCanvases.forEach(c=>Motion.draw(c,c.dataset.exercise,t,1,{small:true}));}
 }
 $("test-sound").addEventListener("click",testSound);$("start-workout").addEventListener("click",()=>openPractice());$("start-workout-2").addEventListener("click",()=>openPractice());$("new-plan").addEventListener("click",newPlan);
-document.addEventListener("click",event=>{const preview=event.target.closest("[data-preview]");if(preview)openPractice(preview.dataset.preview);const filter=event.target.closest("[data-filter]");if(filter)renderLibrary(filter.dataset.filter);});
+document.addEventListener("click",event=>{const preview=event.target.closest("[data-preview]");if(preview)openPractice(preview.dataset.preview);const filter=event.target.closest("[data-filter]");if(filter)renderLibrary(filter.dataset.filter);const avatar=event.target.closest("[data-avatar]");if(avatar)selectAvatar(avatar.dataset.avatar);});
+$("trainer-avatar").addEventListener("change",event=>selectAvatar(event.target.value));
 $("close-trainer").addEventListener("click",closePractice);$("trainer").addEventListener("cancel",e=>{e.preventDefault();closePractice();});$("pause-workout").addEventListener("click",togglePause);$("voice-toggle").addEventListener("click",toggleVoice);
 $("previous-exercise").addEventListener("click",()=>navigateExercise(-1));$("next-exercise").addEventListener("click",()=>state.index===state.list.length-1?startRest():navigateExercise(1));
 $("reference-toggle").addEventListener("click",()=>{state.reference=!state.reference;$("trainer").classList.toggle("reference-mode",state.reference);if(state.reference&&(state.mode==="running"||state.mode==="starting"))pausePractice();$("reference-toggle").setAttribute("aria-pressed",String(state.reference));$("reference-toggle").textContent=state.reference?"返回动画":"看起止姿势";renderPractice();});
@@ -150,4 +161,4 @@ document.addEventListener("visibilitychange",()=>{if(document.hidden){testToken+
 document.addEventListener("keydown",e=>{if(e.code==="Space"&&state.open&&e.target.tagName!=="BUTTON"){e.preventDefault();togglePause();}});
 window.addEventListener("resize",()=>{observeThumbnails();renderPractice();});
 if(typeof IntersectionObserver==="function")new IntersectionObserver(e=>{heroVisible=e[0].isIntersecting;}).observe($("hero-canvas"));
-renderPlan();renderLibrary();requestAnimationFrame(frame);
+syncAvatar();renderPlan();renderLibrary();requestAnimationFrame(frame);
