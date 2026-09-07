@@ -39,8 +39,8 @@ test('both avatars render every exercise without changing rig or playback',async
   s.selectAvatar('invalid');assert.equal(s.Motion.getAvatar(),'male');
 });
 
-test('21 poses have connected, fixed-length limbs and finite joints',()=>{
-  const {s}=harness();assert.equal(s.ITEMS.length,21);
+test('35 poses have connected, fixed-length limbs and finite joints',()=>{
+  const {s}=harness();assert.equal(s.ITEMS.length,35);
   const dist=(a,b)=>Math.hypot(...a.map((x,i)=>x-b[i]));
   for(const item of s.ITEMS)for(const side of [-1,1])for(const t of [0,.25,.5,.75,1]){
     const p=s.Motion.pose(item.id,t,side);
@@ -54,6 +54,16 @@ test('wall push keeps palms on wall; calf raises keep toes planted',()=>{
     const wall=s.Motion.pose('wallPush',t);for(const a of wall.arms)assert.ok(Math.abs(a.hand[2]-132)<.001);
     for(const id of ['heel','seatedHeel']){const p=s.Motion.pose(id,t);for(const l of p.legs){assert.equal(l.toe[1],id==='heel'?10:12);assert.equal(l.toe[2],id==='heel'?29:31)}}
   }
+});
+test('new moves are complete, distinct, and preserve stationary supports',()=>{
+  const {s}=harness();const added=s.ITEMS.filter(i=>i.isNew);assert.equal(added.length,14);
+  for(const key of new Set(s.ITEMS.map(i=>i.key)))assert.equal(s.ITEMS.filter(i=>i.key===key).length,5);
+  const joints=p=>JSON.stringify([p.hip,p.shoulder,p.head,p.legs,p.arms]);
+  for(const item of added){assert.equal(item.steps.length,2);assert.ok(item.name&&item.purpose&&item.cue);assert.notEqual(joints(s.Motion.pose(item.id,0)),joints(s.Motion.pose(item.id,1)));}
+  for(const id of ['hamstringCurl','forwardTap','sideTap'])for(const t of [0,.25,.5,.75,1]){
+    const p=s.Motion.pose(id,t);for(const a of p.arms){assert.ok(Math.abs(a.hand[1]-190)<.001);assert.ok(Math.abs(a.hand[2]-80)<.001);}
+  }
+  for(const id of ['bicepsCurl','shoulderRotate']){const a=s.Motion.pose(id,0),b=s.Motion.pose(id,1);assert.deepEqual(a.arms.map(x=>x.elbow),b.arms.map(x=>x.elbow));}
 });
 test('changing plans preserves all 7 categories, with no repeated previous move',()=>{
   const {s}=harness({blockedStorage:true});const variants=new Set();

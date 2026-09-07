@@ -3,6 +3,10 @@ const $=id=>document.getElementById(id);
 const ITEMS=CATEGORIES.flatMap(category=>LIBRARY[category.key].map(item=>({...item,key:category.key,category:category.label})));
 const ITEM_BY_ID=Object.fromEntries(ITEMS.map(i=>[i.id,i]));
 const PHASES={
+ armSwing:["小幅摆臂","回正 · 换边"],shoulderLift:["轻轻提肩","放松肩膀"],kneeOpen:["双膝向外打开","有控制地收回"],hamstringCurl:["弯膝 · 脚跟向后","放回 · 换边"],
+ armRaise:["向前抬臂","有控制地放下"],bicepsCurl:["弯肘抬手","上臂不动 · 放下"],chestOpen:["轻轻向外打开","放松 · 收回"],shoulderRotate:["手肘不动 · 外转","轻轻收回"],
+ hipHinge:["从髋部稍前倾","背部长直 · 坐正"],diagonalReach:["向对侧膝前伸手","收回 · 换边"],anklePump:["脚尖向上勾","放松下压 · 换边"],heelToe:["脚尖落下 · 提脚跟","脚跟落下 · 抬脚尖"],
+ forwardTap:["向前点一小步","收回 · 换边"],sideTap:["向旁点一小步","收回 · 换边"],
  march:["抬脚 · 自然呼吸","轻放 · 换边"],seatedJack:["向外打开","收回坐稳"],reachTap:["向前点脚","收回换边"],
  stand:["向前倾 · 站起","弯髋屈膝 · 坐下"],miniSquat:["臀部后移 · 小蹲","用腿站起"],extend:["伸膝 · 不锁死","放下换边"],
  wallPush:["屈肘靠近墙","推墙回到起点"],palmPress:["轻轻推压","放松肩膀"],forwardPress:["向前推 · 呼气","收回 · 吸气"],
@@ -94,8 +98,8 @@ function renderPlan(){
   $("plan-summary").textContent="7 个动作 · 动作间休息 20 秒 · 可延长休息";observeThumbnails();
 }
 function renderLibrary(filter="all"){
-  $("library-filters").innerHTML=[{key:"all",label:"全部 "+ITEMS.length+" 个"},...CATEGORIES].map(c=>'<button data-filter="'+c.key+'" aria-pressed="'+(filter===c.key)+'">'+c.label+"</button>").join("");
-  $("library-list").innerHTML=ITEMS.filter(i=>filter==="all"||i.key===filter).map(item=>'<article class="library-item">'+thumbnail(item)+'<div><h3>'+item.name+'</h3><p>'+item.purpose+'</p><button data-preview="'+item.id+'">查看动作与要点 ↗</button></div></article>').join("");observeThumbnails();
+  $("library-filters").innerHTML=[{key:"all",label:"全部 "+ITEMS.length+" 个"},{key:"new",label:"新增 "+ITEMS.filter(i=>i.isNew).length+" 个"},...CATEGORIES.map(c=>({...c,label:c.label+" · "+LIBRARY[c.key].length}))].map(c=>'<button data-filter="'+c.key+'" aria-pressed="'+(filter===c.key)+'">'+c.label+"</button>").join("");
+  $("library-list").innerHTML=ITEMS.filter(i=>filter==="all"||(filter==="new"?i.isNew:i.key===filter)).map(item=>'<article class="library-item">'+thumbnail(item)+'<div><h3>'+item.name+'</h3><p>'+item.purpose+'</p><button data-preview="'+item.id+'">查看动作与要点 ↗</button></div></article>').join("");observeThumbnails();
 }
 function current(){return state.list[state.index];}
 function updateExercise(){
