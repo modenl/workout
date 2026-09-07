@@ -5,4 +5,6 @@ dialog{border:0;margin:0;padding:0;max-width:none;max-height:none;width:100%;hei
 .reference-mode .counter,.reference-mode .reps{visibility:hidden}
 .viewbar{align-items:center;gap:12px}.view-description{display:flex;flex-direction:column;gap:3px}.reference-toggle{position:static;min-height:44px;font-size:13px;flex-shrink:0}.trainer-copy ol,.purpose{font-size:17px}.cue{font-size:15px}
 @media(max-height:710px){.trainer-copy ol,.purpose{font-size:16px;line-height:1.4}.cue{font-size:14px}.reference-toggle{min-height:40px;font-size:12px}}
+.avatar-picker{display:flex;align-items:center;gap:8px;margin:22px 0 0}.avatar-picker>span{font-size:14px;color:var(--muted);margin-right:5px}.avatar-picker button{min-height:44px;padding:8px 16px;font-size:15px}.avatar-picker button[aria-pressed=true]{background:var(--green);color:white;border-color:var(--green)}#trainer-avatar{font:600 13px var(--sans);color:var(--green);background:var(--paper);border:1px solid var(--line);border-radius:8px;min-height:44px;padding:6px;width:82px;flex-shrink:0}.viewbar{gap:7px}.view-description{margin-right:auto}#trainer-avatar:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
+@media(max-width:380px){#trainer-avatar{font-size:12px;width:75px}.viewbar .reference-toggle{padding-left:8px;padding-right:8px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}

@@ -1,6 +1,9 @@
 /* Small orthographic skeleton. World axes: x=left/right, y=up, z=forward.
    Fixed limb lengths and a two-bone solver keep elbows and knees connected. */
 const Motion = (() => {
+  let avatar="male";
+  function setAvatar(value){avatar=value==="female"?"female":"male";}
+  function getAvatar(){return avatar;}
   const add=(a,b)=>a.map((v,i)=>v+b[i]), sub=(a,b)=>a.map((v,i)=>v-b[i]);
   const mul=(a,s)=>a.map(v=>v*s), dot=(a,b)=>a.reduce((s,v,i)=>s+v*b[i],0);
   const norm=a=>Math.hypot(...a), unit=a=>mul(a,1/(norm(a)||1));
@@ -111,7 +114,7 @@ const Motion = (() => {
     if(p.id==="wallPush"){poly([[-65,0,132],[65,0,132],[65,325,132],[-65,325,132]],"#d5ddca");line([-65,0,132],[-65,325,132],"#9dad97",4);}
     const segments=[];
     for(const l of p.legs){
-      const color=l.active?"#c45532":"#5b7567";
+      const color=l.active?"#c45532":"#344c5b";
       segments.push({a:l.h,b:l.k,c:color,w:23},{a:l.k,b:l.f,c:color,w:19},{a:l.f,b:l.toe,c:"#213f36",w:13});
     }
     for(const arm of p.arms){const color=arm.active?"#c45532":"#507768";segments.push({a:arm.sh,b:arm.elbow,c:color,w:17},{a:arm.elbow,b:arm.hand,c:"#d9a27f",w:14});}
@@ -120,23 +123,45 @@ const Motion = (() => {
     const cut=depth(p.hip)*2;
     const drawSegment=s=>{line(s.a,s.b,"#f1f1e5",s.w+3);line(s.a,s.b,s.c,s.w);};
     segments.filter(s=>depth(add(s.a,s.b))<cut).forEach(drawSegment);
-    const hp=project(p.hip),sp=project(p.shoulder),bodyHalf=p.isSide?17:27;
-    ctx.fillStyle="#2c6552";ctx.beginPath();ctx.moveTo(hp[0]-bodyHalf,hp[1]);ctx.lineTo(hp[0]+bodyHalf,hp[1]);ctx.lineTo(sp[0]+bodyHalf+3,sp[1]);ctx.quadraticCurveTo(sp[0],sp[1]-7,sp[0]-bodyHalf-3,sp[1]);ctx.closePath();ctx.fill();
+    const hp=project(p.hip),sp=project(p.shoulder),female=avatar==="female",bodyHalf=p.isSide?17:(female?25:29),waist=female?bodyHalf-5:bodyHalf-3;
+    ctx.fillStyle="#2c6552";ctx.beginPath();ctx.moveTo(hp[0]-bodyHalf,hp[1]);ctx.lineTo(hp[0]+bodyHalf,hp[1]);ctx.quadraticCurveTo(hp[0]+waist,hp[1]-42,sp[0]+bodyHalf+3,sp[1]);ctx.quadraticCurveTo(sp[0],sp[1]-7,sp[0]-bodyHalf-3,sp[1]);ctx.quadraticCurveTo(hp[0]-waist,hp[1]-42,hp[0]-bodyHalf,hp[1]);ctx.closePath();ctx.fill();
+    ctx.strokeStyle="#63917a";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(sp[0]-bodyHalf+6,sp[1]+9);ctx.lineTo(hp[0]-waist+5,hp[1]-9);ctx.stroke();
     line(add(p.hip,[-23,0,0]),add(p.hip,[23,0,0]),"#214d3f",12);
     line(p.shoulder,add(p.head,[0,-14,0]),"#d9a27f",14);
     segments.filter(s=>depth(add(s.a,s.b))>=cut).forEach(drawSegment);
     for(const l of p.legs){circle(l.k,5,"#f5eedc");circle(l.k,2.5,l.active?"#a7482c":"#456252");}
     for(const arm of p.arms){circle(arm.elbow,4.5,"#f5eedc");circle(arm.hand,7,"#d9a27f");}
-    circle(p.head,23,"#e6b38f");
-    // Hair and nose are world-space landmarks, so a side view visibly faces right.
-    circle(add(p.head,[0,12,-4]),19,"#e5e4d8");
-    circle(add(p.head,[0,-2,23]),5,"#cc906b");
-    circle(add(p.head,[-8,4,19]),2.3,"#183d33");
-    if(!p.isSide)circle(add(p.head,[8,4,19]),2.3,"#183d33");
+    // The two mature, athletic appearances share the exact same motion rig.
+    const head=project(p.head);ctx.save();ctx.translate(...head);
+    const path=(color,draw)=>{ctx.fillStyle=color;ctx.beginPath();draw();ctx.closePath();ctx.fill();};
+    const stroke=(color,width,draw)=>{ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineCap="round";ctx.beginPath();draw();ctx.stroke();};
+    const hair="#26312e",skin="#dba47f",lightSkin="#e9b992";
+    if(female)path(hair,()=>{ctx.moveTo(-15,-18);ctx.bezierCurveTo(-39,-26,-40,-4,-31,10);ctx.quadraticCurveTo(-26,21,-33,31);ctx.bezierCurveTo(-11,22,-21,3,-15,-18);});
+    if(p.isSide){
+      path(skin,()=>{ctx.moveTo(-17,-16);ctx.quadraticCurveTo(1,-30,15,-17);ctx.lineTo(18,-2);ctx.lineTo(24,5);ctx.quadraticCurveTo(26,8,18,10);ctx.lineTo(16,19);ctx.quadraticCurveTo(7,28,-4,21);ctx.lineTo(-16,10);});
+      path(lightSkin,()=>{ctx.moveTo(-7,-15);ctx.quadraticCurveTo(10,-25,15,-14);ctx.lineTo(16,-1);ctx.lineTo(22,5);ctx.lineTo(15,8);ctx.lineTo(13,17);ctx.quadraticCurveTo(5,21,-4,15);});
+      path(hair,()=>{ctx.moveTo(-19,9);ctx.bezierCurveTo(-28,-8,-20,-29,0,-28);ctx.quadraticCurveTo(15,-29,19,-18);ctx.quadraticCurveTo(7,-9,-6,-12);ctx.lineTo(-10,5);ctx.lineTo(-15,8);});
+      stroke("#1e302d",2,()=>{ctx.moveTo(6,-3);ctx.lineTo(13,-2);});
+      stroke("#2a3932",1.7,()=>{ctx.moveTo(8,2);ctx.lineTo(12,3);});
+      stroke("#9f604a",1.3,()=>{ctx.moveTo(11,14);ctx.quadraticCurveTo(15,15,17,13);});
+      ctx.fillStyle=skin;ctx.beginPath();ctx.ellipse(-10,6,4,6,-.1,0,Math.PI*2);ctx.fill();
+      stroke("#b57c5e",1,()=>{ctx.moveTo(-11,4);ctx.quadraticCurveTo(-6,2,-9,9);});
+      if(!female)stroke("#536254",1.3,()=>{ctx.moveTo(-17,-9);ctx.lineTo(-17,-2);});
+    }else{
+      path(skin,()=>{ctx.moveTo(-19,-13);ctx.quadraticCurveTo(0,-28,19,-13);ctx.lineTo(18,10);ctx.quadraticCurveTo(female?14:17,21,0,25);ctx.quadraticCurveTo(female?-14:-17,21,-18,10);});
+      path(lightSkin,()=>{ctx.moveTo(-13,-12);ctx.quadraticCurveTo(2,-23,16,-12);ctx.lineTo(15,10);ctx.quadraticCurveTo(9,20,1,21);ctx.quadraticCurveTo(-11,16,-13,-12);});
+      path(hair,()=>{ctx.moveTo(-20,5);ctx.bezierCurveTo(-28,-21,-11,-31,7,-27);ctx.quadraticCurveTo(24,-27,21,-9);ctx.lineTo(18,3);ctx.lineTo(14,-12);ctx.quadraticCurveTo(5,-13,0,-18);ctx.quadraticCurveTo(-7,-9,-15,-9);ctx.lineTo(-17,5);});
+      stroke("#26382f",1.8,()=>{ctx.moveTo(-12,-2);ctx.quadraticCurveTo(-8,-4,-4,-2);ctx.moveTo(5,-2);ctx.quadraticCurveTo(9,-4,13,-1);});
+      stroke("#25372f",1.6,()=>{ctx.moveTo(-11,3);ctx.quadraticCurveTo(-8,1,-5,3);ctx.moveTo(6,3);ctx.quadraticCurveTo(9,1,12,3);});
+      stroke("#b67c5d",1.2,()=>{ctx.moveTo(1,3);ctx.lineTo(-1,10);ctx.lineTo(3,11);});
+      stroke("#9f604a",1.5,()=>{ctx.moveTo(-5,16);ctx.quadraticCurveTo(1,20,7,15);});
+    }
+    stroke("#4c5b4e",1.3,()=>{ctx.moveTo(-13,-19);ctx.quadraticCurveTo(-3,-25,8,-22);});
+    ctx.restore();
     if(p.id==="towelPull"){line(p.arms[0].hand,p.arms[1].hand,p.t>.3?"#c45532":"#bd9857",5);}
     if(p.id==="palmPress"&&p.t>.3){const q=project(p.arms[0].hand);ctx.strokeStyle="#c45532";ctx.lineWidth=2;ctx.beginPath();ctx.arc(q[0],q[1],14+p.t*5,0,Math.PI*2);ctx.stroke();}
     if(!small&&p.isSide){ctx.fillStyle="#4d6a59";ctx.font="13px system-ui";ctx.textAlign="center";ctx.fillText("后", -106,21);ctx.fillText("前 →",113,21);}
     ctx.restore();
   }
-  return {draw,pose,view,ik};
+  return {draw,pose,view,ik,setAvatar,getAvatar};
 })();
