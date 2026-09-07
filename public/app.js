@@ -33,8 +33,19 @@ const state={open:false,preview:false,index:0,list:plan,mode:"closed",elapsed:0,
 let visibleCanvases=new Set(),heroVisible=true;
 const reducedMotion=window.matchMedia?.("(prefers-reduced-motion: reduce)").matches||false;
 class CountAudio {
-  constructor(){this.context=null;this.buffer=null;this.node=null;this.gain=null;}
+  constructor(){this.context=null;this.buffer=null;this.node=null;this.gain=null;this.sessionMode="default";}
+  configurePlaybackSession(){
+    // iOS otherwise treats Web Audio as ambient sound, which follows silent mode.
+    // This configures the existing engine; it does not add another audio player.
+    this.sessionMode="default";
+    try{
+      const session=window.navigator?.audioSession;
+      if(session){session.type="playback";if(session.type==="playback")this.sessionMode="playback";}
+    }catch{this.sessionMode="unavailable";}
+  }
+  modeLabel(){return this.sessionMode==="playback"?"媒体播放模式":"浏览器默认音频模式";}
   ensure(){
+    this.configurePlaybackSession();
     if(!this.context){
       const C=window.AudioContext||window.webkitAudioContext;
       if(!C)throw new Error("此浏览器未提供音频引擎");
@@ -80,8 +91,8 @@ function soundStatus(text){$("sound-status").textContent=text;}
 let testToken=0,testTimer;
 async function testSound(){
   if(state.open)return;const token=++testToken;clearTimeout(testTimer);audio.stop();soundStatus("正在启动计数声音…");
-  try{await audio.unlock();if(token!==testToken||state.open)return;audio.mute(false);audio.start(0,false);soundStatus("录音播放中：一、二、三、四。");
-    testTimer=setTimeout(()=>{if(token===testToken)soundStatus("录音播放结束。听到数拍后，就可以开始跟练。");},4200);
+  try{await audio.unlock();if(token!==testToken||state.open)return;audio.mute(false);audio.start(0,false);soundStatus("计数播放中（"+audio.modeLabel()+"）：一、二、三、四。");
+    testTimer=setTimeout(()=>{if(token===testToken)soundStatus("录音播放结束（"+audio.modeLabel()+"）。若未听到，请检查媒体音量及声音输出设备。");},4200);
   }catch(error){if(token===testToken)soundStatus("未能播放："+error.message+"。");}
 }
 function randomIndex(n){const v=new Uint32Array(1);if(window.crypto?.getRandomValues){window.crypto.getRandomValues(v);return v[0]%n;}return Math.floor(Math.random()*n);}

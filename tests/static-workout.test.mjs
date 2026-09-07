@@ -7,25 +7,39 @@ import { execFileSync } from 'node:child_process';
 
 const root = new URL('../', import.meta.url);
 const [library, motion, app, wav] = await Promise.all(['public/library.js','public/motion.js','public/app.js','public/audio/count-cycle.wav'].map((p,i)=>readFile(new URL(p,root),i===3?undefined:'utf8')));
-function harness({deferred=false,blockedStorage=false}={}) {
-  let now=0;const nodes=[],resumers=[],elements=new Map(),timers=new Map();let timerId=0;
+function harness({deferred=false,blockedStorage=false,audioSession}={}) {
+  let now=0;const nodes=[],resumers=[],events=[],elements=new Map(),timers=new Map();let timerId=0;
   const makeElement=()=>({textContent:'',innerHTML:'',hidden:false,dataset:{},style:{},disabled:false,tagName:'BUTTON',classList:{add(){},remove(){},toggle(){}},setAttribute(){},addEventListener(){},focus(){},showModal(){this.open=true},close(){this.open=false},querySelectorAll(){return Array.from({length:4},makeElement)},getBoundingClientRect(){return {width:0,height:0}}});
   const el=id=>{if(!elements.has(id))elements.set(id,makeElement());return elements.get(id)};
   el('count-audio-source').dataset.src='data:audio/wav;base64,'+wav.toString('base64');
   class AudioContext {
-    constructor(){this.state=deferred?'suspended':'running';this.currentTime=0;this.sampleRate=48000;this.destination={};}
+    constructor(){events.push({event:'create',sessionType:audioSession?.type});this.state=deferred?'suspended':'running';this.currentTime=0;this.sampleRate=48000;this.destination={};}
     createGain(){return {connect(){},gain:{setValueAtTime(){}}}}
     createBuffer(channels,length,rate){const data=new Float32Array(length);return {duration:length/rate,getChannelData(){return data}}}
     createBufferSource(){const node={connect(){},disconnect(){},start(...args){this.started=args},stop(){this.stopped=true}};nodes.push(node);return node}
     addEventListener(){}
-    resume(){if(deferred)return new Promise(resolve=>resumers.push(()=>{this.state='running';resolve()}));this.state='running';return Promise.resolve()}
+    resume(){events.push({event:'resume',sessionType:audioSession?.type});if(deferred)return new Promise(resolve=>resumers.push(()=>{this.state='running';resolve()}));this.state='running';return Promise.resolve()}
   }
   const document={hidden:false,getElementById:el,querySelectorAll(){return []},addEventListener(){},activeElement:makeElement(),body:makeElement()};
-  const context=vm.createContext({document,window:{AudioContext,crypto:webcrypto,matchMedia:()=>({matches:false}),addEventListener(){}},localStorage:{getItem(){if(blockedStorage)throw Error('blocked');return null},setItem(){if(blockedStorage)throw Error('blocked')}},performance:{now:()=>now*1000},requestAnimationFrame(){},atob:s=>Buffer.from(s,'base64').toString('binary'),setTimeout(fn){const id=++timerId;timers.set(id,fn);return id},clearTimeout:id=>timers.delete(id),console});
+  const context=vm.createContext({document,window:{AudioContext,navigator:{audioSession},crypto:webcrypto,matchMedia:()=>({matches:false}),addEventListener(){}},localStorage:{getItem(){if(blockedStorage)throw Error('blocked');return null},setItem(){if(blockedStorage)throw Error('blocked')}},performance:{now:()=>now*1000},requestAnimationFrame(){},atob:s=>Buffer.from(s,'base64').toString('binary'),setTimeout(fn){const id=++timerId;timers.set(id,fn);return id},clearTimeout:id=>timers.delete(id),console});
   vm.runInContext(library+'\n'+motion+'\n'+app+'\n;globalThis.subject={Motion,ITEMS,state,audio,newPlan,openPractice,closePractice,resumePractice,pausePractice,toggleVoice,navigateExercise,frame,holdRest,restNext,testSound,selectAvatar,getPlan:()=>plan};',context);
-  return {s:context.subject,el,nodes,resumers,timers,setNow(t){now=t}};
+  return {s:context.subject,el,nodes,resumers,timers,events,setNow(t){now=t}};
 }
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
+
+test('iOS media session is configured before creating and resuming audio',async()=>{
+  const session={type:'ambient'},h=harness({audioSession:session});await h.s.audio.unlock();
+  assert.equal(session.type,'playback');assert.equal(h.s.audio.modeLabel(),'媒体播放模式');
+  assert.deepEqual(h.events,[{event:'create',sessionType:'playback'},{event:'resume',sessionType:'playback'}]);
+  session.type='ambient';await h.s.audio.unlock();assert.equal(h.events.at(-1).sessionType,'playback');
+});
+test('browsers without AudioSession keep using the same Web Audio engine',async()=>{
+  const {s}=harness();await s.audio.unlock();s.audio.start();assert.ok(s.audio.node);assert.equal(s.audio.sessionMode,'default');
+});
+test('a rejected optional media-session setting does not break audio startup',async()=>{
+  const session={get type(){return 'ambient'},set type(_){throw Error('unsupported')}};
+  const {s}=harness({audioSession:session});await s.audio.unlock();s.audio.start();assert.ok(s.audio.node);assert.equal(s.audio.sessionMode,'unavailable');
+});
 
 test('both avatars render every exercise without changing rig or playback',async()=>{
   const {s,el}=harness();s.openPractice();await settle();const node=s.audio.node,mode=s.state.mode;
