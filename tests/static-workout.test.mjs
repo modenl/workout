@@ -27,6 +27,19 @@ function harness({deferred=false,blockedStorage=false,audioSession}={}) {
 }
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
 
+test('sound reminder is conditional advice, respects webpage mute, and yields to errors',async()=>{
+  const {s,el}=harness();s.openPractice();await settle();
+  assert.equal(el('trainer-status').hidden,false);
+  assert.equal(el('trainer-status').textContent,'听不到数拍？请关闭手机静音模式，并调高媒体音量。');
+  s.pausePractice('声音被系统暂停');assert.equal(el('trainer-status').textContent,'声音被系统暂停');
+  s.toggleVoice();assert.match(el('trainer-status').textContent,/网页数拍声音已关闭/);
+  s.toggleVoice();assert.match(el('trainer-status').textContent,/听不到数拍？/);
+  s.closePractice();await s.testSound();
+  const html=await readFile(new URL('public/legacy.html',root),'utf8');
+  assert.match(html,/<p id="sound-help">听不到数拍？请关闭手机静音模式，并调高媒体音量。<\/p>/);
+  assert.match(html,/id="test-sound" aria-describedby="sound-help"/);
+});
+
 test('iOS media session is configured before creating and resuming audio',async()=>{
   const session={type:'ambient'},h=harness({audioSession:session});await h.s.audio.unlock();
   assert.equal(session.type,'playback');assert.equal(h.s.audio.modeLabel(),'媒体播放模式');

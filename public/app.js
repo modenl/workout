@@ -86,7 +86,7 @@ class CountAudio {
   stop(){if(this.node){this.node.onended=null;try{this.node.stop();}catch{}this.node.disconnect();this.node=null;}}
 }
 const audio=new CountAudio();
-function setStatus(text){$("trainer-status").textContent=text;$("trainer-status").hidden=!text;}
+function setStatus(text){$("trainer-status").textContent=text||(state.voice?"听不到数拍？请关闭手机静音模式，并调高媒体音量。":"网页数拍声音已关闭；点右上角「声音关」可重新开启。");$("trainer-status").hidden=false;}
 function soundStatus(text){$("sound-status").textContent=text;}
 let testToken=0,testTimer;
 async function testSound(){
@@ -141,7 +141,7 @@ function openPractice(id){
 }
 function closePractice(){state.operation++;testToken++;audio.stop();state.open=false;state.mode="closed";$("trainer").close();document.body.classList.remove("training");state.opener?.focus();}
 function togglePause(){if(state.mode==="running"||state.mode==="starting"){pausePractice();return;}if(state.mode==="paused")resumePractice();}
-function toggleVoice(){const running=state.mode==="running";if(running||state.mode==="starting")pausePractice();state.voice=!state.voice;$("voice-toggle").textContent=state.voice?"声音开":"声音关";$("voice-toggle").setAttribute("aria-pressed",String(state.voice));if(running)resumePractice();}
+function toggleVoice(){const running=state.mode==="running";if(running||state.mode==="starting")pausePractice();state.voice=!state.voice;$("voice-toggle").textContent=state.voice?"声音开":"声音关";$("voice-toggle").setAttribute("aria-pressed",String(state.voice));setStatus("");if(running)resumePractice();}
 function navigateExercise(delta){state.operation++;audio.stop();state.mode="paused";state.index=Math.max(0,Math.min(state.list.length-1,state.index+delta));state.elapsed=0;updateExercise();resumePractice();}
 function startRest(){
   state.elapsed=32;audio.stop();state.operation++;state.mode="rest";state.holdRest=false;state.restRemaining=20;state.restUntil=performance.now()/1000+20;
