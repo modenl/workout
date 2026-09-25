@@ -7,7 +7,11 @@ const Motion = (() => {
   const add=(a,b)=>a.map((v,i)=>v+b[i]), sub=(a,b)=>a.map((v,i)=>v-b[i]);
   const mul=(a,s)=>a.map(v=>v*s), dot=(a,b)=>a.reduce((s,v,i)=>s+v*b[i],0);
   const norm=a=>Math.hypot(...a), unit=a=>mul(a,1/(norm(a)||1));
-  const mix=(a,b,t)=>a+(b-a)*t, rad=d=>d*Math.PI/180;
+  const mix=(a,b,t)=>a+(b-a)*t, rad=d=>d*Math.PI/180, lerp=(a,b,t)=>a.map((v,i)=>mix(v,b[i],t));
+  const clamp=(v,lo=0,hi=1)=>Math.min(hi,Math.max(lo,v)), smooth=u=>(u=clamp(u))*u*(3-2*u);
+  // Minimum-jerk timing (natural reaching): out on beats 1–2, back on 3–4, settling at each end.
+  const minJerk=u=>u*u*u*(10+u*(6*u-15));
+  function ease(phase){const p=((phase%1)+1)%1;return minJerk(p<.5?2*p:2-2*p);}
   function ik(a,target,l1,l2,pole) {
     const delta=sub(target,a), raw=norm(delta), d=Math.min(l1+l2-.1,Math.max(.1,raw)), axis=unit(delta);
     const end=add(a,mul(axis,d)), along=(l1*l1-l2*l2+d*d)/(2*d);
@@ -21,8 +25,13 @@ const Motion = (() => {
   function view(id){return sideViews.has(id)?"侧面 · 面向右 →":"正面 · 如照镜子";}
   function pose(id,t,side=1) {
     const seated=!standing.has(id), isSide=sideViews.has(id);
-    let hip=[0,seated?88:160,seated?-68:0], torso=[0,100,0];
-    if(id==="stand"){hip=[0,mix(88,160,t),mix(-68,0,t)];torso=[0,100-10*Math.sin(Math.PI*t),24*Math.sin(Math.PI*t)];}
+    let hip=[0,seated?88:160,seated?-68:0], torso=[0,100,0], rise=0;
+    if(id==="stand"){
+      // Lean until the head is over the toes, lift off, then rise as the trunk straightens.
+      rise=smooth((t-.22)/.78);hip=[0,mix(88,160,rise),mix(-68,0,Math.pow(rise,.7))];
+      const headZ=-68+78*smooth(t/.32)-10*smooth((t-.3)/.7),lean=Math.asin(clamp((headZ-hip[2])/134,0,.6));
+      torso=[0,100*Math.cos(lean),100*Math.sin(lean)];
+    }
     if(id==="miniSquat"){hip=[0,160-30*t,-28*t];torso=[0,98,18*t];}
     if(id==="heel")hip[1]+=15*t;
     if(id==="weightShift"){hip[0]=side*21*t;hip[1]-=6*t;}
@@ -73,7 +82,7 @@ const Motion = (() => {
       legs.push({s,h,k,f,toe,active:legActive});
       const sh=add(shoulder,[s*29,-4,0]);
       let hand=add(hip,[s*38,15,27]),pole=[s*.4,-1,0],armActive=false;
-      if(id==="stand"){hand=add(hip,[s*32,0,24]);}
+      if(id==="stand"){hand=lerp(add(lerp(h,k,.55),[s*3,13,0]),add(hip,[s*30,2,22]),rise*rise);pole=[s*.3,-.4,-1];}
       if(supported.has(id)){hand=[s*30,190,80];}
       if(id==="armSwing"){hand=add(hip,[s*37,15+15*t,27+(active?38:-30)*t]);armActive=true;}
       if(id==="shoulderLift"){hand[1]+=8*t;armActive=true;}
@@ -104,7 +113,57 @@ const Motion = (() => {
     }
     return {hip,shoulder,head,legs,arms,seated,isSide,id,t,side};
   }
-  function draw(canvas,id,t=0,side=1,{comparison=false,small=false}={}) {
+  // Joints with a motion arrow: H hands, E elbows, S shoulders, F toes, A heels, K knees, T head, P pelvis;
+  // lower case: working side only (o: the other hand).
+  const TRACE={march:"k",seatedJack:"HF",reachTap:"Hf",armSwing:"H",shoulderLift:"S",stand:"T",miniSquat:"P",extend:"f",kneeOpen:"K",hamstringCurl:"a",wallPush:"T",forwardPress:"H",armRaise:"H",bicepsCurl:"H",elbowPull:"E",lowRow:"E",chestOpen:"H",shoulderRotate:"H",crossMarch:"ko",kneePress:"k",sideReach:"h",hipHinge:"T",diagonalReach:"h",heel:"A",toeLift:"F",seatedHeel:"A",anklePump:"f",heelToe:"FA",side:"f",weightShift:"T",backLeg:"f",forwardTap:"f",sideTap:"f"};
+  function viewOf(p){const a=rad(p.isSide?73:12),c=Math.cos(a),s=Math.sin(a);return {project:v=>[v[0]*c+v[2]*s,-v[1]+(-v[0]*s+v[2]*c)*.12],depth:v=>-v[0]*s+v[2]*c};}
+  const len2=(a,b)=>Math.hypot(b[0]-a[0],b[1]-a[1]),dir2=(a,b)=>{const l=len2(a,b)||1;return [(b[0]-a[0])/l,(b[1]-a[1])/l];};
+  const guideCache=new Map();
+  function guides(id,side=1){
+    const key=id+side;if(guideCache.has(key))return guideCache.get(key);
+    const n=16,poses=[];for(let i=0;i<=n;i++)poses.push(pose(id,i/n,side));
+    const {project,depth}=viewOf(poses[0]);let paths=[];
+    // Each traced joint: [point, pivot it turns around, clearance].
+    const pick=(p,c)=>{const r=[],u=c.toUpperCase();
+      for(const s of [-1,1]){const arm=p.arms.find(x=>x.s===s),leg=p.legs.find(x=>x.s===s);if(c!==u&&(c==="o")===(s===p.side))continue;
+        const j={H:[arm.hand,arm.sh,14],O:[arm.hand,arm.sh,14],E:[arm.elbow,arm.sh,13],S:[arm.sh,p.hip,14],F:[leg.toe,leg.h,13],A:[leg.f,c==="a"?leg.k:leg.toe,13],K:[leg.k,leg.h,16]}[u];if(j)r.push(j);}
+      if(c==="T")r.push([p.head,p.hip,24]);if(c==="P")r.push([p.hip,[0,0,0],30]);return r;};
+    for(const c of TRACE[id]||""){const lists=poses.map(p=>pick(p,c));
+      // flat: the pivot lies along the line of sight, so "away from it" is meaningless on screen.
+      lists[0].forEach((_,j)=>{const [q,pv]=lists[n/2][j];paths.push({pts:lists.map(l=>project(l[j][0])),pivot:project(pv),flat:len2(project(q),project(pv))<.5*norm(sub(q,pv)),r:lists[0][j][2],d:depth(q)});});}
+    // Seen from the side, paired limbs trace nearly one line: keep the nearer.
+    const gap=(P,Q)=>P.pts.reduce((s,v,i)=>s+len2(v,Q.pts[i]),0)/n,chord=P=>dir2(P.pts[0],P.pts[n]);
+    paths=paths.filter(P=>!paths.some(Q=>Q.d>P.d+1&&dot(chord(P),chord(Q))>.7&&gap(P,Q)<40));
+    const out=paths.map(P=>offsetPath(P,project(poses[n/2].hip)[0])).filter(Boolean);
+    guideCache.set(key,out);return out;
+  }
+  // Puts a path beside the limb: outside a clear curve, else away from its pivot, else outward (or below).
+  function offsetPath({pts,pivot,flat,r},bodyX){
+    const path=[pts[0]];for(const q of pts)if(len2(q,path[path.length-1])>.8)path.push(q);
+    let len=0;for(let i=1;i<path.length;i++)len+=len2(path[i-1],path[i]);
+    if(len<3)return null;
+    const a=path[0],b=path[path.length-1],m=path[path.length>>1],c=lerp(a,b,.5),u=dir2(a,b),nrm=[-u[1],u[0]],bulge=dot(sub(m,c),nrm),pd=dot(dir2(pivot,m),nrm);
+    const sign=Math.abs(bulge)>.15*len2(a,b)?Math.sign(bulge):!flat&&Math.abs(pd)>.7?Math.sign(pd):Math.abs(nrm[0])>.5?Math.sign((m[0]-bodyX)*nrm[0])||1:Math.sign(nrm[1]);
+    // Short moves get a fixed-length arrow; longer paths are resampled and rounded.
+    let line=[];
+    if(len<34)line=[-18,18].map(k=>add(c,mul(u,k)));
+    else{let need=0;for(let i=1;i<path.length;i++){const p=path[i-1],q=path[i],d=len2(p,q);for(;need<=d;need+=6)line.push(lerp(p,q,need/d));need-=d;}
+      if(len2(b,line[line.length-1])>2)line.push(b);
+      for(let k=0;k<3;k++)for(let i=1;i<line.length-1;i++)line[i]=mul(add(add(line[i-1],line[i+1]),mul(line[i],2)),.25);}
+    const tan=i=>dir2(line[Math.max(0,i-1)],line[Math.min(line.length-1,i+1)]),t=tan(line.length>>1),off=(t[0]*nrm[1]-t[1]*nrm[0])*sign>=0?r+12:-r-12;
+    return line.map((q,i)=>{const t=tan(i);return [q[0]-t[1]*off,q[1]+t[0]*off];});
+  }
+  const SKIN="#d9a27f",ACTIVE="#c45532",RIM="#f3f1e6",tints=new Map();
+  // Lighten (k>0) or darken (k<0) a #rrggbb colour.
+  function shade(hex,k){
+    if(!tints.has(hex+k)){const n=parseInt(hex.slice(1),16);tints.set(hex+k,"#"+[16,8,0].map(b=>Math.round(mix(n>>b&255,k>0?255:18,Math.abs(k))).toString(16).padStart(2,"0")).join(""));}
+    return tints.get(hex+k);
+  }
+  function capsule(ctx,a,b,r1,r2){
+    const g=Math.atan2(b[1]-a[1],b[0]-a[0]),d=Math.asin(clamp((r1-r2)/(len2(a,b)||1e-6),-1,1)),q=Math.PI/2;
+    ctx.moveTo(a[0]+r1*Math.cos(g+q-d),a[1]+r1*Math.sin(g+q-d));ctx.arc(a[0],a[1],r1,g+q-d,g+3*q+d);ctx.arc(b[0],b[1],r2,g-q+d,g+q-d);ctx.closePath();
+  }
+  function draw(canvas,id,t=0,side=1,{comparison=false,small=false,phase=null}={}) {
     const box=canvas.getBoundingClientRect(), w=box.width,h=box.height;
     if(!w||!h)return;
     const dpr=Math.min(window.devicePixelRatio||1,2);
@@ -112,20 +171,37 @@ const Motion = (() => {
     const ctx=canvas.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
     if(comparison){
       const shift=sideViews.has(id)?.05:0,scale=Math.min(w/660,(h-36)/335);
-      render(ctx,pose(id,0,side),w*(.25-shift),h*.87,scale,true);
-      render(ctx,pose(id,1,side),w*(.75-shift),h*.87,scale,true);
+      render(ctx,pose(id,0,side),w*(.25-shift),h*.87,scale,{small:true});
+      render(ctx,pose(id,1,side),w*(.75-shift),h*.87,scale,{small:true,guide:{dir:1,alpha:1}});
       ctx.fillStyle="#355c4d";ctx.textAlign="center";ctx.font="13px system-ui";ctx.fillText("起始姿势",w*.25,22);ctx.fillText("动作终点",w*.75,22);
-    }else render(ctx,pose(id,t,side),w*.48,h*(small?.96:.92),Math.min(w/(small?255:440),(h-(small?5:15))/335),small);
+    }else{
+      const p=phase==null?-1:((phase%1)+1)%1,e=p%.5,guide=p<0?null:{dir:p<.5?1:-1,alpha:.35+.65*clamp(Math.min(e,.5-e)/.05)};
+      render(ctx,pose(id,t,side),w*.48,h*(small?.96:.92),Math.min(w/(small?255:440),(h-(small?5:15))/335),{small,guide});
+    }
   }
-  function render(ctx,p,cx,cy,scale,small){
-    const a=rad(p.isSide?73:12);
-    const project=v=>[v[0]*Math.cos(a)+v[2]*Math.sin(a),-v[1]+(-v[0]*Math.sin(a)+v[2]*Math.cos(a))*.12];
-    const depth=v=>-v[0]*Math.sin(a)+v[2]*Math.cos(a);
+  function render(ctx,p,cx,cy,scale,{small=false,guide=null}={}){
+    const {project,depth}=viewOf(p);
     ctx.save();ctx.translate(cx,cy);ctx.scale(scale,scale);
-    const line=(v1,v2,color,width=5)=>{const u=project(v1),v=project(v2);ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(...u);ctx.lineTo(...v);ctx.stroke();};
+    const stroke2=(u,v,color,width)=>{ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(...u);ctx.lineTo(...v);ctx.stroke();};
+    const line=(v1,v2,color,width=5)=>stroke2(project(v1),project(v2),color,width);
     const circle=(v,r,color)=>{const q=project(v);ctx.fillStyle=color;ctx.beginPath();ctx.arc(q[0],q[1],r,0,Math.PI*2);ctx.fill();};
     const poly=(vs,color)=>{ctx.fillStyle=color;ctx.beginPath();vs.forEach((v,i)=>{const q=project(v);if(i)ctx.lineTo(...q);else ctx.moveTo(...q);});ctx.closePath();ctx.fill();};
-    ctx.fillStyle="#ccd4c2";ctx.beginPath();ctx.ellipse(15,3,125,13,0,0,Math.PI*2);ctx.fill();
+    // Tapered limb with a light rim, shaded as if lit from the upper left.
+    const solid=(A,B,r1,r2,color,rim=true)=>{
+      if(rim){ctx.fillStyle=RIM;ctx.beginPath();capsule(ctx,A,B,r1+1.7,r2+1.7);ctx.fill();}
+      const [ux,uy]=dir2(A,B),k=.8*ux-.6*uy<0?1:-1,n=len2(A,B)>.5?[-uy*k,ux*k]:[-.6,-.8],r=Math.max(r1,r2),m=lerp(A,B,.5);
+      const g=ctx.createLinearGradient(m[0]+n[0]*r,m[1]+n[1]*r,m[0]-n[0]*r,m[1]-n[1]*r);g.addColorStop(0,shade(color,.22));g.addColorStop(.45,color);g.addColorStop(1,shade(color,-.22));
+      ctx.fillStyle=g;ctx.beginPath();capsule(ctx,A,B,r1,r2);ctx.fill();
+    };
+    const arrowHead=(tip,from,size)=>{
+      const [ux,uy]=dir2(from,tip),bx=tip[0]-ux*size,by=tip[1]-uy*size,w=size*.55;
+      ctx.beginPath();ctx.moveTo(...tip);ctx.lineTo(bx-uy*w,by+ux*w);ctx.lineTo(bx+uy*w,by-ux*w);ctx.closePath();
+      ctx.lineJoin="round";ctx.lineWidth=3;ctx.strokeStyle=RIM;ctx.stroke();ctx.fillStyle=ACTIVE;ctx.fill();
+    };
+    // Floor shadow, plus foot shadows that fade as a foot lifts.
+    const blob=(q,rx,ry,alpha)=>{if(alpha<.01)return;ctx.save();ctx.translate(...q);ctx.scale(rx,ry);const g=ctx.createRadialGradient(0,0,0,0,0,1);g.addColorStop(0,"rgb(52,78,62)");g.addColorStop(1,"rgba(52,78,62,0)");ctx.globalAlpha=alpha;ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,1,0,Math.PI*2);ctx.fill();ctx.restore();};
+    blob([15,3],140,16,.22);
+    for(const l of p.legs)blob(project([(l.f[0]+l.toe[0])/2,0,(l.f[2]+l.toe[2])/2]),24,5.5,.34*clamp(1-(Math.min(l.f[1],l.toe[1])-10)/40));
     const chair=(z,seatY,backY)=>{
       const c="#7d9180";
       for(const x of [-42,42]){line([x,0,z-35],[x,backY,z-35],c,6);line([x,0,z+34],[x,seatY,z+34],c,6);}
@@ -136,25 +212,41 @@ const Motion = (() => {
     if(p.seated||p.id==="stand")chair(-60,76,163);
     if(supported.has(p.id))chair(115,86,190);
     if(p.id==="wallPush"){poly([[-65,0,132],[65,0,132],[65,325,132],[-65,325,132]],"#d5ddca");line([-65,0,132],[-65,325,132],"#9dad97",4);}
-    const segments=[];
+    // Motion paths sit behind the figure; their arrowheads are drawn last, on top.
+    const paths=guide?guides(p.id,p.side):[];
+    ctx.setLineDash([.1,8.5]);ctx.lineCap="round";ctx.lineWidth=3.6;ctx.strokeStyle="rgba(196,85,50,.55)";
+    for(const g of paths){ctx.beginPath();g.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.stroke();}
+    ctx.setLineDash([]);
+    // Far-side limbs in side view are darker, so overlapping legs stay readable.
+    const dim=(c,s)=>p.isSide&&s>0?shade(c,-.14):c,items=[];
     for(const l of p.legs){
-      const color=l.active?"#c45532":"#344c5b";
-      segments.push({a:l.h,b:l.k,c:color,w:23},{a:l.k,b:l.f,c:color,w:19},{a:l.f,b:l.toe,c:"#213f36",w:13});
+      const c=dim(l.active?ACTIVE:"#344c5b",l.s),knee={v:l.k,n:2,r:4.6,active:l.active};
+      items.push({a:l.h,b:l.k,r1:12.5,r2:9.8,c,glow:l.active,joint:knee},{a:l.k,b:l.f,r1:9.6,r2:6.4,c,glow:l.active,joint:knee},{a:add(l.f,mul(sub(l.toe,l.f),-.22)),b:l.toe,r1:7,r2:6.2,c:dim("#213f36",l.s),shoe:true});
     }
-    for(const arm of p.arms){const color=arm.active?"#c45532":"#507768";segments.push({a:arm.sh,b:arm.elbow,c:color,w:17},{a:arm.elbow,b:arm.hand,c:"#d9a27f",w:14});}
+    for(const arm of p.arms){
+      const elbow={v:arm.elbow,n:2,r:3.9,active:arm.active};
+      items.push({a:arm.sh,b:arm.elbow,r1:9,r2:7.4,c:dim(arm.active?ACTIVE:"#507768",arm.s),glow:arm.active,joint:elbow},{a:arm.elbow,b:arm.hand,r1:7.2,r2:5.4,c:dim(SKIN,arm.s),glow:arm.active,joint:elbow,hand:true});
+    }
     // Render far limbs, body, then near limbs for clear front/back occlusion.
-    segments.sort((x,y)=>depth(add(x.a,x.b))-depth(add(y.a,y.b)));
-    const cut=depth(p.hip)*2;
-    const drawSegment=s=>{line(s.a,s.b,"#f1f1e5",s.w+3);line(s.a,s.b,s.c,s.w);};
-    segments.filter(s=>depth(add(s.a,s.b))<cut).forEach(drawSegment);
+    const mid=it=>depth(add(it.a,it.b)),cut=depth(p.hip)*2;
+    items.sort((x,y)=>mid(x)-mid(y));
+    if(!small){ctx.fillStyle="rgba(196,85,50,"+(.1+.16*p.t).toFixed(3)+")";ctx.beginPath();for(const it of items)if(it.glow)capsule(ctx,project(it.a),project(it.b),it.r1+6,it.r2+6);ctx.fill();}
+    // Joint markers go with the later of their two segments, so far knees stay hidden.
+    const drawItem=it=>{
+      const A=project(it.a),B=project(it.b),[ux,uy]=dir2(A,B);solid(A,B,it.r1,it.r2,it.c);
+      if(it.shoe&&len2(A,B)>4){const o=ux<0?-4.3:4.3;stroke2([A[0]-uy*o,A[1]+ux*o],[B[0]-uy*o,B[1]+ux*o],"rgba(238,234,220,.85)",2.2);}
+      if(it.hand)solid([B[0]-ux,B[1]-uy],[B[0]+ux*6.5,B[1]+uy*6.5],6.4,5.6,it.c);
+      if(it.joint&&!--it.joint.n){circle(it.joint.v,it.joint.r,RIM);circle(it.joint.v,it.joint.r/2,it.joint.active?"#a7482c":"#456252");}
+    };
+    items.filter(it=>mid(it)<cut).forEach(drawItem);
     const hp=project(p.hip),sp=project(p.shoulder),female=avatar==="female",bodyHalf=p.isSide?17:(female?25:29),waist=female?bodyHalf-5:bodyHalf-3;
-    ctx.fillStyle="#2c6552";ctx.beginPath();ctx.moveTo(hp[0]-bodyHalf,hp[1]);ctx.lineTo(hp[0]+bodyHalf,hp[1]);ctx.quadraticCurveTo(hp[0]+waist,hp[1]-42,sp[0]+bodyHalf+3,sp[1]);ctx.quadraticCurveTo(sp[0],sp[1]-7,sp[0]-bodyHalf-3,sp[1]);ctx.quadraticCurveTo(hp[0]-waist,hp[1]-42,hp[0]-bodyHalf,hp[1]);ctx.closePath();ctx.fill();
-    ctx.strokeStyle="#63917a";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(sp[0]-bodyHalf+6,sp[1]+9);ctx.lineTo(hp[0]-waist+5,hp[1]-9);ctx.stroke();
+    const al=len2(hp,sp),[ux,uy]=dir2(hp,sp),at=(o,along,across)=>[o[0]+ux*along-uy*across,o[1]+uy*along+ux*across];
+    const tg=ctx.createLinearGradient(sp[0],sp[1],hp[0],hp[1]);tg.addColorStop(0,"#367762");tg.addColorStop(1,"#245645");
+    ctx.fillStyle=tg;ctx.beginPath();ctx.moveTo(...at(hp,0,-bodyHalf));ctx.lineTo(...at(hp,0,bodyHalf));ctx.quadraticCurveTo(...at(hp,.42*al,waist),...at(sp,0,bodyHalf+3));ctx.quadraticCurveTo(...at(sp,7,0),...at(sp,0,-bodyHalf-3));ctx.quadraticCurveTo(...at(hp,.42*al,-waist),...at(hp,0,-bodyHalf));ctx.closePath();ctx.fill();
+    ctx.strokeStyle="#63917a";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(...at(sp,-9,-bodyHalf+6));ctx.lineTo(...at(hp,9,-waist+5));ctx.stroke();
     line(add(p.hip,[-23,0,0]),add(p.hip,[23,0,0]),"#214d3f",12);
-    line(p.shoulder,add(p.head,[0,-14,0]),"#d9a27f",14);
-    segments.filter(s=>depth(add(s.a,s.b))>=cut).forEach(drawSegment);
-    for(const l of p.legs){circle(l.k,5,"#f5eedc");circle(l.k,2.5,l.active?"#a7482c":"#456252");}
-    for(const arm of p.arms){circle(arm.elbow,4.5,"#f5eedc");circle(arm.hand,7,"#d9a27f");}
+    solid(sp,project(add(p.head,[0,-14,0])),7.2,6.6,SKIN,false);
+    items.filter(it=>mid(it)>=cut).forEach(drawItem);
     // The two mature, athletic appearances share the exact same motion rig.
     const head=project(p.head);ctx.save();ctx.translate(...head);
     const path=(color,draw)=>{ctx.fillStyle=color;ctx.beginPath();draw();ctx.closePath();ctx.fill();};
@@ -182,10 +274,16 @@ const Motion = (() => {
     }
     stroke("#4c5b4e",1.3,()=>{ctx.moveTo(-13,-19);ctx.quadraticCurveTo(-3,-25,8,-22);});
     ctx.restore();
-    if(p.id==="towelPull"){line(p.arms[0].hand,p.arms[1].hand,p.t>.3?"#c45532":"#bd9857",5);}
-    if(p.id==="palmPress"&&p.t>.3){const q=project(p.arms[0].hand);ctx.strokeStyle="#c45532";ctx.lineWidth=2;ctx.beginPath();ctx.arc(q[0],q[1],14+p.t*5,0,Math.PI*2);ctx.stroke();}
+    if(p.id==="towelPull")line(p.arms[0].hand,p.arms[1].hand,p.t>.3?ACTIVE:"#bd9857",5);
+    // Isometric moves: arrows show the press or the pull.
+    if(p.id==="palmPress"||p.id==="towelPull"){
+      const e=clamp((p.t-.2)/.5),press=p.id==="palmPress";
+      if(e>0)for(const arm of p.arms){const q=project(arm.hand),s=arm.s,from=[q[0]+s*(press?92:13),q[1]],tip=[q[0]+s*(press?64:40),q[1]];
+        ctx.globalAlpha=e;stroke2(from,[mix(from[0],tip[0],.6),q[1]],ACTIVE,4);arrowHead(tip,from,12);ctx.globalAlpha=1;}
+    }
+    for(const g of paths){const k=g.length-1,back=Math.min(2,k);ctx.globalAlpha=guide.alpha;if(guide.dir>0)arrowHead(g[k],g[k-back],13);else arrowHead(g[0],g[back],13);ctx.globalAlpha=1;}
     if(!small&&p.isSide){ctx.fillStyle="#4d6a59";ctx.font="13px system-ui";ctx.textAlign="center";ctx.fillText("后", -106,21);ctx.fillText("前 →",113,21);}
     ctx.restore();
   }
-  return {draw,pose,view,ik,setAvatar,getAvatar};
+  return {draw,pose,view,ik,ease,guides,setAvatar,getAvatar};
 })();

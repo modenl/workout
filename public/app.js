@@ -82,6 +82,14 @@ class CountAudio {
     const start=c.currentTime+.025;n.start(start,((offset%4)+4)%4);this.node=n;
     n.onended=()=>{n.disconnect();if(this.node===n)this.node=null;};return start;
   }
+  // Audio time now at the speaker, smooth between hardware callbacks, so motion matches the count.
+  now(){
+    const c=this.context,t=c.currentTime;
+    try{const s=c.getOutputTimestamp&&c.getOutputTimestamp();
+      if(s&&s.contextTime>0&&s.performanceTime>0){const heard=Math.max(this.heard||0,s.contextTime+(performance.now()-s.performanceTime)/1000);if(heard>t-.35&&heard<t+.05)return this.heard=heard;}
+    }catch{}
+    return t;
+  }
   mute(muted){if(this.gain)this.gain.gain.setValueAtTime(muted?0:1,this.context.currentTime);}
   stop(){if(this.node){this.node.onended=null;try{this.node.stop();}catch{}this.node.disconnect();this.node=null;}}
 }
@@ -123,8 +131,9 @@ function updateExercise(){
   $("view-label").textContent=Motion.view(item.id);$("trainer-canvas").setAttribute("aria-label",item.name+"，"+Motion.view(item.id)+"，橙色表示动作部位");
   $("previous-exercise").disabled=state.preview||state.index===0;$("next-exercise").disabled=state.preview;
   $("rep-total").textContent=state.preview?"/ 示范":"/ 8 次";$("transition").hidden=true;setStatus("");renderPractice();
+  if(!reducedMotion)$("trainer-canvas").animate?.([{opacity:0,transform:"scale(.96)"},{opacity:1,transform:"none"}],{duration:450,easing:"ease-out"});
 }
-function elapsedNow(){if(state.mode!=="running")return state.elapsed;const now=state.clockAudio?audio.context.currentTime:performance.now()/1000;return state.clockBase+Math.max(0,now-state.clockStart);}
+function elapsedNow(){if(state.mode!=="running")return state.elapsed;const now=state.clockAudio?audio.now():performance.now()/1000;return state.clockBase+Math.max(0,now-state.clockStart);}
 async function resumePractice(){
   if(state.reference){state.reference=false;$("trainer").classList.remove("reference-mode");$("reference-toggle").setAttribute("aria-pressed","false");$("reference-toggle").textContent="看起止姿势";}
   const token=++state.operation;state.mode="starting";$("pause-workout").textContent="准备中…";setStatus("");
@@ -145,7 +154,7 @@ function toggleVoice(){const running=state.mode==="running";if(running||state.mo
 function navigateExercise(delta){state.operation++;audio.stop();state.mode="paused";state.index=Math.max(0,Math.min(state.list.length-1,state.index+delta));state.elapsed=0;updateExercise();resumePractice();}
 function startRest(){
   state.elapsed=32;audio.stop();state.operation++;state.mode="rest";state.holdRest=false;state.restRemaining=20;state.restUntil=performance.now()/1000+20;
-  $("transition").hidden=false;$("transition-pause").hidden=false;$("transition-next").hidden=false;$("transition-pause").textContent="多休息一下";$("progress-fill").style.width=((state.index+1)/state.list.length*100)+"%";
+  $("transition").hidden=false;$("transition-pause").hidden=false;$("transition-canvas").hidden=state.index===state.list.length-1;$("transition-next").hidden=false;$("transition-pause").textContent="多休息一下";$("progress-fill").style.width=((state.index+1)/state.list.length*100)+"%";
   if(state.index===state.list.length-1){state.mode="done";$("transition-kicker").textContent="这一组，完成了";$("transition-title").textContent="今天又多动了一点";$("transition-count").textContent="✓";$("transition-description").textContent="坐稳，放松，按需补水。稍后再分段走动，不必一次练完所有运动量。";$("transition-pause").hidden=true;$("transition-next").textContent="完成，回到首页";return;}
   $("transition-kicker").textContent="先休息，再继续";$("transition-title").textContent="下一个："+state.list[state.index+1].name;$("transition-description").textContent=state.list[state.index+1].steps[0];$("transition-next").textContent="准备好了，继续 →";$("transition-count").textContent="20";
 }
@@ -153,17 +162,33 @@ function restNext(){if(state.mode==="done"){closePractice();return;}if(state.mod
 function holdRest(){state.holdRest=!state.holdRest;if(!state.holdRest)state.restUntil=performance.now()/1000+state.restRemaining;$("transition-pause").textContent=state.holdRest?"恢复倒计时":"多休息一下";}
 function renderPractice(){
   if(!state.open)return;const item=current(),time=elapsedNow(),phase=(time%4)/4,rep=Math.min(8,Math.floor(time/4)+1),beat=Math.floor(time%4)+1;
-  const move=(1-Math.cos(phase*Math.PI*2))/2,side=Math.floor(time/4)%2?-1:1;Motion.draw($("trainer-canvas"),item.id,move,side,{comparison:state.reference});
-  if(state.beat!==beat){state.beat=beat;$("beat-count").textContent=beat;$("rep-count").textContent=state.preview?"—":rep;[...$("rhythm-bar").querySelectorAll("span")].forEach((e,i)=>e.classList.toggle("active",i===beat-1));}
-  $("phase-cue").textContent=state.reference?"对照起点与终点":state.mode==="paused"?"已暂停":PHASES[item.id][phase<.5?0:1];
+  const side=Math.floor(time/4)%2?-1:1;Motion.draw($("trainer-canvas"),item.id,Motion.ease(phase),side,{comparison:state.reference,phase});
+  if(state.beat!==beat){state.beat=beat;$("beat-count").textContent=beat;$("rep-count").textContent=state.preview?"—":rep;[...$("rhythm-bar").querySelectorAll("span")].forEach((e,i)=>e.classList.toggle("active",i===beat-1));
+    if(state.mode==="running"&&!reducedMotion)$("beat-count").animate?.([{transform:"scale(1.25)"},{transform:"scale(1)"}],{duration:280,easing:"ease-out"});}
+  const cue=state.reference?"对照起点与终点":state.mode==="paused"?"已暂停":PHASES[item.id][phase<.5?0:1];if($("phase-cue").textContent!==cue)$("phase-cue").textContent=cue;
 }
-let lastDraw=0;
+let lastThumbs=0,lastFrame=0,late=0,slow=false,warm=0;
 function frame(now){
-  requestAnimationFrame(frame);if(document.hidden||now-lastDraw<32)return;lastDraw=now;
+  requestAnimationFrame(frame);if(document.hidden)return;
+  const gap=now-lastFrame;if(slow&&gap<30)return;lastFrame=now;
+  // If the running trainer keeps missing frames, settle at a steady ~30 fps.
+  if(state.mode!=="running")warm=0;else if(++warm>30&&!slow&&gap<100){late=late*.98+(gap>25?.02:0);slow=late>.2;}
+  animate(now);
+}
+function animate(now){
+  const cycle=now/4000,loop=reducedMotion?.5:Motion.ease(cycle),side=Math.floor(cycle)%2?-1:1;
   if(state.open){
-    if(state.mode==="rest"){if(!state.holdRest)state.restRemaining=Math.max(0,Math.ceil(state.restUntil-now/1000));$("transition-count").textContent=state.holdRest?"休息":state.restRemaining;if(!state.holdRest&&state.restRemaining===0)restNext();return;}
+    if(state.mode==="rest"){
+      if(!state.holdRest)state.restRemaining=Math.max(0,Math.ceil(state.restUntil-now/1000));
+      const count=String(state.holdRest?"休息":state.restRemaining);if($("transition-count").textContent!==count)$("transition-count").textContent=count;
+      if(!state.holdRest&&state.restRemaining===0){restNext();return;}
+      Motion.draw($("transition-canvas"),state.list[state.index+1].id,loop,side,{small:true,phase:cycle});return;
+    }
     if(state.mode==="done")return;if(state.mode==="running"&&!state.preview&&elapsedNow()>=32){startRest();return;}renderPractice();
-  }else{const t=reducedMotion?.5:(1-Math.cos(now/4000*Math.PI*2))/2;if(heroVisible)Motion.draw($("hero-canvas"),"stand",t);if(!reducedMotion)visibleCanvases.forEach(c=>Motion.draw(c,c.dataset.exercise,t,1,{small:true}));}
+  }else{
+    if(heroVisible)Motion.draw($("hero-canvas"),"stand",loop);
+    if(!reducedMotion&&now-lastThumbs>=30){lastThumbs=now;visibleCanvases.forEach(c=>Motion.draw(c,c.dataset.exercise,loop,side,{small:true}));}
+  }
 }
 $("test-sound").addEventListener("click",testSound);$("start-workout").addEventListener("click",()=>openPractice());$("start-workout-2").addEventListener("click",()=>openPractice());$("new-plan").addEventListener("click",newPlan);
 document.addEventListener("click",event=>{const preview=event.target.closest("[data-preview]");if(preview)openPractice(preview.dataset.preview);const filter=event.target.closest("[data-filter]");if(filter)renderLibrary(filter.dataset.filter);const avatar=event.target.closest("[data-avatar]");if(avatar)selectAvatar(avatar.dataset.avatar);});
