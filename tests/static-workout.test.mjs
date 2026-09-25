@@ -16,7 +16,7 @@ function harness({deferred=false,blockedStorage=false,audioSession,outputTimesta
     constructor(){events.push({event:'create',sessionType:audioSession?.type});this.state=deferred?'suspended':'running';this.currentTime=0;this.sampleRate=48000;this.destination={};if(outputTimestamp)this.getOutputTimestamp=outputTimestamp;}
     createGain(){return {connect(){},gain:{setValueAtTime(){}}}}
     createBuffer(channels,length,rate){const data=new Float32Array(length);return {duration:length/rate,getChannelData(){return data}}}
-    createBufferSource(){const node={connect(){},disconnect(){},start(...args){this.started=args},stop(){this.stopped=true}};nodes.push(node);return node}
+    createBufferSource(){const node={connect(){},disconnect(){},start(...args){this.started=args},stop(...args){this.stopped=args}};nodes.push(node);return node}
     addEventListener(){}
     resume(){events.push({event:'resume',sessionType:audioSession?.type});if(deferred)return new Promise(resolve=>resumers.push(()=>{this.state='running';resolve()}));this.state='running';return Promise.resolve()}
   }
@@ -26,6 +26,12 @@ function harness({deferred=false,blockedStorage=false,audioSession,outputTimesta
   return {s:context.subject,el,nodes,resumers,timers,events,setNow(t){now=t}};
 }
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
+// A sized canvas whose 2D context rejects non-finite numbers, in calls and in property writes.
+function fakeCanvas(width=360,height=260){
+  const gradient={addColorStop(){}},check=(key,values)=>{if(values.some(v=>typeof v==='number'&&!Number.isFinite(v)))throw Error('non-finite '+String(key));};
+  const ctx=new Proxy({},{get:(target,key)=>target[key]??((...args)=>{check(key,args);return gradient}),set:(target,key,value)=>{check(key,[value]);target[key]=value;return true}});
+  return {width,height,getBoundingClientRect:()=>({width,height}),getContext:()=>ctx};
+}
 
 test('sound reminder is conditional advice, respects webpage mute, and yields to errors',async()=>{
   const {s,el}=harness();s.openPractice();await settle();
@@ -57,10 +63,7 @@ test('a rejected optional media-session setting does not break audio startup',as
 test('both avatars render every exercise without changing rig or playback',async()=>{
   const {s,el}=harness();s.openPractice();await settle();const node=s.audio.node,mode=s.state.mode;
   const poses=s.ITEMS.map(item=>JSON.stringify(s.Motion.pose(item.id,.5)));
-  // Every drawing call must receive finite numbers; gradient factories return a stub gradient.
-  const gradient={addColorStop(){}};
-  const ctx=new Proxy({},{get:(target,key)=>target[key]??((...args)=>{if(args.some(a=>typeof a==='number'&&!Number.isFinite(a)))throw Error('non-finite argument to '+String(key));return gradient}),set:(target,key,value)=>{target[key]=value;return true}});
-  const canvas={width:360,height:260,getBoundingClientRect:()=>({width:360,height:260}),getContext:()=>ctx};
+  const canvas=fakeCanvas();
   for(const avatar of ['male','female']){
     s.selectAvatar(avatar);assert.equal(s.Motion.getAvatar(),avatar);assert.equal(el('trainer-avatar').value,avatar);assert.equal(s.audio.node,node);assert.equal(s.state.mode,mode);
     s.ITEMS.forEach((item,i)=>{assert.equal(JSON.stringify(s.Motion.pose(item.id,.5)),poses[i]);s.Motion.draw(canvas,item.id,.5);s.Motion.draw(canvas,item.id,.5,1,{comparison:true});s.Motion.draw(canvas,item.id,.3,-1,{phase:.2});s.Motion.draw(canvas,item.id,.8,1,{small:true,phase:.7})});
@@ -118,18 +121,27 @@ test('motion arrows trace each working joint and stay readable',()=>{
     assert.equal(s.Motion.guides(item.id,side),paths,'paths are computed once');
   }
   const knee=side=>s.Motion.guides('march',side)[0][0][0];assert.ok(knee(1)>0&&knee(-1)<0,'alternating moves show the working side');
+  for(const id of ['forwardTap','sideTap'])for(const [,y] of s.Motion.guides(id,1)[0])assert.ok(y>0,id+' step arrow lies on the floor, not on the shin');
+});
+test('motion arrows fit inside the frame drawn for them',()=>{
+  // Frames with arrows keep 345 units above the floor, 27 below and 148 to the left; leave room for arrowheads.
+  const {s}=harness();
+  for(const item of s.ITEMS)for(const side of [-1,1])for(const g of s.Motion.guides(item.id,side))for(const [x,y] of g)
+    assert.ok(y>-332&&y<22&&x>-135&&x<148,item.id+' arrow at '+x.toFixed(0)+','+y.toFixed(0));
 });
 test('animation clock follows the audio reaching the speaker',async()=>{
   let stamp={contextTime:0,performanceTime:0};const {s,setNow}=harness({outputTimestamp:()=>stamp});await s.audio.unlock();
-  s.audio.context.currentTime=10;setNow(50);assert.equal(s.audio.now(),10,'no output timestamp yet');
-  stamp={contextTime:9.9,performanceTime:49990};assert.ok(Math.abs(s.audio.now()-9.91)<1e-9,'extrapolated from the output timestamp');
+  s.audio.context.currentTime=10;setNow(50);stamp={contextTime:9.9,performanceTime:49990};assert.ok(Math.abs(s.audio.now()-9.91)<1e-9,'extrapolated from the output timestamp');
   stamp={contextTime:9.85,performanceTime:49990};assert.ok(Math.abs(s.audio.now()-9.91)<1e-9,'never runs backwards');
-  stamp={contextTime:11,performanceTime:49990};assert.equal(s.audio.now(),10,'implausible timestamps fall back to currentTime');
+  stamp={contextTime:0,performanceTime:0};assert.equal(s.audio.now(),10,'without a timestamp, currentTime');
+  stamp={contextTime:9.95,performanceTime:49990};assert.equal(s.audio.now(),10,'nor backwards after using currentTime');
+  s.audio.context.currentTime=11;stamp={contextTime:12,performanceTime:49990};assert.ok(Math.abs(s.audio.now()-11.05)<1e-9,'implausible timestamps are clamped, not jumped to');
+  stamp={contextTime:9,performanceTime:49990};assert.ok(Math.abs(s.audio.now()-11.05)<1e-9);
   s.openPractice();await settle();const start=s.state.clockStart;s.audio.context.currentTime=start+2.1;stamp={contextTime:start+2,performanceTime:50000};
   s.pausePractice();assert.ok(Math.abs(s.state.elapsed-2)<1e-9,'pausing keeps the position that was heard');
 });
 test('rest screen previews the next move, and the final screen hides it',async()=>{
-  const {s,el,setNow}=harness();s.openPractice();await settle();const calls=[],draw=s.Motion.draw;s.Motion.draw=(canvas,id,...rest)=>{calls.push([canvas,id]);return draw(canvas,id,...rest)};
+  const {s,el,setNow}=harness();Object.assign(el('transition-canvas'),fakeCanvas(312,230));s.openPractice();await settle();const calls=[],draw=s.Motion.draw;s.Motion.draw=(canvas,id,...rest)=>{calls.push([canvas,id]);return draw(canvas,id,...rest)};
   setNow(32);s.audio.context.currentTime=s.state.clockStart+32;s.frame(32000);assert.equal(s.state.mode,'rest');assert.equal(el('transition-canvas').hidden,false);
   calls.length=0;s.frame(33000);assert.deepEqual(calls,[[el('transition-canvas'),s.getPlan()[1].id]]);
   s.navigateExercise(6);await settle();s.audio.context.currentTime=s.state.clockStart+32;s.frame(90000);assert.equal(s.state.mode,'done');assert.equal(el('transition-canvas').hidden,true);
@@ -137,8 +149,14 @@ test('rest screen previews the next move, and the final screen hides it',async()
 test('a device that keeps missing frames settles at a steady 30 fps',async()=>{
   const {s}=harness();s.openPractice();await settle();let draws=0;const draw=s.Motion.draw;s.Motion.draw=(...a)=>{draws++;return draw(...a)};
   let t=1000;for(let i=0;i<120;i++)s.frame(t+=16.7);assert.equal(draws,120,'smooth devices draw every frame');
-  for(let i=0;i<5;i++)s.frame(t+=33.4);draws=0;for(let i=0;i<60;i++)s.frame(t+=16.7);assert.equal(draws,60,'a brief hiccup changes nothing');
-  for(let i=0;i<60;i++)s.frame(t+=33.4);draws=0;for(let i=0;i<60;i++)s.frame(t+=16.7);assert.equal(draws,30);
+  for(let i=0;i<15;i++)s.frame(t+=33.4);draws=0;for(let i=0;i<60;i++)s.frame(t+=16.7);assert.equal(draws,60,'a half-second hiccup changes nothing');
+  for(let i=0;i<120;i++)s.frame(t+=33.4);draws=0;for(let i=0;i<60;i++)s.frame(t+=16.7);assert.equal(draws,30);
+  s.closePractice();s.openPractice();await settle();draws=0;for(let i=0;i<60;i++)s.frame(t+=16.7);assert.equal(draws,60,'each workout starts at the full rate again');
+});
+test('the count stops exactly at the end of the eighth repetition',async()=>{
+  const {s}=harness();s.openPractice();await settle();assert.ok(Math.abs(s.audio.node.stopped[0]-(s.state.clockStart+32))<1e-9);
+  s.audio.context.currentTime=s.state.clockStart+10;s.pausePractice();await s.resumePractice();assert.ok(Math.abs(s.audio.node.stopped[0]-(s.state.clockStart+22))<1e-9,'resuming keeps the same end');
+  s.closePractice();s.openPractice('march');await settle();assert.equal(s.audio.node.stopped,undefined,'previews loop without an end');
 });
 test('changing plans preserves all 7 categories, with no repeated previous move',()=>{
   const {s}=harness({blockedStorage:true});const variants=new Set();
