@@ -13,9 +13,20 @@ const PHASES={
  elbowPull:["弯肘 · 向后拉","伸回 · 不耸肩"],towelPull:["向两侧轻拉","放松 · 不松手"],lowRow:["手肘向后拉","有控制地伸回"],
  crossMarch:["对侧手靠近膝","放下 · 换边"],kneePress:["手膝轻轻相推","放松 · 换边"],sideReach:["小幅侧伸","坐直 · 换边"],
  heel:["脚跟抬起","有控制地落下"],toeLift:["脚尖抬起","脚跟始终着地"],seatedHeel:["脚跟抬起","脚尖始终着地"],
- side:["侧抬 · 身体不歪","轻放 · 换边"],weightShift:["向一侧移重心","回中间 · 换边"],backLeg:["向后抬 · 不塌腰","轻放 · 换边"]
+ side:["侧抬 · 身体不歪","轻放 · 换边"],weightShift:["向一侧移重心","回中间 · 换边"],backLeg:["向后抬 · 不塌腰","轻放 · 换边"],
+ standMarch:["抬膝 · 对侧摆臂","落脚 · 换边"],stepJack:["向旁迈步 · 抬臂","收回 · 换边"],squat:["臀部后坐 · 双臂前伸","推地站直"],
+ reverseLunge:["向后退步 · 下沉","推回站直 · 换边"],wallSlide:["背贴墙下滑","推地站起"],inclinePush:["屈肘 · 胸口靠近桌边","推回 · 身体成直线"],
+ chairDip:["屈肘 · 下降一小段","撑起 · 不耸肩"],hingeRow:["屈肘向后拉","慢慢放下"],towelPulldown:["拉紧毛巾 · 向下拉","举回头顶"],
+ standCross:["提膝 · 对侧手靠近","放下 · 换边"],tableKneeDrive:["膝盖提向胸口","放回 · 换边"],goodMorning:["臀部后推 · 前倾","臀部发力 · 站直"],
+ singleCalf:["单脚踮起","慢慢落下 · 换脚"],wallToe:["抬起脚尖","慢慢放下"],singleLegStand:["提膝 · 站稳","放下 · 换边"],singleLegHinge:["前倾 · 后腿抬起","收回站直 · 换边"]
 };
-const DEFAULT_IDS=["march","stand","wallPush","elbowPull","kneePress","seatedHeel","weightShift"];
+const DEFAULT_PLANS={
+ strong:["standMarch","squat","inclinePush","hingeRow","goodMorning","singleCalf","singleLegHinge"],
+ standard:["standMarch","squat","wallPush","hingeRow","standCross","heel","singleLegStand"],
+ gentle:["march","stand","wallPush","elbowPull","kneePress","seatedHeel","weightShift"]
+};
+const LEVEL_BY_KEY=Object.fromEntries(LEVELS.map(l=>[l.key,l]));
+const inLevel=(item,key)=>item.levels.includes(key);
 const storage={get(key){try{return localStorage.getItem(key);}catch{return null;}},set(key,value){try{localStorage.setItem(key,value);}catch{}}};
 Motion.setAvatar(storage.get("cq-avatar-v1"));
 function selectAvatar(value){
@@ -27,8 +38,21 @@ function syncAvatar(){
   $("trainer-avatar").value=value;
   $("hero-canvas").setAttribute("aria-label",(value==="female"?"女":"男")+"示范人物，坐站起身关节动画");
 }
-let plan=DEFAULT_IDS.map(id=>ITEM_BY_ID[id]);
-try{const saved=JSON.parse(storage.get("cq-plan-v2"));if(Array.isArray(saved)&&saved.length===7&&saved.every((id,i)=>ITEM_BY_ID[id]?.key===CATEGORIES[i].key))plan=saved.map(id=>ITEM_BY_ID[id]);}catch{}
+// Each level keeps its own plan; the gentle level still reads plans saved before levels existed.
+function loadPlan(key){
+  try{const saved=JSON.parse(storage.get("cq-plan-v3-"+key)||(key==="gentle"?storage.get("cq-plan-v2"):null));
+    if(Array.isArray(saved)&&saved.length===7&&saved.every((id,i)=>ITEM_BY_ID[id]?.key===CATEGORIES[i].key&&inLevel(ITEM_BY_ID[id],key)))return saved.map(id=>ITEM_BY_ID[id]);}catch{}
+  return DEFAULT_PLANS[key].map(id=>ITEM_BY_ID[id]);
+}
+let level=LEVEL_BY_KEY[storage.get("cq-level-v1")]?storage.get("cq-level-v1"):"gentle",plan=loadPlan(level),libraryFilter="all";
+function levelLabel(key=level){return LEVEL_BY_KEY[key].age+" · "+LEVEL_BY_KEY[key].name;}
+function selectLevel(key){
+  if(!LEVEL_BY_KEY[key]||state.open)return;level=key;storage.set("cq-level-v1",key);plan=loadPlan(key);syncLevel();renderPlan();renderLibrary("all");
+}
+function syncLevel(){
+  document.querySelectorAll("[data-level]").forEach(button=>button.setAttribute("aria-pressed",String(button.dataset.level===level)));
+  $("level-hint").textContent=LEVEL_BY_KEY[level].hint;
+}
 const state={open:false,preview:false,index:0,list:plan,mode:"closed",elapsed:0,clockStart:0,clockBase:0,clockAudio:false,voice:true,operation:0,reference:false,restUntil:0,restRemaining:20,holdRest:false,beat:-1,opener:null};
 let visibleCanvases=new Set(),heroVisible=true;
 const reducedMotion=window.matchMedia?.("(prefers-reduced-motion: reduce)").matches||false;
@@ -105,8 +129,8 @@ async function testSound(){
 }
 function randomIndex(n){const v=new Uint32Array(1);if(window.crypto?.getRandomValues){window.crypto.getRandomValues(v);return v[0]%n;}return Math.floor(Math.random()*n);}
 function newPlan(){
-  plan=CATEGORIES.map((c,i)=>{const options=ITEMS.filter(x=>x.key===c.key&&x.id!==plan[i].id);return options[randomIndex(options.length)];});
-  storage.set("cq-plan-v2",JSON.stringify(plan.map(i=>i.id)));renderPlan();$("plan-summary").textContent="已换好一组：七个类别均保留，每个动作都与上一组不同。";
+  plan=CATEGORIES.map((c,i)=>{const options=ITEMS.filter(x=>x.key===c.key&&inLevel(x,level)&&x.id!==plan[i].id);return options[randomIndex(options.length)];});
+  storage.set("cq-plan-v3-"+level,JSON.stringify(plan.map(i=>i.id)));renderPlan();$("plan-summary").textContent="已换好一组（"+levelLabel()+"）：七个类别均保留，每个动作都与上一组不同。";
 }
 function thumbnail(item){return '<canvas data-exercise="'+item.id+'" aria-hidden="true"></canvas>';}
 const observer=typeof IntersectionObserver==="function"?new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)visibleCanvases.add(e.target);else visibleCanvases.delete(e.target);});},{rootMargin:"50px"}):null;
@@ -114,11 +138,14 @@ function observeThumbnails(){visibleCanvases.clear();if(observer)observer.discon
 function renderPlan(){
   $("coverage-strip").innerHTML=CATEGORIES.map(c=>"<span>"+c.label+"</span>").join("");
   $("plan-list").innerHTML=plan.map(item=>"<li>"+thumbnail(item)+'<div><h3>'+item.name+'</h3><p>'+item.category+" · "+(item.alternating?"每侧 4 次":"共 8 次")+'</p></div><button data-preview="'+item.id+'" aria-label="预览'+item.name+'">预览 ↗</button></li>').join("");
-  $("plan-summary").textContent="7 个动作 · 动作间休息 20 秒 · 可延长休息";observeThumbnails();
+  $("plan-summary").textContent=levelLabel()+" · 7 个动作 · 动作间休息 20 秒 · 可延长休息";observeThumbnails();
 }
-function renderLibrary(filter="all"){
-  $("library-filters").innerHTML=[{key:"all",label:"全部 "+ITEMS.length+" 个"},{key:"new",label:"新增 "+ITEMS.filter(i=>i.isNew).length+" 个"},...CATEGORIES.map(c=>({...c,label:c.label+" · "+LIBRARY[c.key].length}))].map(c=>'<button data-filter="'+c.key+'" aria-pressed="'+(filter===c.key)+'">'+c.label+"</button>").join("");
-  $("library-list").innerHTML=ITEMS.filter(i=>filter==="all"||(filter==="new"?i.isNew:i.key===filter)).map(item=>'<article class="library-item">'+thumbnail(item)+'<div><h3>'+item.name+'</h3><p>'+item.purpose+'</p><button data-preview="'+item.id+'">查看动作与要点 ↗</button></div></article>').join("");observeThumbnails();
+function levelTags(item){return '<span class="level-tags">'+LEVELS.filter(l=>inLevel(item,l.key)).map(l=>"<span>"+l.age+"</span>").join("")+"</span>";}
+// "all" and the categories show the current level; "every" shows all three levels.
+function renderLibrary(filter=libraryFilter){
+  libraryFilter=filter;const mine=ITEMS.filter(i=>inLevel(i,level));
+  $("library-filters").innerHTML=[{key:"all",label:levelLabel()+" · "+mine.length+" 个"},...CATEGORIES.map(c=>({...c,label:c.label+" · "+mine.filter(i=>i.key===c.key).length})),{key:"every",label:"三档全部 "+ITEMS.length+" 个"}].map(c=>'<button data-filter="'+c.key+'" aria-pressed="'+(filter===c.key)+'">'+c.label+"</button>").join("");
+  $("library-list").innerHTML=(filter==="every"?ITEMS:mine.filter(i=>filter==="all"||i.key===filter)).map(item=>'<article class="library-item">'+thumbnail(item)+'<div><h3>'+item.name+'</h3>'+levelTags(item)+'<p>'+item.purpose+'</p><button data-preview="'+item.id+'">查看动作与要点 ↗</button></div></article>').join("");observeThumbnails();
 }
 function current(){return state.list[state.index];}
 function updateExercise(){
@@ -191,7 +218,7 @@ function animate(now){
   }
 }
 $("test-sound").addEventListener("click",testSound);$("start-workout").addEventListener("click",()=>openPractice());$("start-workout-2").addEventListener("click",()=>openPractice());$("new-plan").addEventListener("click",newPlan);
-document.addEventListener("click",event=>{const preview=event.target.closest("[data-preview]");if(preview)openPractice(preview.dataset.preview);const filter=event.target.closest("[data-filter]");if(filter)renderLibrary(filter.dataset.filter);const avatar=event.target.closest("[data-avatar]");if(avatar)selectAvatar(avatar.dataset.avatar);});
+document.addEventListener("click",event=>{const preview=event.target.closest("[data-preview]");if(preview)openPractice(preview.dataset.preview);const filter=event.target.closest("[data-filter]");if(filter)renderLibrary(filter.dataset.filter);const avatar=event.target.closest("[data-avatar]");if(avatar)selectAvatar(avatar.dataset.avatar);const lv=event.target.closest("[data-level]");if(lv)selectLevel(lv.dataset.level);});
 $("trainer-avatar").addEventListener("change",event=>selectAvatar(event.target.value));
 $("close-trainer").addEventListener("click",closePractice);$("trainer").addEventListener("cancel",e=>{e.preventDefault();closePractice();});$("pause-workout").addEventListener("click",togglePause);$("voice-toggle").addEventListener("click",toggleVoice);
 $("previous-exercise").addEventListener("click",()=>navigateExercise(-1));$("next-exercise").addEventListener("click",()=>state.index===state.list.length-1?startRest():navigateExercise(1));
@@ -201,4 +228,4 @@ document.addEventListener("visibilitychange",()=>{if(document.hidden){testToken+
 document.addEventListener("keydown",e=>{if(e.code==="Space"&&state.open&&e.target.tagName!=="BUTTON"){e.preventDefault();togglePause();}});
 window.addEventListener("resize",()=>{observeThumbnails();renderPractice();});
 if(typeof IntersectionObserver==="function")new IntersectionObserver(e=>{heroVisible=e[0].isIntersecting;}).observe($("hero-canvas"));
-syncAvatar();renderPlan();renderLibrary();requestAnimationFrame(frame);
+syncAvatar();syncLevel();renderPlan();renderLibrary();requestAnimationFrame(frame);

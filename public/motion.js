@@ -19,9 +19,14 @@ const Motion = (() => {
     if(norm(bend)<.01)bend=sub([1,0,0],mul(axis,axis[0]));
     return [add(add(a,mul(axis,along)),mul(unit(bend),Math.sqrt(Math.max(0,l1*l1-along*along)))),end];
   }
-  const sideViews=new Set(["stand","miniSquat","extend","wallPush","forwardPress","reachTap","elbowPull","lowRow","backLeg","toeLift","seatedHeel","armSwing","hamstringCurl","armRaise","bicepsCurl","hipHinge","anklePump","heelToe","forwardTap"]);
-  const supported=new Set(["miniSquat","heel","side","weightShift","backLeg","hamstringCurl","forwardTap","sideTap"]);
-  const standing=new Set(["stand","wallPush",...supported]);
+  const sideViews=new Set(["stand","miniSquat","extend","wallPush","forwardPress","reachTap","elbowPull","lowRow","backLeg","toeLift","seatedHeel","armSwing","hamstringCurl","armRaise","bicepsCurl","hipHinge","anklePump","heelToe","forwardTap",
+    "standMarch","squat","reverseLunge","wallSlide","inclinePush","chairDip","hingeRow","tableKneeDrive","goodMorning","singleCalf","wallToe","singleLegHinge"]);
+  const supported=new Set(["miniSquat","heel","side","weightShift","backLeg","hamstringCurl","forwardTap","sideTap","singleCalf","singleLegStand","singleLegHinge"]);
+  const standing=new Set(["stand","wallPush",...supported,"standMarch","stepJack","squat","reverseLunge","wallSlide","inclinePush","hingeRow","tableKneeDrive","standCross","goodMorning","wallToe"]);
+  const lean=d=>[0,100*Math.cos(rad(d)),100*Math.sin(rad(d))];
+  // Incline moves: a straight body pivoting on the toes, hands fixed on a table edge (arms straight at INCLINE).
+  const FOOT_Z=-115,INCLINE=37,plankAt=d=>({hip:[0,10+150*Math.cos(rad(d)),FOOT_Z+150*Math.sin(rad(d))],torso:lean(d)});
+  const TABLE_HAND=[29,10+250*Math.cos(rad(INCLINE))-4-105*Math.sin(rad(INCLINE)),FOOT_Z+250*Math.sin(rad(INCLINE))+105*Math.cos(rad(INCLINE))],TABLE_Y=TABLE_HAND[1]-7;
   function view(id){return sideViews.has(id)?"侧面 · 面向右 →":"正面 · 如照镜子";}
   function pose(id,t,side=1) {
     const seated=!standing.has(id), isSide=sideViews.has(id);
@@ -40,6 +45,19 @@ const Motion = (() => {
     if(id==="diagonalReach")torso=[-side*8*t,100-2*t,8*t];
     if(id==="forwardTap"||id==="sideTap")hip[1]-=9*t;
     if(id==="wallPush"){const a=rad(15+10*t);hip=[0,10+150*Math.cos(a),150*Math.sin(a)];torso=[0,100*Math.cos(a),100*Math.sin(a)];}
+    if(id==="squat"){hip=[0,160-65*t,-45*t];torso=lean(35*t);}
+    if(id==="reverseLunge"){hip=[0,158-40*t,-12*t];torso=lean(6*t);}
+    if(id==="wallSlide")hip=[0,150-50*t,-32];
+    if(id==="wallToe"){hip=[0,155,-26];torso=lean(-6);}
+    if(id==="inclinePush"||id==="tableKneeDrive")({hip,torso}=plankAt(id==="inclinePush"?INCLINE+9*t:INCLINE));
+    if(id==="chairDip")hip=[0,86-26*t,-6];
+    if(id==="hingeRow"){hip=[0,150,-22];torso=lean(42);}
+    if(id==="goodMorning"){hip=[0,156,-22*t];torso=lean(45*t);}
+    if(id==="singleCalf")hip=[side*8,160+15*t,10];
+    if(id==="singleLegStand")hip[0]=-side*10*t;
+    if(id==="singleLegHinge"){hip=[0,160,-6*t];torso=lean(38*t);}
+    if(id==="standCross")torso=add(lean(16*t),[-side*8*t,0,0]);
+    if(id==="stepJack")hip[1]-=4*t;
     const shoulder=add(hip,torso), head=add(shoulder,mul(unit(torso),34));
     if(id==="shoulderLift")shoulder[1]+=8*t;
     const legs=[],arms=[];
@@ -49,6 +67,7 @@ const Motion = (() => {
       if(id==="wallPush"){f=[s*22,10,0];[k]=ik(h,f,76,76,[0,0,1]);}
       else if(id==="stand"||id==="miniSquat"||id==="weightShift"){
         f=[s*(id==="weightShift"?38:24),10,8];[k]=ik(h,f,76,76,[0,0,1]);
+      }else if(id==="chairDip"){f=[s*22,10,50];[k]=ik(h,f,76,76,[0,0,1]);
       }else if(seated){
         let thigh=rad(90),shin=0,lateral=0;
         if(["march","crossMarch","kneePress"].includes(id)&&active)thigh+=rad(20*t);
@@ -69,7 +88,17 @@ const Motion = (() => {
         if(id==="backLeg"&&active){const a=rad(16*t);f=add(h,[0,-150*Math.cos(a),-150*Math.sin(a)]);}
         if(id==="forwardTap"&&active){f[2]+=40*t;f[1]+=8*Math.sin(Math.PI*t);}
         if(id==="sideTap"&&active){f[0]+=s*35*t;f[1]+=8*Math.sin(Math.PI*t);}
-        [k,f]=ik(h,f,76,76,[0,0,1]);
+        if(id==="wallSlide")f=[s*22,10,20];
+        if(id==="wallToe")f=[s*22,10,12];
+        if(id==="inclinePush"||id==="tableKneeDrive")f=[s*22,10,FOOT_Z];
+        if(id==="tableKneeDrive"&&active)f=lerp(f,[s*22,48,-35],t);
+        if(id==="reverseLunge"&&active)f=[s*24,10+12*t+10*Math.sin(Math.PI*t),6-93*t];
+        if(id==="stepJack"&&active){f[0]+=s*30*t;f[1]+=8*Math.sin(Math.PI*t);}
+        if(id==="singleCalf")f=active?[s*24,10+15*t,29-Math.sqrt(23*23-225*t*t)]:[s*22,55+15*t,-24];
+        if(id==="singleLegHinge"&&active){const b=rad(38*t);f=add(h,[0,-150*Math.cos(b),-150*Math.sin(b)]);}
+        // Knee lifts: the thigh swings forward from 10°, the shin stays 10° behind vertical.
+        if(["standMarch","singleLegStand","standCross"].includes(id)&&active){const a=rad(10+({standMarch:70,singleLegStand:60,standCross:80}[id]-10)*t);k=add(h,[0,-76*Math.cos(a),76*Math.sin(a)]);f=add(k,[0,-76*Math.cos(rad(10)),-76*Math.sin(rad(10))]);}
+        else [k,f]=ik(h,f,76,76,[0,0,1]);
         if(id==="hamstringCurl"&&active){const v=sub(f,k),a=rad(60*t);f=add(k,[v[0],v[1]*Math.cos(a)-v[2]*Math.sin(a),v[1]*Math.sin(a)+v[2]*Math.cos(a)]);}
       }
       let toe=add(f,[0,0,23]);
@@ -78,7 +107,13 @@ const Motion = (() => {
       if(id==="toeLift")toe=add(f,[0,23*Math.sin(rad(40*t)),23*Math.cos(rad(40*t))]);
       if(id==="anklePump"&&active)toe=add(f,[0,23*Math.sin(rad(35*t)),23*Math.cos(rad(35*t))]);
       if(id==="heelToe")toe=t>.5?[f[0],12,31]:add(f,[0,23*Math.sin(rad(35*(1-2*t))),23*Math.cos(rad(35*(1-2*t)))]);
-      const legActive=["stand","miniSquat","heel","toeLift","seatedHeel","seatedJack","weightShift","kneeOpen","heelToe"].includes(id)||(["march","extend","reachTap","crossMarch","kneePress","side","backLeg","hamstringCurl","anklePump","forwardTap","sideTap"].includes(id)&&active);
+      // The back foot ends on the ball of the foot: heel 12 up, toes on the floor.
+      if(id==="reverseLunge"&&active){const c=Math.asin(12/23)*t;toe=add(f,[0,-23*Math.sin(c),23*Math.cos(c)]);}
+      if(id==="singleCalf")toe=active?[f[0],10,29]:add(f,[0,-8,Math.sqrt(23*23-64)]);
+      if(id==="wallToe")toe=add(f,[0,23*Math.sin(rad(40*t)),23*Math.cos(rad(40*t))]);
+      // The lifted foot stays square to the leg, without dipping into the floor.
+      if(id==="singleLegHinge"&&active){const c=Math.min(rad(38*t),Math.asin(clamp((f[1]-10)/23)));toe=add(f,[0,-23*Math.sin(c),23*Math.cos(c)]);}
+      const legActive=["stand","miniSquat","heel","toeLift","seatedHeel","seatedJack","weightShift","kneeOpen","heelToe","squat","reverseLunge","wallSlide","wallToe","goodMorning"].includes(id)||(["march","extend","reachTap","crossMarch","kneePress","side","backLeg","hamstringCurl","anklePump","forwardTap","sideTap","standMarch","stepJack","standCross","tableKneeDrive","singleCalf","singleLegStand","singleLegHinge"].includes(id)&&active);
       legs.push({s,h,k,f,toe,active:legActive});
       const sh=add(shoulder,[s*29,-4,0]);
       let hand=add(hip,[s*38,15,27]),pole=[s*.4,-1,0],armActive=false;
@@ -100,9 +135,21 @@ const Motion = (() => {
       if(id==="elbowPull"){hand=add(shoulder,[s*32,-12,102-69*t]);pole=[s*.25,-.3,-1];armActive=true;}
       if(id==="lowRow"){hand=add(shoulder,[s*29,-48,88-54*t]);pole=[s*.25,-.3,-1];armActive=true;}
       if(id==="sideReach"){hand=add(hip,[s*(38+(active?33*t:0)),18-(active?10*t:0),16]);armActive=active;}
+      if(id==="standMarch"){const a=rad(active?-20*t:35*t);hand=add(sh,[0,-107*Math.cos(a),107*Math.sin(a)]);pole=[s*.2,-.3,-1];}
+      if(id==="stepJack"){hand=add(shoulder,[s*(38+60*t),-80+69*t,9]);armActive=true;}
+      if(id==="squat"){const b=rad(15+70*t);hand=add(sh,[0,-107*Math.cos(b),107*Math.sin(b)]);}
+      if(id==="reverseLunge"){hand=add(hip,[s*33,12,6]);pole=[s,-.2,-.6];}
+      if(id==="wallSlide"){hand=add(lerp(h,k,.55),[s*3,13,0]);pole=[s*.3,-.4,-1];}
+      if(id==="wallToe")hand=add(hip,[s*36,5,4]);
+      if(id==="inclinePush"||id==="tableKneeDrive"){hand=[s*TABLE_HAND[0],TABLE_HAND[1],TABLE_HAND[2]];pole=[s*.5,-.6,-.6];armActive=id==="inclinePush";}
+      if(id==="chairDip"){hand=[s*32,82,-27];pole=[s*.15,0,-1];armActive=true;}
+      if(id==="hingeRow"){hand=add(sh,lerp([0,-100,8],[0,-36,-36],t));pole=[s*.2,.3,-1];armActive=true;}
+      if(id==="towelPulldown"){hand=add(sh,lerp([s*46,92,8],[s*46,4,18],t));pole=[s,-.6,0];armActive=true;}
+      // Arms folded on the chest, carried with the trunk.
+      if(id==="goodMorning"){const u=unit(torso);hand=add(add(shoulder,[-s*12,0,0]),add(mul(u,-24),mul([0,-u[2],u[1]],18)));pole=[s,-.5,0];}
       arms.push({s,sh,hand,pole,active:armActive});
     }
-    if(id==="crossMarch"||id==="kneePress"){
+    if(id==="crossMarch"||id==="kneePress"||id==="standCross"){
       const target=legs.find(l=>l.s===side).k;
       for(const a of arms)if(id==="kneePress"||a.s!==side){a.hand=add(target,[a.s*5,12,0]);a.active=true;}
     }
@@ -115,7 +162,7 @@ const Motion = (() => {
   }
   // Joints with a motion arrow: H hands, E elbows, S shoulders, F toes, A heels, K knees, T head, P pelvis;
   // lower case: working side only (o: the other hand).
-  const TRACE={march:"k",seatedJack:"HF",reachTap:"Hf",armSwing:"H",shoulderLift:"S",stand:"T",miniSquat:"P",extend:"f",kneeOpen:"K",hamstringCurl:"a",wallPush:"T",forwardPress:"H",armRaise:"H",bicepsCurl:"H",elbowPull:"E",lowRow:"E",chestOpen:"H",shoulderRotate:"H",crossMarch:"ko",kneePress:"k",sideReach:"h",hipHinge:"T",diagonalReach:"h",heel:"A",toeLift:"F",seatedHeel:"A",anklePump:"f",heelToe:"FA",side:"f",weightShift:"T",backLeg:"f",forwardTap:"f",sideTap:"f"};
+  const TRACE={standMarch:"k",stepJack:"Hf",squat:"P",reverseLunge:"fP",wallSlide:"P",inclinePush:"T",chairDip:"P",hingeRow:"E",towelPulldown:"H",standCross:"ko",tableKneeDrive:"k",goodMorning:"T",singleCalf:"a",wallToe:"F",singleLegStand:"k",singleLegHinge:"f",march:"k",seatedJack:"HF",reachTap:"Hf",armSwing:"H",shoulderLift:"S",stand:"T",miniSquat:"P",extend:"f",kneeOpen:"K",hamstringCurl:"a",wallPush:"T",forwardPress:"H",armRaise:"H",bicepsCurl:"H",elbowPull:"E",lowRow:"E",chestOpen:"H",shoulderRotate:"H",crossMarch:"ko",kneePress:"k",sideReach:"h",hipHinge:"T",diagonalReach:"h",heel:"A",toeLift:"F",seatedHeel:"A",anklePump:"f",heelToe:"FA",side:"f",weightShift:"T",backLeg:"f",forwardTap:"f",sideTap:"f"};
   function viewOf(p){const a=rad(p.isSide?73:12),c=Math.cos(a),s=Math.sin(a);return {project:v=>[v[0]*c+v[2]*s,-v[1]+(-v[0]*s+v[2]*c)*.12],depth:v=>-v[0]*s+v[2]*c};}
   const len2=(a,b)=>Math.hypot(b[0]-a[0],b[1]-a[1]),dir2=(a,b)=>{const l=len2(a,b)||1;return [(b[0]-a[0])/l,(b[1]-a[1])/l];};
   const guideCache=new Map();
@@ -126,7 +173,7 @@ const Motion = (() => {
     // [joint, pivot it turns around, clearance]
     const pick=(p,c)=>{const r=[],u=c==="o"?"H":c.toUpperCase();
       for(const s of [-1,1]){const arm=p.arms.find(x=>x.s===s),leg=p.legs.find(x=>x.s===s);if(c!==u&&(c==="o")===(s===p.side))continue;
-        const j={H:[arm.hand,arm.sh,14],E:[arm.elbow,arm.sh,13],S:[arm.sh,p.hip,14],F:[leg.toe,leg.h,13],A:[leg.f,c==="a"?leg.k:leg.toe,13],K:[leg.k,leg.h,16]}[u];if(j)r.push(j);}
+        const j={H:[arm.hand,arm.sh,14],E:[arm.elbow,arm.sh,13],S:[arm.sh,p.hip,14],F:[leg.toe,leg.h,13],A:[leg.f,p.id==="hamstringCurl"?leg.k:leg.toe,13],K:[leg.k,leg.h,16]}[u];if(j)r.push(j);}
       if(c==="T")r.push([p.head,p.hip,24]);if(c==="P")r.push([p.hip,[0,0,0],30]);return r;};
     for(const c of TRACE[id]||""){const lists=poses.map(p=>pick(p,c));
       // flat: the pivot is on the line of sight, so "away from it" means nothing on screen.
@@ -211,9 +258,16 @@ const Motion = (() => {
       line([-44,backY,z-35],[44,backY,z-35],c,12);
       line([-44,seatY,z+36],[44,seatY,z+36],c,7);
     };
-    if(p.seated||p.id==="stand")chair(-60,76,163);
+    if(p.seated||p.id==="stand"||p.id==="squat")chair(-60,76,163);
     if(supported.has(p.id))chair(115,86,190);
-    if(p.id==="wallPush"){poly([[-65,0,132],[65,0,132],[65,325,132],[-65,325,132]],"#d5ddca");line([-65,0,132],[-65,325,132],"#9dad97",4);}
+    const wall=z=>{poly([[-65,0,z],[65,0,z],[65,325,z],[-65,325,z]],"#d5ddca");line([-65,0,z],[-65,325,z],"#9dad97",4);};
+    if(p.id==="wallPush")wall(132);
+    if(p.id==="wallSlide"||p.id==="wallToe")wall(-50);
+    if(p.id==="inclinePush"||p.id==="tableKneeDrive"){
+      const c="#7d9180",T=TABLE_Y,z0=TABLE_HAND[2]-16,z1=z0+60;
+      for(const x of [-52,52]){line([x,0,z0+4],[x,T,z0+4],c,6);line([x,0,z1-4],[x,T,z1-4],c,6);}
+      poly([[-58,T,z0],[58,T,z0],[58,T,z1],[-58,T,z1]],"#bac7ad");line([-58,T,z0],[58,T,z0],c,7);
+    }
     // Motion paths sit behind the figure; their arrowheads are drawn last, on top.
     const paths=guide?guides(p.id,p.side):[];
     ctx.setLineDash([.1,8.5]);ctx.lineCap="round";ctx.lineWidth=3.6;ctx.strokeStyle="rgba(196,85,50,.55)";
@@ -250,7 +304,8 @@ const Motion = (() => {
     solid(sp,project(add(p.head,[0,-14,0])),7.2,6.6,SKIN,false);
     items.filter(it=>mid(it)>=cut).forEach(drawItem);
     // The two mature, athletic appearances share the exact same motion rig.
-    const head=project(p.head);ctx.save();ctx.translate(...head);
+    // The head follows the trunk, so hinged and inclined moves keep a neutral neck.
+    const head=project(p.head);ctx.save();ctx.translate(...head);ctx.rotate(Math.atan2(sp[0]-hp[0],hp[1]-sp[1]));
     const path=(color,draw)=>{ctx.fillStyle=color;ctx.beginPath();draw();ctx.closePath();ctx.fill();};
     const stroke=(color,width,draw)=>{ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineCap="round";ctx.beginPath();draw();ctx.stroke();};
     const hair="#26312e",skin="#dba47f",lightSkin="#e9b992";
@@ -276,7 +331,7 @@ const Motion = (() => {
     }
     stroke("#4c5b4e",1.3,()=>{ctx.moveTo(-13,-19);ctx.quadraticCurveTo(-3,-25,8,-22);});
     ctx.restore();
-    if(p.id==="towelPull")line(p.arms[0].hand,p.arms[1].hand,p.t>.3?ACTIVE:"#bd9857",5);
+    if(p.id==="towelPull"||p.id==="towelPulldown")line(p.arms[0].hand,p.arms[1].hand,p.t>.3?ACTIVE:"#bd9857",5);
     // Isometric moves: arrows show the press or the pull.
     if(p.id==="palmPress"||p.id==="towelPull"){
       const e=clamp((p.t-.2)/.5),press=p.id==="palmPress";
