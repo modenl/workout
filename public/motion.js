@@ -123,13 +123,13 @@ const Motion = (() => {
     const key=id+side;if(guideCache.has(key))return guideCache.get(key);
     const n=16,poses=[];for(let i=0;i<=n;i++)poses.push(pose(id,i/n,side));
     const {project,depth}=viewOf(poses[0]);let paths=[];
-    // Each traced joint: [point, pivot it turns around, clearance].
-    const pick=(p,c)=>{const r=[],u=c.toUpperCase();
+    // [joint, pivot it turns around, clearance]
+    const pick=(p,c)=>{const r=[],u=c==="o"?"H":c.toUpperCase();
       for(const s of [-1,1]){const arm=p.arms.find(x=>x.s===s),leg=p.legs.find(x=>x.s===s);if(c!==u&&(c==="o")===(s===p.side))continue;
-        const j={H:[arm.hand,arm.sh,14],O:[arm.hand,arm.sh,14],E:[arm.elbow,arm.sh,13],S:[arm.sh,p.hip,14],F:[leg.toe,leg.h,13],A:[leg.f,c==="a"?leg.k:leg.toe,13],K:[leg.k,leg.h,16]}[u];if(j)r.push(j);}
+        const j={H:[arm.hand,arm.sh,14],E:[arm.elbow,arm.sh,13],S:[arm.sh,p.hip,14],F:[leg.toe,leg.h,13],A:[leg.f,c==="a"?leg.k:leg.toe,13],K:[leg.k,leg.h,16]}[u];if(j)r.push(j);}
       if(c==="T")r.push([p.head,p.hip,24]);if(c==="P")r.push([p.hip,[0,0,0],30]);return r;};
     for(const c of TRACE[id]||""){const lists=poses.map(p=>pick(p,c));
-      // flat: the pivot lies along the line of sight, so "away from it" is meaningless on screen.
+      // flat: the pivot is on the line of sight, so "away from it" means nothing on screen.
       lists[0].forEach((_,j)=>{const [q,pv]=lists[n/2][j];paths.push({pts:lists.map(l=>project(l[j][0])),pivot:project(pv),flat:len2(project(q),project(pv))<.5*norm(sub(q,pv)),r:lists[0][j][2],d:depth(q)});});}
     // Seen from the side, paired limbs trace nearly one line: keep the nearer.
     const gap=(P,Q)=>P.pts.reduce((s,v,i)=>s+len2(v,Q.pts[i]),0)/n,chord=P=>dir2(P.pts[0],P.pts[n]);
@@ -137,16 +137,16 @@ const Motion = (() => {
     const out=paths.map(P=>offsetPath(P,project(poses[n/2].hip)[0])).filter(Boolean);
     guideCache.set(key,out);return out;
   }
-  // Puts a path beside the limb: outside a clear curve, else away from its pivot, else outward (or below).
+  // Puts a path beside the limb: outside a clear curve, else away from its pivot, else outward.
   function offsetPath({pts,pivot,flat,r},bodyX){
     const path=[pts[0]];for(const q of pts)if(len2(q,path[path.length-1])>.8)path.push(q);
     let len=0;for(let i=1;i<path.length;i++)len+=len2(path[i-1],path[i]);
     if(len<3)return null;
     const a=path[0],b=path[path.length-1],m=path[path.length>>1],c=lerp(a,b,.5),u=dir2(a,b),nrm=[-u[1],u[0]],bulge=dot(sub(m,c),nrm),pd=dot(dir2(pivot,m),nrm);
-    const sign=Math.abs(bulge)>.15*len2(a,b)?Math.sign(bulge):!flat&&Math.abs(pd)>.7?Math.sign(pd):Math.abs(nrm[0])>.5?Math.sign((m[0]-bodyX)*nrm[0])||1:Math.sign(nrm[1]);
-    // Short moves get a fixed-length arrow; longer paths are resampled and rounded.
+    const sign=Math.abs(bulge)>.3*len2(a,b)?Math.sign(bulge):!flat&&Math.abs(pd)>.7?Math.sign(pd):Math.abs(nrm[0])>.5?Math.sign((m[0]-bodyX)*nrm[0])||1:Math.sign(nrm[1]);
+    // Short moves, or paths offset into their own curve, get a straight arrow.
     let line=[];
-    if(len<34)line=[-18,18].map(k=>add(c,mul(u,k)));
+    if(len<34||sign*bulge<-2){const k=Math.max(18,len2(a,b)/2);line=[-k,k].map(k=>add(c,mul(u,k)));}
     else{let need=0;for(let i=1;i<path.length;i++){const p=path[i-1],q=path[i],d=len2(p,q);for(;need<=d;need+=6)line.push(lerp(p,q,need/d));need-=d;}
       if(len2(b,line[line.length-1])>2)line.push(b);
       for(let k=0;k<3;k++)for(let i=1;i<line.length-1;i++)line[i]=mul(add(add(line[i-1],line[i+1]),mul(line[i],2)),.25);}
@@ -170,13 +170,15 @@ const Motion = (() => {
     if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr)){canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);}
     const ctx=canvas.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
     if(comparison){
-      const shift=sideViews.has(id)?.05:0,scale=Math.min(w/660,(h-36)/335);
+      const shift=sideViews.has(id)?.05:0,scale=Math.min(w/660,(h-36)/355);
       render(ctx,pose(id,0,side),w*(.25-shift),h*.87,scale,{small:true});
       render(ctx,pose(id,1,side),w*(.75-shift),h*.87,scale,{small:true,guide:{dir:1,alpha:1}});
       ctx.fillStyle="#355c4d";ctx.textAlign="center";ctx.font="13px system-ui";ctx.fillText("起始姿势",w*.25,22);ctx.fillText("动作终点",w*.75,22);
     }else{
       const p=phase==null?-1:((phase%1)+1)%1,e=p%.5,guide=p<0?null:{dir:p<.5?1:-1,alpha:.35+.65*clamp(Math.min(e,.5-e)/.05)};
-      render(ctx,pose(id,t,side),w*.48,h*(small?.96:.92),Math.min(w/(small?255:440),(h-(small?5:15))/335),{small,guide});
+      // Leave room for arrows above the head and on the floor.
+      const s=guide?Math.min(w/(small?310:440),(h-10)/372):Math.min(w/(small?255:440),(h-(small?5:15))/335),y=h*(small?.96:.92);
+      render(ctx,pose(id,t,side),w*.48,guide?Math.min(y,h-27*s):y,s,{small,guide});
     }
   }
   function render(ctx,p,cx,cy,scale,{small=false,guide=null}={}){
@@ -194,12 +196,12 @@ const Motion = (() => {
       ctx.fillStyle=g;ctx.beginPath();capsule(ctx,A,B,r1,r2);ctx.fill();
     };
     const arrowHead=(tip,from,size)=>{
-      const [ux,uy]=dir2(from,tip),bx=tip[0]-ux*size,by=tip[1]-uy*size,w=size*.55;
+      const [ux,uy]=dir2(from,tip),bx=tip[0]-ux*size,by=tip[1]-uy*size,w=size*.38;
       ctx.beginPath();ctx.moveTo(...tip);ctx.lineTo(bx-uy*w,by+ux*w);ctx.lineTo(bx+uy*w,by-ux*w);ctx.closePath();
       ctx.lineJoin="round";ctx.lineWidth=3;ctx.strokeStyle=RIM;ctx.stroke();ctx.fillStyle=ACTIVE;ctx.fill();
     };
     // Floor shadow, plus foot shadows that fade as a foot lifts.
-    const blob=(q,rx,ry,alpha)=>{if(alpha<.01)return;ctx.save();ctx.translate(...q);ctx.scale(rx,ry);const g=ctx.createRadialGradient(0,0,0,0,0,1);g.addColorStop(0,"rgb(52,78,62)");g.addColorStop(1,"rgba(52,78,62,0)");ctx.globalAlpha=alpha;ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,1,0,Math.PI*2);ctx.fill();ctx.restore();};
+    const blob=(q,rx,ry,alpha)=>{if(alpha<.01)return;ctx.save();ctx.translate(...q);ctx.scale(rx,ry);const g=ctx.createRadialGradient(0,0,0,0,0,1);g.addColorStop(0,"#344e3e");g.addColorStop(1,"rgba(52,78,62,0)");ctx.globalAlpha=alpha;ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,1,0,Math.PI*2);ctx.fill();ctx.restore();};
     blob([15,3],140,16,.22);
     for(const l of p.legs)blob(project([(l.f[0]+l.toe[0])/2,0,(l.f[2]+l.toe[2])/2]),24,5.5,.34*clamp(1-(Math.min(l.f[1],l.toe[1])-10)/40));
     const chair=(z,seatY,backY)=>{
@@ -234,9 +236,9 @@ const Motion = (() => {
     // Joint markers go with the later of their two segments, so far knees stay hidden.
     const drawItem=it=>{
       const A=project(it.a),B=project(it.b),[ux,uy]=dir2(A,B);solid(A,B,it.r1,it.r2,it.c);
-      if(it.shoe&&len2(A,B)>4){const o=ux<0?-4.3:4.3;stroke2([A[0]-uy*o,A[1]+ux*o],[B[0]-uy*o,B[1]+ux*o],"rgba(238,234,220,.85)",2.2);}
+      if(it.shoe&&len2(A,B)>4){const o=ux<0?-4.3:4.3;stroke2([A[0]-uy*o,A[1]+ux*o],[B[0]-uy*o,B[1]+ux*o],"#e9e5d6",2.2);}
       if(it.hand)solid([B[0]-ux,B[1]-uy],[B[0]+ux*6.5,B[1]+uy*6.5],6.4,5.6,it.c);
-      if(it.joint&&!--it.joint.n){circle(it.joint.v,it.joint.r,RIM);circle(it.joint.v,it.joint.r/2,it.joint.active?"#a7482c":"#456252");}
+      const j=it.joint;if(j&&!--j.n){circle(j.v,j.r,RIM);circle(j.v,j.r/2,j.active?"#a7482c":"#456252");}
     };
     items.filter(it=>mid(it)<cut).forEach(drawItem);
     const hp=project(p.hip),sp=project(p.shoulder),female=avatar==="female",bodyHalf=p.isSide?17:(female?25:29),waist=female?bodyHalf-5:bodyHalf-3;

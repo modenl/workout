@@ -82,13 +82,13 @@ class CountAudio {
     const start=c.currentTime+.025;n.start(start,((offset%4)+4)%4);this.node=n;
     n.onended=()=>{n.disconnect();if(this.node===n)this.node=null;};return start;
   }
-  // Audio time now at the speaker, smooth between hardware callbacks, so motion matches the count.
+  // Audio time at the speaker, smooth between hardware callbacks.
   now(){
-    const c=this.context,t=c.currentTime;
+    const c=this.context,t=c.currentTime;let heard=t;
     try{const s=c.getOutputTimestamp&&c.getOutputTimestamp();
-      if(s&&s.contextTime>0&&s.performanceTime>0){const heard=Math.max(this.heard||0,s.contextTime+(performance.now()-s.performanceTime)/1000);if(heard>t-.35&&heard<t+.05)return this.heard=heard;}
+      if(s&&s.contextTime>0&&s.performanceTime>0)heard=Math.min(t+.05,Math.max(t-.35,s.contextTime+(performance.now()-s.performanceTime)/1000));
     }catch{}
-    return t;
+    return this.heard=Math.max(this.heard||0,heard);
   }
   mute(muted){if(this.gain)this.gain.gain.setValueAtTime(muted?0:1,this.context.currentTime);}
   stop(){if(this.node){this.node.onended=null;try{this.node.stop();}catch{}this.node.disconnect();this.node=null;}}
@@ -131,14 +131,14 @@ function updateExercise(){
   $("view-label").textContent=Motion.view(item.id);$("trainer-canvas").setAttribute("aria-label",item.name+"，"+Motion.view(item.id)+"，橙色表示动作部位");
   $("previous-exercise").disabled=state.preview||state.index===0;$("next-exercise").disabled=state.preview;
   $("rep-total").textContent=state.preview?"/ 示范":"/ 8 次";$("transition").hidden=true;setStatus("");renderPractice();
-  if(!reducedMotion)$("trainer-canvas").animate?.([{opacity:0,transform:"scale(.96)"},{opacity:1,transform:"none"}],{duration:450,easing:"ease-out"});
+  if(!reducedMotion)$("trainer-canvas").animate?.([{opacity:0},{opacity:1}],{duration:450,easing:"ease-out"});
 }
 function elapsedNow(){if(state.mode!=="running")return state.elapsed;const now=state.clockAudio?audio.now():performance.now()/1000;return state.clockBase+Math.max(0,now-state.clockStart);}
 async function resumePractice(){
   if(state.reference){state.reference=false;$("trainer").classList.remove("reference-mode");$("reference-toggle").setAttribute("aria-pressed","false");$("reference-toggle").textContent="看起止姿势";}
   const token=++state.operation;state.mode="starting";$("pause-workout").textContent="准备中…";setStatus("");
   try{
-    if(state.voice){await audio.unlock();if(token!==state.operation||!state.open)return;audio.mute(false);state.clockStart=audio.start(state.elapsed,true);state.clockAudio=true;}
+    if(state.voice){await audio.unlock();if(token!==state.operation||!state.open)return;audio.mute(false);state.clockStart=audio.start(state.elapsed,true);state.clockAudio=true;if(!state.preview)audio.node.stop(state.clockStart+32-state.elapsed);}
     else{state.clockStart=performance.now()/1000;state.clockAudio=false;}
     if(token!==state.operation||!state.open)return;state.clockBase=state.elapsed;state.mode="running";$("pause-workout").textContent="暂停";
   }catch(error){if(token!==state.operation)return;state.mode="paused";$("pause-workout").textContent="重试声音";setStatus("未能启动声音："+error.message+"。可重试，或手动关闭声音后继续。");}
@@ -148,7 +148,7 @@ function openPractice(id){
   testToken++;clearTimeout(testTimer);audio.stop();state.opener=document.activeElement;state.open=true;state.preview=typeof id==="string";state.list=state.preview?[ITEM_BY_ID[id]]:plan.slice();state.index=0;state.elapsed=0;state.mode="paused";
   $("trainer").showModal();document.body.classList.add("training");updateExercise();resumePractice();$("close-trainer").focus();
 }
-function closePractice(){state.operation++;testToken++;audio.stop();state.open=false;state.mode="closed";$("trainer").close();document.body.classList.remove("training");state.opener?.focus();}
+function closePractice(){late=0;slow=false;state.operation++;testToken++;audio.stop();state.open=false;state.mode="closed";$("trainer").close();document.body.classList.remove("training");state.opener?.focus();}
 function togglePause(){if(state.mode==="running"||state.mode==="starting"){pausePractice();return;}if(state.mode==="paused")resumePractice();}
 function toggleVoice(){const running=state.mode==="running";if(running||state.mode==="starting")pausePractice();state.voice=!state.voice;$("voice-toggle").textContent=state.voice?"声音开":"声音关";$("voice-toggle").setAttribute("aria-pressed",String(state.voice));setStatus("");if(running)resumePractice();}
 function navigateExercise(delta){state.operation++;audio.stop();state.mode="paused";state.index=Math.max(0,Math.min(state.list.length-1,state.index+delta));state.elapsed=0;updateExercise();resumePractice();}
@@ -172,11 +172,11 @@ function frame(now){
   requestAnimationFrame(frame);if(document.hidden)return;
   const gap=now-lastFrame;if(slow&&gap<30)return;lastFrame=now;
   // If the running trainer keeps missing frames, settle at a steady ~30 fps.
-  if(state.mode!=="running")warm=0;else if(++warm>30&&!slow&&gap<100){late=late*.98+(gap>25?.02:0);slow=late>.2;}
+  if(state.mode!=="running")warm=0;else if(++warm>30&&!slow&&gap<100){late=late*.99+(gap>25?.01:0);slow=late>.2;}
   animate(now);
 }
 function animate(now){
-  const cycle=now/4000,loop=reducedMotion?.5:Motion.ease(cycle),side=Math.floor(cycle)%2?-1:1;
+  const cycle=reducedMotion?.25:now/4000,loop=Motion.ease(cycle),side=Math.floor(cycle)%2?-1:1;
   if(state.open){
     if(state.mode==="rest"){
       if(!state.holdRest)state.restRemaining=Math.max(0,Math.ceil(state.restUntil-now/1000));
@@ -186,8 +186,8 @@ function animate(now){
     }
     if(state.mode==="done")return;if(state.mode==="running"&&!state.preview&&elapsedNow()>=32){startRest();return;}renderPractice();
   }else{
-    if(heroVisible)Motion.draw($("hero-canvas"),"stand",loop);
-    if(!reducedMotion&&now-lastThumbs>=30){lastThumbs=now;visibleCanvases.forEach(c=>Motion.draw(c,c.dataset.exercise,loop,side,{small:true}));}
+    if(now-lastThumbs<30)return;lastThumbs=now;if(heroVisible)Motion.draw($("hero-canvas"),"stand",loop);
+    if(!reducedMotion)visibleCanvases.forEach(c=>Motion.draw(c,c.dataset.exercise,loop,side,{small:true}));
   }
 }
 $("test-sound").addEventListener("click",testSound);$("start-workout").addEventListener("click",()=>openPractice());$("start-workout-2").addEventListener("click",()=>openPractice());$("new-plan").addEventListener("click",newPlan);
