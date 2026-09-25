@@ -1,0 +1,25 @@
+{
+  "name": "轻练周历",
+  "short_name": "轻练周历",
+  "description": "根据身体参数生成一周轻健身计划，并用节拍音逐步带练。",
+  "start_url": "./index.html",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#fff7f0",
+  "theme_color": "#f06a4a",
+  "lang": "zh-CN",
+  "icons": [
+    {
+      "src": "./icons/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "./icons/maskable.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}

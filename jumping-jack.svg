@@ -1,0 +1,134 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" role="img" aria-labelledby="title desc">
+  <title id="title">开合跳动画</title>
+  <desc id="desc">一个用简洁线条绘制的开合跳动画，展示手臂上举、双腿打开，再回到站立姿势。</desc>
+
+  <defs>
+    <linearGradient id="bg" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#fffaf5" />
+      <stop offset="100%" stop-color="#f1e4d8" />
+    </linearGradient>
+  </defs>
+
+  <style>
+    .panel { fill: url(#bg); }
+    .guide {
+      fill: none;
+      stroke: #cdb9a9;
+      stroke-width: 6;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-dasharray: 7 9;
+      opacity: 0.45;
+    }
+    .body {
+      fill: none;
+      stroke: #1f232a;
+      stroke-width: 8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .limb {
+      fill: none;
+      stroke: #d86d42;
+      stroke-width: 8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .joint { fill: #fffaf5; stroke: #1f232a; stroke-width: 4; }
+    .end { fill: #6a938a; }
+    .ground { stroke: #b8a99b; stroke-width: 3; stroke-linecap: round; opacity: 0.9; }
+    .shadow { fill: #1f232a; opacity: 0.08; }
+    .label {
+      fill: #61656d;
+      font-family: "SF Pro Text", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+      font-size: 14px;
+      letter-spacing: 0.08em;
+    }
+  </style>
+
+  <rect class="panel" x="12" y="12" width="296" height="296" rx="26" />
+  <text class="label" x="28" y="42">JUMPING JACK</text>
+  <text class="label" x="28" y="62">开合跳</text>
+
+  <ellipse class="shadow" cx="160" cy="278" rx="48" ry="10">
+    <animate attributeName="rx" values="48;34;48" dur="1.2s" repeatCount="indefinite" />
+    <animate attributeName="ry" values="10;7;10" dur="1.2s" repeatCount="indefinite" />
+  </ellipse>
+  <path class="ground" d="M84 284 H236" />
+
+  <g aria-hidden="true">
+    <circle class="guide" cx="160" cy="74" r="20" />
+    <path class="guide" d="M160 96 L160 172" />
+    <path class="guide" d="M145 112 L108 54" />
+    <path class="guide" d="M175 112 L212 54" />
+    <path class="guide" d="M148 172 L104 252" />
+    <path class="guide" d="M172 172 L216 252" />
+  </g>
+
+  <g>
+    <animateTransform
+      attributeName="transform"
+      type="translate"
+      values="0 0;0 -10;0 0"
+      dur="1.2s"
+      repeatCount="indefinite"
+    />
+
+    <circle class="joint" cx="160" cy="74" r="20" />
+    <path class="body" d="M160 96 L160 172" />
+    <path class="body" d="M145 112 H175" />
+    <path class="body" d="M148 172 H172" />
+
+    <g>
+      <animateTransform
+        attributeName="transform"
+        type="rotate"
+        values="0 145 112;120 145 112;0 145 112"
+        dur="1.2s"
+        repeatCount="indefinite"
+      />
+      <path class="limb" d="M145 112 L114 178" />
+      <circle class="joint" cx="145" cy="112" r="5" />
+      <circle class="end" cx="114" cy="178" r="6" />
+    </g>
+
+    <g>
+      <animateTransform
+        attributeName="transform"
+        type="rotate"
+        values="0 175 112;-120 175 112;0 175 112"
+        dur="1.2s"
+        repeatCount="indefinite"
+      />
+      <path class="limb" d="M175 112 L206 178" />
+      <circle class="joint" cx="175" cy="112" r="5" />
+      <circle class="end" cx="206" cy="178" r="6" />
+    </g>
+
+    <g>
+      <animateTransform
+        attributeName="transform"
+        type="rotate"
+        values="0 148 172;26 148 172;0 148 172"
+        dur="1.2s"
+        repeatCount="indefinite"
+      />
+      <path class="limb" d="M148 172 L138 258" />
+      <circle class="joint" cx="148" cy="172" r="5" />
+      <circle class="end" cx="138" cy="258" r="6" />
+    </g>
+
+    <g>
+      <animateTransform
+        attributeName="transform"
+        type="rotate"
+        values="0 172 172;-26 172 172;0 172 172"
+        dur="1.2s"
+        repeatCount="indefinite"
+      />
+      <path class="limb" d="M172 172 L182 258" />
+      <circle class="joint" cx="172" cy="172" r="5" />
+      <circle class="end" cx="182" cy="258" r="6" />
+    </g>
+  </g>
+</svg>

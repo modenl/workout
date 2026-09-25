@@ -1,361 +1,179 @@
-const INK = "#173a34";
-const ORANGE = "#df714d";
-const WHITE = "#fffdf8";
-const GUIDE = "rgba(23,58,52,.22)";
-const YELLOW = "#efc75e";
-const FAR = "#8da19a";
-
-const CATEGORIES = [
-  { key: "warm", label: "热身活动" },
-  { key: "lower", label: "腿与臀" },
-  { key: "push", label: "胸与手臂" },
-  { key: "pull", label: "背与肩" },
-  { key: "core", label: "核心与姿势" },
-  { key: "ankle", label: "小腿与脚踝" },
-  { key: "balance", label: "髋部与平衡" }
-];
-
-const VIEW_META = {
-  march:"正面视角 · 橙色腿交替抬起", seatedJack:"正面视角 · 双侧同时开合", reachTap:"侧面视角 · 前方在右 →",
-  stand:"侧面视角 · 向上站起", miniSquat:"斜侧视角 · 臀部向后", extend:"侧面视角 · 脚向前 →",
-  wallPush:"侧面视角 · 墙在前方 →", palmPress:"正面视角 · 双掌在胸前", forwardPress:"侧面视角 · 双手向前 →",
-  elbowPull:"正面视角 · 手肘向后拉", towelPull:"正面视角 · 双手向左右拉", lowRow:"正面视角 · 手肘贴身后拉",
-  crossMarch:"正面视角 · 对侧手膝靠近", kneePress:"正面视角 · 橙色侧发力", sideReach:"正面视角 · 左右交替",
-  heel:"正面视角 · 脚跟向上", toeLift:"正面视角 · 脚尖向上", seatedHeel:"正面视角 · 脚跟向上",
-  side:"正面视角 · 腿向左或右", weightShift:"正面视角 · 重心左右移动", backLeg:"侧面视角 · 后方在左 ←"
+"use strict";
+const $=id=>document.getElementById(id);
+const ITEMS=CATEGORIES.flatMap(category=>LIBRARY[category.key].map(item=>({...item,key:category.key,category:category.label})));
+const ITEM_BY_ID=Object.fromEntries(ITEMS.map(i=>[i.id,i]));
+const PHASES={
+ armSwing:["小幅摆臂","回正 · 换边"],shoulderLift:["轻轻提肩","放松肩膀"],kneeOpen:["双膝向外打开","有控制地收回"],hamstringCurl:["弯膝 · 脚跟向后","放回 · 换边"],
+ armRaise:["向前抬臂","有控制地放下"],bicepsCurl:["弯肘抬手","上臂不动 · 放下"],chestOpen:["轻轻向外打开","放松 · 收回"],shoulderRotate:["手肘不动 · 外转","轻轻收回"],
+ hipHinge:["从髋部稍前倾","背部长直 · 坐正"],diagonalReach:["向对侧膝前伸手","收回 · 换边"],anklePump:["脚尖向上勾","放松下压 · 换边"],heelToe:["脚尖落下 · 提脚跟","脚跟落下 · 抬脚尖"],
+ forwardTap:["向前点一小步","收回 · 换边"],sideTap:["向旁点一小步","收回 · 换边"],
+ march:["抬脚 · 自然呼吸","轻放 · 换边"],seatedJack:["向外打开","收回坐稳"],reachTap:["向前点脚","收回换边"],
+ stand:["向前倾 · 站起","弯髋屈膝 · 坐下"],miniSquat:["臀部后移 · 小蹲","用腿站起"],extend:["伸膝 · 不锁死","放下换边"],
+ wallPush:["屈肘靠近墙","推墙回到起点"],palmPress:["轻轻推压","放松肩膀"],forwardPress:["向前推 · 呼气","收回 · 吸气"],
+ elbowPull:["弯肘 · 向后拉","伸回 · 不耸肩"],towelPull:["向两侧轻拉","放松 · 不松手"],lowRow:["手肘向后拉","有控制地伸回"],
+ crossMarch:["对侧手靠近膝","放下 · 换边"],kneePress:["手膝轻轻相推","放松 · 换边"],sideReach:["小幅侧伸","坐直 · 换边"],
+ heel:["脚跟抬起","有控制地落下"],toeLift:["脚尖抬起","脚跟始终着地"],seatedHeel:["脚跟抬起","脚尖始终着地"],
+ side:["侧抬 · 身体不歪","轻放 · 换边"],weightShift:["向一侧移重心","回中间 · 换边"],backLeg:["向后抬 · 不塌腰","轻放 · 换边"]
 };
-
-const LIBRARY = {
-  warm: [
-    { id:"march", name:"坐姿踏步", purpose:"温和带动心肺，唤醒髋部和大腿。", steps:["坐在椅子前半部，身体坐直。","左右轮流抬脚，同时自然摆臂。"], cue:"脚轻轻落地；抬到舒服的高度即可。", alternating:true },
-    { id:"seatedJack", name:"坐姿开合", purpose:"活动肩、髋和腿，让全身暖起来。", steps:["坐稳，双脚并拢，双手放在腿旁。","双脚向两旁点开，双臂抬到肩高，再收回。"], cue:"手臂不必举过头；全程保持顺畅呼吸。" },
-    { id:"reachTap", name:"坐姿前点脚", purpose:"活动髋、膝和肩部，温和提高身体活动量。", steps:["坐在椅子前半部，双脚踩稳。","一只脚向前点，同时双手向前送，再换边。"], cue:"脚跟轻点地面；身体保持直，不向后倒。", alternating:true }
-  ],
-  lower: [
-    { id:"stand", name:"扶椅起身", purpose:"练大腿和臀部，帮助起床、如厕和上下车。", steps:["椅子靠墙，双脚放在膝盖下方。","身体稍向前，站直后有控制地坐回。"], cue:"弯髋、弯膝；膝盖始终朝向脚尖。" },
-    { id:"miniSquat", name:"扶椅小蹲", purpose:"练大腿、臀部和髋部，增强站立力量。", steps:["双手扶稳椅背，双脚与髋同宽。","臀部向后坐一小段，再用腿站直。"], cue:"背部保持长直；膝盖不向内夹。" },
-    { id:"extend", name:"坐姿伸膝", purpose:"练大腿前侧，帮助膝盖在站立和走路时稳定。", steps:["坐直，双手扶住椅子两侧。","一侧小腿向前伸，再慢慢放回换边。"], cue:"膝盖不要锁死；不用甩腿或追求很高。", alternating:true }
-  ],
-  push: [
-    { id:"wallPush", name:"墙面俯卧撑", purpose:"练胸、肩和手臂，让推门和撑起身体更有力。", steps:["面对墙站立，双手与肩同高。","弯手肘靠近墙，再把墙推远。"], cue:"只弯手肘；头、背、髋始终保持一条直线。" },
-    { id:"palmPress", name:"坐姿合掌推压", purpose:"温和练胸、肩和手臂，不需要器械。", steps:["坐直，双掌在胸前相对。","数到 2 时互相推压，数到 4 时放松。"], cue:"肩膀放松，不耸肩；不要憋气。" },
-    { id:"forwardPress", name:"坐姿向前推", purpose:"练胸、肩和手臂，帮助完成日常推送动作。", steps:["坐直，双手握拳放在胸前。","双臂向前推到微弯，再有控制地收回。"], cue:"手肘不要锁死；腰部不后仰。" }
-  ],
-  pull: [
-    { id:"elbowPull", name:"坐姿拉肘夹背", purpose:"练上背和肩后侧，帮助维持挺拔姿势。", steps:["坐直，双臂向前伸到肩高。","弯手肘向后拉，轻轻夹背，再伸回。"], cue:"肘保持在肩膀下方；腰部不要后仰。" },
-    { id:"towelPull", name:"坐姿毛巾拉开", purpose:"练上背、肩和手臂，帮助拿物更稳。", steps:["双手握毛巾两端，在胸前伸直。","向两边拉紧毛巾，再缓缓放松。"], cue:"手肘保持微弯，不锁死；毛巾不用拉得很紧。" },
-    { id:"lowRow", name:"坐姿低位划臂", purpose:"练背部和手臂，帮助保持肩膀打开。", steps:["坐直，双手向前下方伸出。","弯手肘贴近身体向后拉，再慢慢伸回。"], cue:"先向后拉肩胛骨；不要耸肩或挺肚子。" }
-  ],
-  core: [
-    { id:"crossMarch", name:"坐姿对侧触膝", purpose:"练腹部、髋部和身体协调。", steps:["坐直，右脚抬起，同时左手靠近右膝。","放回后换边，身体不要后倒。"], cue:"动作来自抬膝和轻微转身，不要猛拉颈部。", alternating:true },
-    { id:"kneePress", name:"坐姿手膝相推", purpose:"温和唤醒腹部深层肌肉，帮助躯干稳定。", steps:["坐直，抬起一侧膝盖，双手扶住膝上方。","手向下、膝向上轻轻相推，再放回换边。"], cue:"只用三四成力；背部保持直，不憋气。", alternating:true },
-    { id:"sideReach", name:"坐姿侧向伸手", purpose:"练躯干两侧和姿势控制，帮助弯身取物。", steps:["坐稳，双脚踩地，一只手扶住椅边。","另一只手向身体侧下方伸，再回正换边。"], cue:"幅度要小；臀部两侧始终压在椅面。", alternating:true }
-  ],
-  ankle: [
-    { id:"heel", name:"扶椅踮脚", purpose:"练小腿和脚踝，帮助迈步和站稳。", steps:["双手扶稳椅背，双脚朝前。","脚跟抬起，再有控制地落地。"], cue:"脚趾始终着地；膝盖保持柔软，不锁死。" },
-    { id:"toeLift", name:"坐姿抬脚尖", purpose:"练小腿前侧和脚踝，帮助减少走路绊脚。", steps:["坐稳，双脚平放，膝盖约九十度。","脚跟不动，抬起脚尖，再慢慢放下。"], cue:"只动脚踝；不要抬起整条腿。" },
-    { id:"seatedHeel", name:"坐姿提脚跟", purpose:"练小腿后侧和脚踝，帮助迈步时向前推地。", steps:["坐稳，双脚平放，脚尖朝前。","脚尖不动，抬起脚跟，再慢慢落下。"], cue:"膝盖保持在脚尖上方；不要让脚踝向外倒。" }
-  ],
-  balance: [
-    { id:"side", name:"扶椅侧抬腿", purpose:"练髋部两侧和单脚稳定，帮助走路少摇晃。", steps:["一手扶稳椅背，双脚朝前。","外侧腿向旁抬一小段，再慢慢收回。"], cue:"抬起腿保持直；支撑腿微弯，不锁膝。", alternating:true },
-    { id:"weightShift", name:"扶椅左右移重心", purpose:"练脚踝、髋部和平衡反应，帮助转身与迈步。", steps:["双手轻扶椅背，双脚比髋稍宽。","把重心移到一侧，再回中间换边。"], cue:"两脚不离地；承重侧膝盖保持微弯。", alternating:true },
-    { id:"backLeg", name:"扶椅向后抬腿", purpose:"练臀部和髋后侧，帮助站稳和迈步。", steps:["双手扶稳椅背，身体站直。","一条腿保持直，向后抬一小段，再换边。"], cue:"不要前倾或塌腰；支撑腿微弯。", alternating:true }
-  ]
-};
-
-function lerp(a, b, t) { return a + (b - a) * t; }
-function ease(t) { return .5 - Math.cos(Math.PI * t) / 2; }
-function point(a, b, t) { return { x: lerp(a.x, b.x, t), y: lerp(a.y, b.y, t) }; }
-function limb(ctx, a, b, width = 18, color = INK) {
-  ctx.strokeStyle = color; ctx.lineWidth = width; ctx.lineCap = "round";
-  ctx.beginPath(); ctx.moveTo(a.x, a.y); ctx.lineTo(b.x, b.y); ctx.stroke();
+const DEFAULT_IDS=["march","stand","wallPush","elbowPull","kneePress","seatedHeel","weightShift"];
+const storage={get(key){try{return localStorage.getItem(key);}catch{return null;}},set(key,value){try{localStorage.setItem(key,value);}catch{}}};
+Motion.setAvatar(storage.get("cq-avatar-v1"));
+function selectAvatar(value){
+  Motion.setAvatar(value);storage.set("cq-avatar-v1",Motion.getAvatar());syncAvatar();observeThumbnails();renderPractice();
+  Motion.draw($("hero-canvas"),"stand",.5);
 }
-function ghostLimb(ctx,a,b,width=14){ctx.save();ctx.globalAlpha=.32;ctx.strokeStyle=FAR;ctx.lineWidth=width;ctx.lineCap="round";ctx.setLineDash([7,8]);ctx.beginPath();ctx.moveTo(a.x,a.y);ctx.lineTo(b.x,b.y);ctx.stroke();ctx.restore();}
-function joint(ctx, p, r = 8) { ctx.fillStyle = ORANGE; ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill(); }
-function head(ctx, p, r = 27) { ctx.fillStyle = WHITE; ctx.strokeStyle = INK; ctx.lineWidth = 8; ctx.beginPath(); ctx.arc(p.x, p.y, r, 0, Math.PI * 2); ctx.fill(); ctx.stroke(); }
-function chair(ctx, x, y, scale = 1) {
-  ctx.strokeStyle = INK; ctx.lineWidth = 11 * scale; ctx.lineCap = "round";
-  ctx.beginPath(); ctx.moveTo(x, y - 155*scale); ctx.lineTo(x, y - 20*scale); ctx.moveTo(x, y - 75*scale); ctx.lineTo(x + 105*scale, y - 75*scale); ctx.lineTo(x + 105*scale, y); ctx.moveTo(x + 18*scale, y - 72*scale); ctx.lineTo(x + 18*scale, y); ctx.stroke();
+function syncAvatar(){
+  const value=Motion.getAvatar();document.querySelectorAll("[data-avatar]").forEach(button=>button.setAttribute("aria-pressed",String(button.dataset.avatar===value)));
+  $("trainer-avatar").value=value;
+  $("hero-canvas").setAttribute("aria-label",(value==="female"?"女":"男")+"示范人物，坐站起身关节动画");
 }
-function arrow(ctx, x1, y1, x2, y2) {
-  const angle = Math.atan2(y2-y1, x2-x1);
-  ctx.save(); ctx.strokeStyle = ORANGE; ctx.fillStyle = ORANGE; ctx.lineWidth = 6; ctx.setLineDash([10,10]);
-  ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); ctx.setLineDash([]);
-  ctx.beginPath(); ctx.moveTo(x2,y2); ctx.lineTo(x2-17*Math.cos(angle-.55),y2-17*Math.sin(angle-.55)); ctx.lineTo(x2-17*Math.cos(angle+.55),y2-17*Math.sin(angle+.55)); ctx.closePath(); ctx.fill(); ctx.restore();
-}
-function drawGround(ctx) { ctx.strokeStyle=GUIDE; ctx.lineWidth=2; ctx.beginPath(); ctx.moveTo(-240,430);ctx.lineTo(240,430);ctx.stroke(); }
-function drawTorso(ctx, hip, shoulder) { limb(ctx, hip, shoulder, 23); joint(ctx, hip); head(ctx, {x:shoulder.x,y:shoulder.y-52}); }
-
-function seatedPose(ctx, c, options = {}) {
-  chair(ctx,c.x-92,c.y,1); const hip={x:c.x,y:c.y-82}, shoulder={x:c.x,y:c.y-205}; drawTorso(ctx,hip,shoulder);
-  const leftKnee=options.leftKnee || {x:c.x-42,y:c.y-34};
-  const rightKnee=options.rightKnee || {x:c.x+55,y:c.y-34};
-  const leftFoot=options.leftFoot || {x:c.x-45,y:c.y};
-  const rightFoot=options.rightFoot || {x:c.x+58,y:c.y};
-  const leftColor=options.activeSide==="left"?ORANGE:FAR,rightColor=options.activeSide==="left"?FAR:ORANGE;
-  limb(ctx,hip,leftKnee,16,leftColor);limb(ctx,leftKnee,leftFoot,16,leftColor);limb(ctx,hip,rightKnee,18,rightColor);limb(ctx,rightKnee,rightFoot,18,rightColor);
-  joint(ctx,leftKnee,7);joint(ctx,rightKnee,7);
-  return {hip,shoulder,leftKnee,rightKnee,leftFoot,rightFoot};
-}
-function standingPose(ctx,c,options={}) {
-  const hip={x:c.x+(options.shift||0),y:c.y-145+(options.drop||0)}, shoulder={x:c.x+(options.shift||0)+(options.lean||0),y:c.y-260+(options.drop||0)};
-  const footL={x:c.x-38+(options.sideL||0),y:c.y+(options.ankleRise||0)}, footR={x:c.x+38+(options.sideR||0),y:c.y+(options.ankleRise||0)};
-  const kneeL=options.kneeL||point(hip,footL,.53), kneeR=options.kneeR||point(hip,footR,.53);
-  const leftColor=options.activeSide==="left"?ORANGE:FAR,rightColor=options.activeSide==="left"?FAR:ORANGE;
-  drawTorso(ctx,hip,shoulder); limb(ctx,hip,kneeL,16,leftColor);limb(ctx,kneeL,footL,16,leftColor);limb(ctx,hip,kneeR,18,rightColor);limb(ctx,kneeR,footR,18,rightColor);joint(ctx,kneeL,7);joint(ctx,kneeR,7);
-  return {hip,shoulder,footL,footR,kneeL,kneeR};
-}
-
-const DRAWERS = {
-  march(ctx,c,t,side){
-    const lift = 48*t; const right = side > 0;
-    const pose=seatedPose(ctx,c,{activeSide:right?"right":"left",rightKnee:right?{x:c.x+62,y:c.y-34-lift*.5}:undefined,rightFoot:right?{x:c.x+62,y:c.y-lift}:undefined,leftKnee:!right?{x:c.x-48,y:c.y-34-lift*.5}:undefined,leftFoot:!right?{x:c.x-48,y:c.y-lift}:undefined});
-    const movingShoulder=pose.shoulder; const handA={x:c.x+(right?-42:42),y:c.y-130-25*t},handB={x:c.x+(right?42:-42),y:c.y-130};limb(ctx,movingShoulder,handA,15,ORANGE);limb(ctx,movingShoulder,handB,15);arrow(ctx,c.x+(right?105:-105),c.y-4,c.x+(right?105:-105),c.y-68);
-  },
-  seatedJack(ctx,c,t){
-    const pose=seatedPose(ctx,c,{leftFoot:{x:c.x-45-52*t,y:c.y},rightFoot:{x:c.x+58+52*t,y:c.y}});
-    const leftElbow={x:c.x-48-34*t,y:c.y-160-35*t},rightElbow={x:c.x+48+34*t,y:c.y-160-35*t};
-    const leftHand={x:c.x-48-70*t,y:c.y-105-92*t},rightHand={x:c.x+48+70*t,y:c.y-105-92*t};
-    limb(ctx,pose.shoulder,leftElbow,16);limb(ctx,leftElbow,leftHand,16,ORANGE);limb(ctx,pose.shoulder,rightElbow,16);limb(ctx,rightElbow,rightHand,16,ORANGE);joint(ctx,leftElbow);joint(ctx,rightElbow);
-  },
-  reachTap(ctx,c,t,side){
-    chair(ctx,c.x-105,c.y,1);const hip={x:c.x-8,y:c.y-82},shoulder={x:c.x-8,y:c.y-205};drawTorso(ctx,hip,shoulder);const farKnee={x:c.x+35,y:c.y-38},farFoot={x:c.x+48,y:c.y},knee={x:c.x+48,y:c.y-42},foot={x:c.x+65+92*t,y:c.y};ghostLimb(ctx,knee,{x:c.x+65,y:c.y});limb(ctx,hip,farKnee,15,FAR);limb(ctx,farKnee,farFoot,15,FAR);limb(ctx,hip,knee,18,ORANGE);limb(ctx,knee,foot,18,ORANGE);joint(ctx,knee,7);const elbow={x:c.x+38,y:c.y-170},hand={x:c.x+65+62*t,y:c.y-150};limb(ctx,shoulder,elbow,15,FAR);limb(ctx,elbow,hand,17,ORANGE);joint(ctx,elbow);arrow(ctx,c.x+78,c.y-16,c.x+170,c.y-16);
-  },
-  stand(ctx,c,t){
-    chair(ctx,c.x-135,c.y,1); const hip={x:c.x-45+45*t,y:c.y-82-63*t}, shoulder={x:c.x-42+42*t,y:c.y-205-55*t};
-    const footL={x:c.x-18,y:c.y},footR={x:c.x+48,y:c.y}; const kneeL={x:c.x+16,y:c.y-44-35*t},kneeR={x:c.x+58,y:c.y-46-33*t};
-    drawTorso(ctx,hip,shoulder);limb(ctx,hip,kneeL,18,ORANGE);limb(ctx,kneeL,footL,18,ORANGE);limb(ctx,hip,kneeR);limb(ctx,kneeR,footR);joint(ctx,kneeL);joint(ctx,kneeR);
-    const hand={x:c.x-104+34*t,y:c.y-112-63*t};limb(ctx,shoulder,hand,15);arrow(ctx,c.x+135,c.y-90,c.x+135,c.y-215);
-  },
-  miniSquat(ctx,c,t){
-    chair(ctx,c.x+98,c.y,1); const hip={x:c.x+12*t,y:c.y-145+48*t},shoulder={x:c.x+28*t,y:c.y-260+48*t};
-    const footL={x:c.x-42,y:c.y},footR={x:c.x+42,y:c.y}; const kneeL={x:c.x-50+18*t,y:c.y-72+27*t},kneeR={x:c.x+50+18*t,y:c.y-72+27*t};
-    drawTorso(ctx,hip,shoulder);limb(ctx,hip,kneeL);limb(ctx,kneeL,footL);limb(ctx,hip,kneeR,18,ORANGE);limb(ctx,kneeR,footR,18,ORANGE);joint(ctx,kneeL);joint(ctx,kneeR);
-    const hand={x:c.x+105,y:c.y-190};limb(ctx,shoulder,hand,15);joint(ctx,hand,6);arrow(ctx,c.x-110,c.y-165,c.x-110,c.y-95);
-  },
-  extend(ctx,c,t,side){
-    chair(ctx,c.x-105,c.y,1);const hip={x:c.x-8,y:c.y-82},shoulder={x:c.x-8,y:c.y-205};drawTorso(ctx,hip,shoulder);const farKnee={x:c.x+34,y:c.y-38},farFoot={x:c.x+45,y:c.y},knee={x:c.x+52,y:c.y-45},foot={x:c.x+62+105*t,y:c.y-4-72*t};ghostLimb(ctx,knee,{x:c.x+62,y:c.y});limb(ctx,hip,farKnee,15,FAR);limb(ctx,farKnee,farFoot,15,FAR);limb(ctx,hip,knee,18,ORANGE);limb(ctx,knee,foot,18,ORANGE);joint(ctx,knee,7);const hand={x:c.x+24,y:c.y-112};limb(ctx,shoulder,hand,15);arrow(ctx,c.x+80,c.y-58,c.x+174,c.y-100);
-  },
-  wallPush(ctx,c,t){
-    const wallX=c.x+150; ctx.strokeStyle=INK;ctx.lineWidth=10;ctx.beginPath();ctx.moveTo(wallX,c.y-340);ctx.lineTo(wallX,c.y+5);ctx.stroke();
-    const foot={x:c.x-86,y:c.y}, shoulder={x:c.x-78+48*t,y:c.y-255}, hip={x:c.x-82+26*t,y:c.y-138}; const knee=point(hip,foot,.52);
-    drawTorso(ctx,hip,shoulder);limb(ctx,foot,knee);limb(ctx,knee,hip);joint(ctx,knee,7);
-    const hand={x:wallX,y:c.y-245},elbow={x:lerp(shoulder.x,wallX,.55),y:c.y-218+28*t};limb(ctx,shoulder,elbow,18,ORANGE);limb(ctx,elbow,hand,18,ORANGE);joint(ctx,elbow);joint(ctx,hand,7);arrow(ctx,c.x+10,c.y-310,c.x+88,c.y-310);
-  },
-  palmPress(ctx,c,t){
-    const pose=seatedPose(ctx,c); const hand={x:c.x,y:c.y-178},leftElbow={x:c.x-82+24*t,y:c.y-170},rightElbow={x:c.x+82-24*t,y:c.y-170};
-    limb(ctx,pose.shoulder,leftElbow,16);limb(ctx,leftElbow,hand,17,ORANGE);limb(ctx,pose.shoulder,rightElbow,16);limb(ctx,rightElbow,hand,17,ORANGE);joint(ctx,leftElbow);joint(ctx,rightElbow);joint(ctx,hand,8);ctx.strokeStyle=YELLOW;ctx.lineWidth=5;ctx.beginPath();ctx.arc(hand.x,hand.y,22+8*t,0,Math.PI*2);ctx.stroke();
-  },
-  forwardPress(ctx,c,t){
-    chair(ctx,c.x-105,c.y,1);const hip={x:c.x-8,y:c.y-82},shoulder={x:c.x-8,y:c.y-205};drawTorso(ctx,hip,shoulder);const knee={x:c.x+40,y:c.y-38},foot={x:c.x+48,y:c.y};limb(ctx,hip,knee,16,FAR);limb(ctx,knee,foot,16,FAR);const elbow={x:c.x+42+28*t,y:c.y-180},hand={x:c.x+58+105*t,y:c.y-180};ghostLimb(ctx,elbow,{x:c.x+58,y:c.y-180});limb(ctx,shoulder,elbow,17,FAR);limb(ctx,elbow,hand,19,ORANGE);joint(ctx,elbow);joint(ctx,hand,7);arrow(ctx,c.x+74,c.y-238,c.x+176,c.y-238);
-  },
-  elbowPull(ctx,c,t){
-    const pose=seatedPose(ctx,c); const leftElbow={x:c.x-58-42*t,y:c.y-178},rightElbow={x:c.x+58+42*t,y:c.y-178}; const leftHand={x:c.x-82+70*(1-t),y:c.y-177},rightHand={x:c.x+82-70*(1-t),y:c.y-177};
-    limb(ctx,pose.shoulder,leftElbow,17);limb(ctx,leftElbow,leftHand,17,ORANGE);limb(ctx,pose.shoulder,rightElbow,17);limb(ctx,rightElbow,rightHand,17,ORANGE);joint(ctx,leftElbow);joint(ctx,rightElbow);arrow(ctx,c.x-18,c.y-242,c.x-102,c.y-242);arrow(ctx,c.x+18,c.y-242,c.x+102,c.y-242);
-  },
-  towelPull(ctx,c,t){
-    const pose=seatedPose(ctx,c); const leftHand={x:c.x-52-45*t,y:c.y-178},rightHand={x:c.x+52+45*t,y:c.y-178};
-    limb(ctx,pose.shoulder,leftHand,17,ORANGE);limb(ctx,pose.shoulder,rightHand,17,ORANGE);ctx.strokeStyle=YELLOW;ctx.lineWidth=9;ctx.beginPath();ctx.moveTo(leftHand.x,leftHand.y);ctx.lineTo(rightHand.x,rightHand.y);ctx.stroke();joint(ctx,leftHand,7);joint(ctx,rightHand,7);
-  },
-  lowRow(ctx,c,t){
-    const pose=seatedPose(ctx,c);const leftElbow={x:c.x-52-55*t,y:c.y-148+12*t},rightElbow={x:c.x+52+55*t,y:c.y-148+12*t};const leftHand={x:c.x-78+55*(1-t),y:c.y-116},rightHand={x:c.x+78-55*(1-t),y:c.y-116};
-    limb(ctx,pose.shoulder,leftElbow,16);limb(ctx,leftElbow,leftHand,17,ORANGE);limb(ctx,pose.shoulder,rightElbow,16);limb(ctx,rightElbow,rightHand,17,ORANGE);joint(ctx,leftElbow);joint(ctx,rightElbow);arrow(ctx,c.x-25,c.y-102,c.x-112,c.y-102);arrow(ctx,c.x+25,c.y-102,c.x+112,c.y-102);
-  },
-  crossMarch(ctx,c,t,side){
-    const right=side>0, lift=50*t; const pose=seatedPose(ctx,c,{activeSide:right?"right":"left",rightKnee:right?{x:c.x+58,y:c.y-34-lift*.45}:undefined,rightFoot:right?{x:c.x+58,y:c.y-lift}:undefined,leftKnee:!right?{x:c.x-45,y:c.y-34-lift*.45}:undefined,leftFoot:!right?{x:c.x-45,y:c.y-lift}:undefined});
-    const hand={x:c.x+(right?35:-30),y:c.y-110-18*t};limb(ctx,pose.shoulder,hand,17,ORANGE);joint(ctx,hand,7);
-  },
-  kneePress(ctx,c,t,side){
-    const right=side>0, lift=45*t; const pose=seatedPose(ctx,c,{activeSide:right?"right":"left",rightKnee:right?{x:c.x+55,y:c.y-34-lift*.5}:undefined,rightFoot:right?{x:c.x+55,y:c.y-lift}:undefined,leftKnee:!right?{x:c.x-45,y:c.y-34-lift*.5}:undefined,leftFoot:!right?{x:c.x-45,y:c.y-lift}:undefined});
-    const target=right?pose.rightKnee:pose.leftKnee; const hand={x:target.x,y:target.y-18};limb(ctx,pose.shoulder,hand,17,ORANGE);joint(ctx,hand,7);ctx.strokeStyle=YELLOW;ctx.lineWidth=5;ctx.beginPath();ctx.arc(target.x,target.y,16+7*t,0,Math.PI*2);ctx.stroke();
-  },
-  sideReach(ctx,c,t,side){
-    chair(ctx,c.x-92,c.y,1);const hip={x:c.x,y:c.y-82},shoulder={x:c.x+side*24*t,y:c.y-205+8*t};drawTorso(ctx,hip,shoulder);const kneeL={x:c.x-42,y:c.y-34},kneeR={x:c.x+55,y:c.y-34},footL={x:c.x-45,y:c.y},footR={x:c.x+58,y:c.y};limb(ctx,hip,kneeL);limb(ctx,kneeL,footL);limb(ctx,hip,kneeR,18,ORANGE);limb(ctx,kneeR,footR,18,ORANGE);joint(ctx,kneeL,7);joint(ctx,kneeR,7);
-    const reachingHand={x:c.x+side*(78+58*t),y:c.y-122+42*t},supportHand={x:c.x-side*42,y:c.y-112};limb(ctx,shoulder,reachingHand,17,ORANGE);limb(ctx,shoulder,supportHand,15);joint(ctx,reachingHand,7);arrow(ctx,c.x+side*70,c.y-125,c.x+side*145,c.y-75);
-  },
-  heel(ctx,c,t){
-    chair(ctx,c.x+100,c.y,1); const pose=standingPose(ctx,c,{drop:-20*t,ankleRise:-22*t}); const toeL={x:pose.footL.x+20,y:c.y},toeR={x:pose.footR.x+20,y:c.y};limb(ctx,pose.footL,toeL,8);limb(ctx,pose.footR,toeR,8);const hand={x:c.x+106,y:c.y-186};limb(ctx,pose.shoulder,hand,15);joint(ctx,hand,6);arrow(ctx,c.x-115,c.y-8,c.x-115,c.y-70);
-  },
-  toeLift(ctx,c,t){
-    const pose=seatedPose(ctx,c); const heelL={x:pose.leftFoot.x,y:c.y},heelR={x:pose.rightFoot.x,y:c.y};const toeL={x:heelL.x+34,y:c.y-25*t},toeR={x:heelR.x+34,y:c.y-25*t};limb(ctx,heelL,toeL,10,ORANGE);limb(ctx,heelR,toeR,10,ORANGE);arrow(ctx,c.x+120,c.y-4,c.x+120,c.y-45);
-  },
-  seatedHeel(ctx,c,t){
-    const pose=seatedPose(ctx,c);const toeL={x:pose.leftFoot.x+30,y:c.y},toeR={x:pose.rightFoot.x+30,y:c.y},heelL={x:pose.leftFoot.x,y:c.y-25*t},heelR={x:pose.rightFoot.x,y:c.y-25*t};limb(ctx,heelL,toeL,10,ORANGE);limb(ctx,heelR,toeR,10,ORANGE);arrow(ctx,c.x-120,c.y-3,c.x-120,c.y-46);
-  },
-  side(ctx,c,t,side){
-    chair(ctx,c.x+108,c.y,1); const move=side>0?"sideR":"sideL"; const opts={activeSide:side>0?"right":"left"};opts[move]=(side>0?82:-82)*t;const pose=standingPose(ctx,c,opts);const hand={x:c.x+114,y:c.y-185};limb(ctx,pose.shoulder,hand,15);joint(ctx,hand,6);arrow(ctx,c.x+(side>0?55:-55),c.y-46,c.x+(side>0?145:-145),c.y-46);
-  },
-  weightShift(ctx,c,t,side){
-    chair(ctx,c.x+102,c.y,1); const shift=side*38*t;const pose=standingPose(ctx,c,{activeSide:side>0?"right":"left",shift,kneeL:{x:c.x-48+shift*.6,y:c.y-72+5*t},kneeR:{x:c.x+48+shift*.6,y:c.y-72+5*t}});const hand={x:c.x+108,y:c.y-185};limb(ctx,pose.shoulder,hand,15);joint(ctx,hand,6);arrow(ctx,c.x-80,c.y-310,c.x+80,c.y-310);
-  },
-  backLeg(ctx,c,t,side){
-    chair(ctx,c.x+112,c.y,1);const hip={x:c.x,y:c.y-145},shoulder={x:c.x,y:c.y-260};drawTorso(ctx,hip,shoulder);const supportKnee={x:c.x+18,y:c.y-74},supportFoot={x:c.x+20,y:c.y},movingKnee={x:c.x-18-26*t,y:c.y-76-12*t},movingFoot={x:c.x-24-88*t,y:c.y-3-20*t};ghostLimb(ctx,hip,{x:c.x-18,y:c.y-76});ghostLimb(ctx,{x:c.x-18,y:c.y-76},{x:c.x-24,y:c.y-3});limb(ctx,hip,supportKnee,16,FAR);limb(ctx,supportKnee,supportFoot,16,FAR);limb(ctx,hip,movingKnee,19,ORANGE);limb(ctx,movingKnee,movingFoot,19,ORANGE);joint(ctx,supportKnee,7);joint(ctx,movingKnee,7);const hand={x:c.x+118,y:c.y-185};limb(ctx,shoulder,hand,16,ORANGE);joint(ctx,hand,6);arrow(ctx,c.x-60,c.y-45,c.x-158,c.y-66);
+let plan=DEFAULT_IDS.map(id=>ITEM_BY_ID[id]);
+try{const saved=JSON.parse(storage.get("cq-plan-v2"));if(Array.isArray(saved)&&saved.length===7&&saved.every((id,i)=>ITEM_BY_ID[id]?.key===CATEGORIES[i].key))plan=saved.map(id=>ITEM_BY_ID[id]);}catch{}
+const state={open:false,preview:false,index:0,list:plan,mode:"closed",elapsed:0,clockStart:0,clockBase:0,clockAudio:false,voice:true,operation:0,reference:false,restUntil:0,restRemaining:20,holdRest:false,beat:-1,opener:null};
+let visibleCanvases=new Set(),heroVisible=true;
+const reducedMotion=window.matchMedia?.("(prefers-reduced-motion: reduce)").matches||false;
+class CountAudio {
+  constructor(){this.context=null;this.buffer=null;this.node=null;this.gain=null;this.sessionMode="default";}
+  configurePlaybackSession(){
+    // iOS otherwise treats Web Audio as ambient sound, which follows silent mode.
+    // This configures the existing engine; it does not add another audio player.
+    this.sessionMode="default";
+    try{
+      const session=window.navigator?.audioSession;
+      if(session){session.type="playback";if(session.type==="playback")this.sessionMode="playback";}
+    }catch{this.sessionMode="unavailable";}
   }
-};
-
-const els = {
-  planList:document.querySelector("#plan-list"), trainer:document.querySelector("#trainer"), canvas:document.querySelector("#trainer-canvas"),
-  progressLabel:document.querySelector("#progress-label"), progressFill:document.querySelector("#progress-fill"), beat:document.querySelector("#beat-count"), rep:document.querySelector("#rep-count"),
-  category:document.querySelector("#exercise-category"), name:document.querySelector("#exercise-name"), purpose:document.querySelector("#exercise-purpose"), steps:document.querySelector("#exercise-steps"), cue:document.querySelector("#exercise-cue"),
-  view:document.querySelector("#view-label"), pause:document.querySelector("#pause-workout"), voice:document.querySelector("#voice-toggle"), countAudioSource:document.querySelector("#count-audio-source"), soundTest:document.querySelector("#test-sound"), soundStatus:document.querySelector("#sound-status"), transition:document.querySelector("#transition"), transitionKicker:document.querySelector("#transition-kicker"), transitionTitle:document.querySelector("#transition-title"), transitionCount:document.querySelector("#transition-count")
-};
-const ctx = els.canvas.getContext("2d");
-const todayKey = new Date().toISOString().slice(0,10);
-const daySeed = [...todayKey].reduce((sum,ch)=>sum+ch.charCodeAt(0),0);
-let planOffset = Number(localStorage.getItem("planOffset") || 0);
-let plan = [];
-const state = { open:false, index:0, paused:false, voice:true, elapsed:0, lastNow:0, lastBeat:-1, transitioning:false, transitionTimers:[] };
-let soundTestTimer = null;
-let audioContext = null;
-let countAudioBuffer = null;
-let countAudioNode = null;
-let audioBytesPromise = null;
-let audioRequestId = 0;
-
-function setSoundStatus(message,stateName="") {
-  els.soundStatus.textContent=message;els.soundStatus.dataset.state=stateName;
-}
-function audioErrorName(error) {
-  const detail=error?.name&&error.name!=="Error"?error.name:error?.message;
-  return detail?`（${detail}）`:"";
-}
-function getAudioContext() {
-  const AudioContextClass=window.AudioContext||window.webkitAudioContext;
-  if(!AudioContextClass)throw new Error("WebAudioUnsupported");
-  if(!audioContext)audioContext=new AudioContextClass({latencyHint:"interactive"});
-  return audioContext;
-}
-function playUnlockPulse(context) {
-  const buffer=context.createBuffer(1,1,22050);const source=context.createBufferSource();
-  source.buffer=buffer;source.connect(context.destination);source.start(0);
-}
-function resumeAudioContext(context) {
-  const timeout=new Promise((_,reject)=>setTimeout(()=>reject(new Error("AudioContextSuspended")),2500));
-  return Promise.race([context.resume(),timeout]);
-}
-function dataUrlToBuffer(url) {
-  const comma=url.indexOf(",");if(comma<0)throw new Error("InvalidAudioData");
-  const metadata=url.slice(0,comma);const payload=url.slice(comma+1);
-  if(!metadata.includes(";base64"))return new TextEncoder().encode(decodeURIComponent(payload)).buffer;
-  const binary=atob(payload);const bytes=new Uint8Array(binary.length);
-  for(let index=0;index<binary.length;index+=1)bytes[index]=binary.charCodeAt(index);
-  return bytes.buffer;
-}
-async function loadAudioBytes() {
-  const url=els.countAudioSource.dataset.src;
-  if(url.startsWith("data:"))return dataUrlToBuffer(url);
-  const response=await fetch(url,{cache:"force-cache"});if(!response.ok)throw new Error(`AudioHTTP${response.status}`);
-  return response.arrayBuffer();
-}
-function decodeAudio(context,arrayBuffer) {
-  return new Promise((resolve,reject)=>{
-    let settled=false;const done=value=>{if(!settled){settled=true;resolve(value);}};const fail=error=>{if(!settled){settled=true;reject(error);}};
-    const result=context.decodeAudioData(arrayBuffer.slice(0),done,fail);if(result?.then)result.then(done,fail);
-  });
-}
-async function getCountAudioBuffer(context) {
-  if(countAudioBuffer)return countAudioBuffer;
-  audioBytesPromise ||= loadAudioBytes();
-  countAudioBuffer=await decodeAudio(context,await audioBytesPromise);return countAudioBuffer;
-}
-function stopCountCycle() {
-  audioRequestId+=1;clearTimeout(soundTestTimer);soundTestTimer=null;
-  if(countAudioNode){try{countAudioNode.stop();}catch{}countAudioNode.disconnect();countAudioNode=null;}
-}
-async function startCountCycle({fromStart=false,testing=false}={}) {
-  if(!testing&&!state.voice)return false;
-  stopCountCycle();const requestId=audioRequestId;
-  if(testing)setSoundStatus("正在准备内置计数声音…","playing");
-  try{
-    const context=getAudioContext();const resumePromise=resumeAudioContext(context);playUnlockPulse(context);await resumePromise;
-    if(context.state!=="running")throw new Error("AudioContextSuspended");
-    const buffer=await getCountAudioBuffer(context);if(requestId!==audioRequestId)return false;
-    const source=context.createBufferSource();source.buffer=buffer;source.loop=!testing;source.connect(context.destination);
-    const offset=fromStart?0:Math.min(Math.max(0,buffer.duration-.02),(state.elapsed%4000)/1000);
-    countAudioNode=source;source.start(0,offset);
-    source.addEventListener?.("ended",()=>{if(countAudioNode===source&&!source.loop)countAudioNode=null;});
-    if(testing){
-      setSoundStatus("正在播放：一、二、三、四","playing");
-      soundTestTimer=setTimeout(()=>{stopCountCycle();setSoundStatus("声音正常，可以开始锻炼","ready");},Math.ceil((buffer.duration-offset)*1000)+120);
+  modeLabel(){return this.sessionMode==="playback"?"媒体播放模式":"浏览器默认音频模式";}
+  ensure(){
+    this.configurePlaybackSession();
+    if(!this.context){
+      const C=window.AudioContext||window.webkitAudioContext;
+      if(!C)throw new Error("此浏览器未提供音频引擎");
+      this.context=new C();this.gain=this.context.createGain();this.gain.connect(this.context.destination);
+      this.context.addEventListener("statechange",()=>{if(this.context.state!=="running"&&state.mode==="running"&&state.clockAudio)pausePractice("声音被系统暂停；点「继续」后恢复。");});
     }
-    return true;
-  }catch(error){
-    stopCountCycle();setSoundStatus(`声音启动失败${audioErrorName(error)}，请再点一次测试声音`,`blocked`);return false;
+    if(!this.buffer){
+      const raw=$("count-audio-source").dataset.src;
+      if(!raw.startsWith("data:audio/wav;base64,"))throw new Error("录音还未打包，请打开正式首页");
+      const binary=atob(raw.split(",")[1]), bytes=new Uint8Array(binary.length);
+      for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
+      const view=new DataView(bytes.buffer);let channels=0,rate=0,bits=0,data=0,length=0;
+      for(let p=12;p+8<=bytes.length;){const tag=String.fromCharCode(...bytes.subarray(p,p+4)),size=view.getUint32(p+4,true);
+        if(p+8+size>bytes.length)throw new Error("录音文件不完整");
+        if(tag==="fmt "){if(view.getUint16(p+8,true)!==1)throw new Error("录音格式不正确");channels=view.getUint16(p+10,true);rate=view.getUint32(p+12,true);bits=view.getUint16(p+22,true);}
+        if(tag==="data"){data=p+8;length=size;}p+=8+size+(size%2);
+      }
+      if(channels!==1||bits!==16||rate!==16000||length!==128000)throw new Error("录音采样不正确");
+      this.buffer=this.context.createBuffer(1,length/2,rate);
+      const samples=this.buffer.getChannelData(0);for(let i=0;i<samples.length;i++)samples[i]=view.getInt16(data+i*2,true)/32768;
+    }
+    return this.context;
   }
-}
-function testSound() { startCountCycle({fromStart:true,testing:true}); }
-function startVoiceFromTap() {
-  if(!state.voice)return Promise.resolve(true);
-  state.lastBeat=0;return startCountCycle({fromStart:true});
-}
-
-function makePlan() {
-  plan = CATEGORIES.map((category,index) => {
-    const choices=LIBRARY[category.key]; const exercise=choices[(daySeed+planOffset+index)%choices.length];
-    return {...exercise,category:category.label};
-  });
-}
-function renderPlan() {
-  els.planList.innerHTML=plan.map(item=>`<li><strong>${item.name}</strong><span>${item.category} · ${item.purpose}</span></li>`).join("");
-}
-function generateNewPlan() {
-  planOffset += 1; localStorage.setItem("planOffset",String(planOffset)); makePlan(); renderPlan();
-  const first=els.planList.querySelector("li"); if(first){first.animate([{background:"rgba(239,199,94,.55)"},{background:"transparent"}],{duration:800});}
-}
-
-function currentExercise(){ return plan[state.index]; }
-function setExercise(index) {
-  clearTransitions(); state.index=Math.max(0,Math.min(plan.length-1,index));state.elapsed=0;state.lastBeat=-1;state.lastNow=performance.now();state.paused=false;state.transitioning=false;
-  const item=currentExercise();els.progressLabel.textContent=`动作 ${state.index+1} / ${plan.length}`;els.progressFill.style.width=`${((state.index+1)/plan.length)*100}%`;els.category.textContent=item.category;els.name.textContent=item.name;els.purpose.textContent=item.purpose;els.steps.innerHTML=item.steps.map(step=>`<li>${step}</li>`).join("");els.cue.textContent=item.cue;els.view.textContent=VIEW_META[item.id]||"橙色表示动作侧";els.canvas.setAttribute("aria-label",`${item.name}标准速度动画演示，${VIEW_META[item.id]||"橙色表示动作侧"}`);els.rep.textContent="1";els.beat.textContent="1";els.pause.textContent="暂停";els.transition.classList.remove("is-open");els.transition.setAttribute("aria-hidden","true");
-}
-async function openTrainer() {
-  state.open=true;document.body.classList.add("is-training");els.trainer.classList.add("is-open");els.trainer.setAttribute("aria-hidden","false");setExercise(0);state.paused=true;els.pause.textContent="声音准备中";
-  const ready=await startVoiceFromTap();if(state.open&&ready){state.paused=false;state.elapsed=0;state.lastNow=performance.now();els.pause.textContent="暂停";}else if(state.open){els.pause.textContent="重试声音";}
-  els.pause.focus();
-}
-function closeTrainer() {
-  clearTransitions();stopCountCycle();state.open=false;state.paused=false;state.transitioning=false;document.body.classList.remove("is-training");els.trainer.classList.remove("is-open");els.trainer.setAttribute("aria-hidden","true");document.querySelector("#start-workout").focus();
-}
-async function togglePause(forcePause=false) {
-  if(!state.open||state.transitioning)return;
-  if(forcePause||!state.paused){state.paused=true;state.lastNow=performance.now();els.pause.textContent="继续";stopCountCycle();return;}
-  els.pause.textContent="声音准备中";const ready=await startCountCycle();if(!state.open)return;
-  state.paused=!ready;state.lastNow=performance.now();els.pause.textContent=ready?"暂停":"重试声音";
-}
-function clearTransitions(){state.transitionTimers.forEach(id=>{clearTimeout(id);clearInterval(id);});state.transitionTimers=[];}
-function completeExercise() {
-  if(state.transitioning)return;state.transitioning=true;stopCountCycle();els.transition.classList.add("is-open");els.transition.setAttribute("aria-hidden","false");
-  if(state.index===plan.length-1){els.transitionKicker.textContent="七个动作全部完成";els.transitionTitle.textContent="今天练完了";els.transitionCount.textContent="✓";state.transitionTimers.push(setTimeout(closeTrainer,4200));return;}
-  const next=plan[state.index+1];els.transitionKicker.textContent="这个动作完成";els.transitionTitle.textContent=`下一个：${next.name}`;let remaining=3;els.transitionCount.textContent=String(remaining);
-  const timer=setInterval(()=>{remaining-=1;els.transitionCount.textContent=String(Math.max(remaining,1));if(remaining<=0){clearInterval(timer);setExercise(state.index+1);startCountCycle({fromStart:true});}},1000);state.transitionTimers.push(timer);
-}
-
-function drawCurrent(motion, repNumber) {
-  const rect=els.canvas.getBoundingClientRect();const dpr=Math.min(window.devicePixelRatio||1,2);const width=Math.max(1,Math.round(rect.width*dpr)),height=Math.max(1,Math.round(rect.height*dpr));if(els.canvas.width!==width||els.canvas.height!==height){els.canvas.width=width;els.canvas.height=height;}
-  ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,rect.width,rect.height);ctx.save();const scale=Math.min(rect.width/620,rect.height/520);ctx.translate(rect.width/2,rect.height*.91);ctx.scale(scale,scale);ctx.translate(0,-430);drawGround(ctx);const item=currentExercise();const side=repNumber%2===0?-1:1;DRAWERS[item.id](ctx,{x:0,y:430},motion,side);ctx.restore();
-}
-function frame(now) {
-  if(state.open&&!state.transitioning){
-    if(!state.paused){const delta=Math.min(100,Math.max(0,now-state.lastNow));state.elapsed+=delta;}state.lastNow=now;
-    const beatIndex=Math.floor(state.elapsed/1000);const repNumber=Math.min(8,Math.floor(beatIndex/4)+1);const beatNumber=(beatIndex%4)+1;
-    if(beatIndex!==state.lastBeat&&beatIndex<32&&!state.paused){state.lastBeat=beatIndex;els.beat.textContent=String(beatNumber);els.rep.textContent=String(repNumber);const orb=els.beat.parentElement;orb.classList.remove("is-beat");void orb.offsetWidth;orb.classList.add("is-beat");}
-    const phase=(state.elapsed%4000)/4000;const motion=phase<.5?ease(phase*2):ease((1-phase)*2);drawCurrent(motion,repNumber);
-    if(state.elapsed>=32000)completeExercise();
+  async unlock(){
+    const c=this.ensure();let timer;const resumed=c.resume();
+    const pulse=c.createBufferSource();pulse.buffer=c.createBuffer(1,1,c.sampleRate);pulse.connect(c.destination);pulse.onended=()=>pulse.disconnect();pulse.start();
+    try{await Promise.race([resumed,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error("音频引擎未启动，请检查浏览器声音权限")),3500);})]);}
+    finally{clearTimeout(timer);}
+    if(c.state!=="running")throw new Error("音频引擎被系统暂停");
   }
-  requestAnimationFrame(frame);
+  start(offset=0,loop=true){
+    this.stop();const c=this.context;if(!c||c.state!=="running")throw new Error("请点继续，重新启动声音");
+    const n=c.createBufferSource();n.buffer=this.buffer;n.loop=loop;n.loopStart=0;n.loopEnd=4;n.connect(this.gain);
+    const start=c.currentTime+.025;n.start(start,((offset%4)+4)%4);this.node=n;
+    n.onended=()=>{n.disconnect();if(this.node===n)this.node=null;};return start;
+  }
+  mute(muted){if(this.gain)this.gain.gain.setValueAtTime(muted?0:1,this.context.currentTime);}
+  stop(){if(this.node){this.node.onended=null;try{this.node.stop();}catch{}this.node.disconnect();this.node=null;}}
 }
-
-document.querySelectorAll("#start-workout, #start-workout-2").forEach(button=>button.addEventListener("click",openTrainer));
-document.querySelectorAll("#new-plan, #new-plan-2").forEach(button=>button.addEventListener("click",generateNewPlan));
-document.querySelector("#close-trainer").addEventListener("click",closeTrainer);
-document.querySelector("#pause-workout").addEventListener("click",()=>togglePause());
-document.querySelector("#previous-exercise").addEventListener("click",()=>{setExercise(state.index-1);startCountCycle({fromStart:true});});
-document.querySelector("#next-exercise").addEventListener("click",()=>{if(state.index===plan.length-1)completeExercise();else{setExercise(state.index+1);startCountCycle({fromStart:true});}});
-els.voice.addEventListener("click",()=>{state.voice=!state.voice;els.voice.textContent=state.voice?"语音开":"语音关";els.voice.setAttribute("aria-pressed",String(state.voice));if(!state.voice)stopCountCycle();else startCountCycle();});
-els.soundTest.addEventListener("click",testSound);
-document.addEventListener("visibilitychange",()=>{if(document.hidden&&state.open&&!state.paused)togglePause(true);});
-document.addEventListener("keydown",event=>{if(event.key==="Escape"&&state.open)closeTrainer();if(event.code==="Space"&&state.open){event.preventDefault();togglePause();}});
-audioBytesPromise=loadAudioBytes().catch(error=>{audioBytesPromise=null;throw error;});
-audioBytesPromise.catch(()=>{});
-
-makePlan();renderPlan();requestAnimationFrame(frame);
+const audio=new CountAudio();
+function setStatus(text){$("trainer-status").textContent=text||(state.voice?"听不到数拍？请关闭手机静音模式，并调高媒体音量。":"网页数拍声音已关闭；点右上角「声音关」可重新开启。");$("trainer-status").hidden=false;}
+function soundStatus(text){$("sound-status").textContent=text;}
+let testToken=0,testTimer;
+async function testSound(){
+  if(state.open)return;const token=++testToken;clearTimeout(testTimer);audio.stop();soundStatus("正在启动计数声音…");
+  try{await audio.unlock();if(token!==testToken||state.open)return;audio.mute(false);audio.start(0,false);soundStatus("计数播放中（"+audio.modeLabel()+"）：一、二、三、四。");
+    testTimer=setTimeout(()=>{if(token===testToken)soundStatus("录音播放结束（"+audio.modeLabel()+"）。若未听到，请检查媒体音量及声音输出设备。");},4200);
+  }catch(error){if(token===testToken)soundStatus("未能播放："+error.message+"。");}
+}
+function randomIndex(n){const v=new Uint32Array(1);if(window.crypto?.getRandomValues){window.crypto.getRandomValues(v);return v[0]%n;}return Math.floor(Math.random()*n);}
+function newPlan(){
+  plan=CATEGORIES.map((c,i)=>{const options=ITEMS.filter(x=>x.key===c.key&&x.id!==plan[i].id);return options[randomIndex(options.length)];});
+  storage.set("cq-plan-v2",JSON.stringify(plan.map(i=>i.id)));renderPlan();$("plan-summary").textContent="已换好一组：七个类别均保留，每个动作都与上一组不同。";
+}
+function thumbnail(item){return '<canvas data-exercise="'+item.id+'" aria-hidden="true"></canvas>';}
+const observer=typeof IntersectionObserver==="function"?new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)visibleCanvases.add(e.target);else visibleCanvases.delete(e.target);});},{rootMargin:"50px"}):null;
+function observeThumbnails(){visibleCanvases.clear();if(observer)observer.disconnect();document.querySelectorAll("canvas[data-exercise]").forEach(canvas=>{Motion.draw(canvas,canvas.dataset.exercise,.55,1,{small:true});if(observer)observer.observe(canvas);});}
+function renderPlan(){
+  $("coverage-strip").innerHTML=CATEGORIES.map(c=>"<span>"+c.label+"</span>").join("");
+  $("plan-list").innerHTML=plan.map(item=>"<li>"+thumbnail(item)+'<div><h3>'+item.name+'</h3><p>'+item.category+" · "+(item.alternating?"每侧 4 次":"共 8 次")+'</p></div><button data-preview="'+item.id+'" aria-label="预览'+item.name+'">预览 ↗</button></li>').join("");
+  $("plan-summary").textContent="7 个动作 · 动作间休息 20 秒 · 可延长休息";observeThumbnails();
+}
+function renderLibrary(filter="all"){
+  $("library-filters").innerHTML=[{key:"all",label:"全部 "+ITEMS.length+" 个"},{key:"new",label:"新增 "+ITEMS.filter(i=>i.isNew).length+" 个"},...CATEGORIES.map(c=>({...c,label:c.label+" · "+LIBRARY[c.key].length}))].map(c=>'<button data-filter="'+c.key+'" aria-pressed="'+(filter===c.key)+'">'+c.label+"</button>").join("");
+  $("library-list").innerHTML=ITEMS.filter(i=>filter==="all"||(filter==="new"?i.isNew:i.key===filter)).map(item=>'<article class="library-item">'+thumbnail(item)+'<div><h3>'+item.name+'</h3><p>'+item.purpose+'</p><button data-preview="'+item.id+'">查看动作与要点 ↗</button></div></article>').join("");observeThumbnails();
+}
+function current(){return state.list[state.index];}
+function updateExercise(){
+  const item=current();state.beat=-1;state.reference=false;$("trainer").classList.remove("reference-mode");$("reference-toggle").setAttribute("aria-pressed","false");$("reference-toggle").textContent="看起止姿势";
+  $("progress-label").textContent=state.preview?"动作预览":"动作 "+(state.index+1)+" / "+state.list.length;
+  $("progress-fill").style.width=(state.preview?100:state.index/state.list.length*100)+"%";
+  $("exercise-category").textContent=item.category+(item.alternating?" · 左右交替":"");
+  $("exercise-name").textContent=item.name;$("exercise-purpose").textContent=item.purpose;
+  $("exercise-steps").innerHTML=item.steps.map(s=>"<li>"+s+"</li>").join("");$("exercise-cue").textContent=item.cue;
+  $("view-label").textContent=Motion.view(item.id);$("trainer-canvas").setAttribute("aria-label",item.name+"，"+Motion.view(item.id)+"，橙色表示动作部位");
+  $("previous-exercise").disabled=state.preview||state.index===0;$("next-exercise").disabled=state.preview;
+  $("rep-total").textContent=state.preview?"/ 示范":"/ 8 次";$("transition").hidden=true;setStatus("");renderPractice();
+}
+function elapsedNow(){if(state.mode!=="running")return state.elapsed;const now=state.clockAudio?audio.context.currentTime:performance.now()/1000;return state.clockBase+Math.max(0,now-state.clockStart);}
+async function resumePractice(){
+  if(state.reference){state.reference=false;$("trainer").classList.remove("reference-mode");$("reference-toggle").setAttribute("aria-pressed","false");$("reference-toggle").textContent="看起止姿势";}
+  const token=++state.operation;state.mode="starting";$("pause-workout").textContent="准备中…";setStatus("");
+  try{
+    if(state.voice){await audio.unlock();if(token!==state.operation||!state.open)return;audio.mute(false);state.clockStart=audio.start(state.elapsed,true);state.clockAudio=true;}
+    else{state.clockStart=performance.now()/1000;state.clockAudio=false;}
+    if(token!==state.operation||!state.open)return;state.clockBase=state.elapsed;state.mode="running";$("pause-workout").textContent="暂停";
+  }catch(error){if(token!==state.operation)return;state.mode="paused";$("pause-workout").textContent="重试声音";setStatus("未能启动声音："+error.message+"。可重试，或手动关闭声音后继续。");}
+}
+function pausePractice(message=""){if(!state.open)return;state.elapsed=elapsedNow();state.operation++;audio.stop();state.mode="paused";$("pause-workout").textContent="继续";setStatus(message);renderPractice();}
+function openPractice(id){
+  testToken++;clearTimeout(testTimer);audio.stop();state.opener=document.activeElement;state.open=true;state.preview=typeof id==="string";state.list=state.preview?[ITEM_BY_ID[id]]:plan.slice();state.index=0;state.elapsed=0;state.mode="paused";
+  $("trainer").showModal();document.body.classList.add("training");updateExercise();resumePractice();$("close-trainer").focus();
+}
+function closePractice(){state.operation++;testToken++;audio.stop();state.open=false;state.mode="closed";$("trainer").close();document.body.classList.remove("training");state.opener?.focus();}
+function togglePause(){if(state.mode==="running"||state.mode==="starting"){pausePractice();return;}if(state.mode==="paused")resumePractice();}
+function toggleVoice(){const running=state.mode==="running";if(running||state.mode==="starting")pausePractice();state.voice=!state.voice;$("voice-toggle").textContent=state.voice?"声音开":"声音关";$("voice-toggle").setAttribute("aria-pressed",String(state.voice));setStatus("");if(running)resumePractice();}
+function navigateExercise(delta){state.operation++;audio.stop();state.mode="paused";state.index=Math.max(0,Math.min(state.list.length-1,state.index+delta));state.elapsed=0;updateExercise();resumePractice();}
+function startRest(){
+  state.elapsed=32;audio.stop();state.operation++;state.mode="rest";state.holdRest=false;state.restRemaining=20;state.restUntil=performance.now()/1000+20;
+  $("transition").hidden=false;$("transition-pause").hidden=false;$("transition-next").hidden=false;$("transition-pause").textContent="多休息一下";$("progress-fill").style.width=((state.index+1)/state.list.length*100)+"%";
+  if(state.index===state.list.length-1){state.mode="done";$("transition-kicker").textContent="这一组，完成了";$("transition-title").textContent="今天又多动了一点";$("transition-count").textContent="✓";$("transition-description").textContent="坐稳，放松，按需补水。稍后再分段走动，不必一次练完所有运动量。";$("transition-pause").hidden=true;$("transition-next").textContent="完成，回到首页";return;}
+  $("transition-kicker").textContent="先休息，再继续";$("transition-title").textContent="下一个："+state.list[state.index+1].name;$("transition-description").textContent=state.list[state.index+1].steps[0];$("transition-next").textContent="准备好了，继续 →";$("transition-count").textContent="20";
+}
+function restNext(){if(state.mode==="done"){closePractice();return;}if(state.mode==="rest")navigateExercise(1);}
+function holdRest(){state.holdRest=!state.holdRest;if(!state.holdRest)state.restUntil=performance.now()/1000+state.restRemaining;$("transition-pause").textContent=state.holdRest?"恢复倒计时":"多休息一下";}
+function renderPractice(){
+  if(!state.open)return;const item=current(),time=elapsedNow(),phase=(time%4)/4,rep=Math.min(8,Math.floor(time/4)+1),beat=Math.floor(time%4)+1;
+  const move=(1-Math.cos(phase*Math.PI*2))/2,side=Math.floor(time/4)%2?-1:1;Motion.draw($("trainer-canvas"),item.id,move,side,{comparison:state.reference});
+  if(state.beat!==beat){state.beat=beat;$("beat-count").textContent=beat;$("rep-count").textContent=state.preview?"—":rep;[...$("rhythm-bar").querySelectorAll("span")].forEach((e,i)=>e.classList.toggle("active",i===beat-1));}
+  $("phase-cue").textContent=state.reference?"对照起点与终点":state.mode==="paused"?"已暂停":PHASES[item.id][phase<.5?0:1];
+}
+let lastDraw=0;
+function frame(now){
+  requestAnimationFrame(frame);if(document.hidden||now-lastDraw<32)return;lastDraw=now;
+  if(state.open){
+    if(state.mode==="rest"){if(!state.holdRest)state.restRemaining=Math.max(0,Math.ceil(state.restUntil-now/1000));$("transition-count").textContent=state.holdRest?"休息":state.restRemaining;if(!state.holdRest&&state.restRemaining===0)restNext();return;}
+    if(state.mode==="done")return;if(state.mode==="running"&&!state.preview&&elapsedNow()>=32){startRest();return;}renderPractice();
+  }else{const t=reducedMotion?.5:(1-Math.cos(now/4000*Math.PI*2))/2;if(heroVisible)Motion.draw($("hero-canvas"),"stand",t);if(!reducedMotion)visibleCanvases.forEach(c=>Motion.draw(c,c.dataset.exercise,t,1,{small:true}));}
+}
+$("test-sound").addEventListener("click",testSound);$("start-workout").addEventListener("click",()=>openPractice());$("start-workout-2").addEventListener("click",()=>openPractice());$("new-plan").addEventListener("click",newPlan);
+document.addEventListener("click",event=>{const preview=event.target.closest("[data-preview]");if(preview)openPractice(preview.dataset.preview);const filter=event.target.closest("[data-filter]");if(filter)renderLibrary(filter.dataset.filter);const avatar=event.target.closest("[data-avatar]");if(avatar)selectAvatar(avatar.dataset.avatar);});
+$("trainer-avatar").addEventListener("change",event=>selectAvatar(event.target.value));
+$("close-trainer").addEventListener("click",closePractice);$("trainer").addEventListener("cancel",e=>{e.preventDefault();closePractice();});$("pause-workout").addEventListener("click",togglePause);$("voice-toggle").addEventListener("click",toggleVoice);
+$("previous-exercise").addEventListener("click",()=>navigateExercise(-1));$("next-exercise").addEventListener("click",()=>state.index===state.list.length-1?startRest():navigateExercise(1));
+$("reference-toggle").addEventListener("click",()=>{state.reference=!state.reference;$("trainer").classList.toggle("reference-mode",state.reference);if(state.reference&&(state.mode==="running"||state.mode==="starting"))pausePractice();$("reference-toggle").setAttribute("aria-pressed",String(state.reference));$("reference-toggle").textContent=state.reference?"返回动画":"看起止姿势";renderPractice();});
+$("transition-next").addEventListener("click",restNext);$("transition-pause").addEventListener("click",holdRest);
+document.addEventListener("visibilitychange",()=>{if(document.hidden){testToken++;clearTimeout(testTimer);if(state.open){if(state.mode==="running"||state.mode==="starting")pausePractice("页面已离开，点继续恢复。");if(state.mode==="rest"&&!state.holdRest)holdRest();}else audio.stop();}});
+document.addEventListener("keydown",e=>{if(e.code==="Space"&&state.open&&e.target.tagName!=="BUTTON"){e.preventDefault();togglePause();}});
+window.addEventListener("resize",()=>{observeThumbnails();renderPractice();});
+if(typeof IntersectionObserver==="function")new IntersectionObserver(e=>{heroVisible=e[0].isIntersecting;}).observe($("hero-canvas"));
+syncAvatar();renderPlan();renderLibrary();requestAnimationFrame(frame);
