@@ -108,6 +108,9 @@ test('every level covers all 7 categories with at least 3 moves; moves are compl
 });
 test('choosing a level filters the plan and library, and is remembered with its own plan',()=>{
   const {s,el,store}=harness();assert.equal(s.getLevel(),'gentle');assert.equal(s.getPlan().map(i=>i.id).join(),s.DEFAULT_PLANS.gentle.join());
+  const defaults=Object.values(s.DEFAULT_PLANS).flat();assert.equal(new Set(defaults).size,21,'default plans share no moves');
+  s.selectLevel('strong');const plan=s.getPlan().map(i=>i.name);assert.ok(plan.every(name=>el('level-hint').textContent.includes(name)),'switching names the new plan');
+  s.selectLevel('strong');assert.doesNotMatch(el('level-hint').textContent,/已换成/,'re-selecting the same level changes nothing');
   for(const key of ['strong','standard','gentle']){
     s.selectLevel(key);assert.equal(s.getLevel(),key);assert.equal(store.get('cq-level-v1'),key);
     assert.ok(s.getPlan().every(i=>i.levels.includes(key)));assert.match(el('level-hint').textContent,/./);

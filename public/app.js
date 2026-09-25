@@ -20,9 +20,10 @@ const PHASES={
  standCross:["提膝 · 对侧手靠近","放下 · 换边"],tableKneeDrive:["膝盖提向胸口","放回 · 换边"],goodMorning:["臀部后推 · 前倾","臀部发力 · 站直"],
  singleCalf:["单脚踮起","慢慢落下 · 换脚"],wallToe:["抬起脚尖","慢慢放下"],singleLegStand:["提膝 · 站稳","放下 · 换边"],singleLegHinge:["前倾 · 后腿抬起","收回站直 · 换边"]
 };
+// Default plans share no moves, so switching level visibly changes all seven.
 const DEFAULT_PLANS={
- strong:["standMarch","squat","inclinePush","hingeRow","goodMorning","singleCalf","singleLegHinge"],
- standard:["standMarch","squat","wallPush","hingeRow","standCross","heel","singleLegStand"],
+ strong:["stepJack","reverseLunge","chairDip","hingeRow","goodMorning","singleCalf","singleLegHinge"],
+ standard:["standMarch","squat","inclinePush","towelPulldown","standCross","heel","singleLegStand"],
  gentle:["march","stand","wallPush","elbowPull","kneePress","seatedHeel","weightShift"]
 };
 const LEVEL_BY_KEY=Object.fromEntries(LEVELS.map(l=>[l.key,l]));
@@ -47,11 +48,12 @@ function loadPlan(key){
 let level=LEVEL_BY_KEY[storage.get("cq-level-v1")]?storage.get("cq-level-v1"):"gentle",plan=loadPlan(level),libraryFilter="all";
 function levelLabel(key=level){return LEVEL_BY_KEY[key].age+" · "+LEVEL_BY_KEY[key].name;}
 function selectLevel(key){
-  if(!LEVEL_BY_KEY[key]||state.open)return;level=key;storage.set("cq-level-v1",key);plan=loadPlan(key);syncLevel();renderPlan();renderLibrary("all");
+  if(!LEVEL_BY_KEY[key]||state.open)return;const changed=key!==level;level=key;storage.set("cq-level-v1",key);plan=loadPlan(key);syncLevel(changed);renderPlan();renderLibrary("all");
 }
-function syncLevel(){
+// The plan list sits below the fold on phones, so say right here that it changed.
+function syncLevel(changed=false){
   document.querySelectorAll("[data-level]").forEach(button=>button.setAttribute("aria-pressed",String(button.dataset.level===level)));
-  $("level-hint").textContent=LEVEL_BY_KEY[level].hint;
+  $("level-hint").textContent=LEVEL_BY_KEY[level].hint+(changed?"。今日跟练已换成这一档："+plan.map(i=>i.name).join("、")+"。":"");
 }
 const state={open:false,preview:false,index:0,list:plan,mode:"closed",elapsed:0,clockStart:0,clockBase:0,clockAudio:false,voice:true,operation:0,reference:false,restUntil:0,restRemaining:20,holdRest:false,beat:-1,opener:null};
 let visibleCanvases=new Set(),heroVisible=true;
