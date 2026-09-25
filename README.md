@@ -1,8 +1,10 @@
 # 常青动一动
 
-为 70+ 长者设计的温和全身入门活动。无需登录，只保留一个正式入口：
+为 70+ 长者设计的温和全身入门活动。无需登录，正式入口：
 
-https://modenl.github.io/workout/
+https://workout.postagi.co.uk/
+
+由 Cloudflare Workers 托管（Worker 名 `workout`，配置见 `wrangler.jsonc`）。`main` 分支同时由 GitHub Pages 发布在 https://modenl.github.io/workout/ 。
 
 ## 2026-09 改版
 
@@ -30,6 +32,12 @@ https://modenl.github.io/workout/
 ```sh
 node --test tests/static-workout.test.mjs
 node build/build-github-page.mjs index.html
+```
+
+部署到 Cloudflare（构建到 `dist/cloudflare/` 后用 wrangler 上传，需本机已 `wrangler login`）：
+
+```sh
+npm run deploy
 ```
 
 预览构建后的首页，例如：
