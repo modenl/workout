@@ -6,3 +6,4 @@ dist/
 *.tsbuildinfo
 .DS_Store
 *.tar.gz
+export/wall-pushup/.wall_pushup.gif-*

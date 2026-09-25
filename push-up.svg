@@ -1,0 +1,173 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 320" role="img" aria-labelledby="title desc">
+  <title id="title">俯卧撑动画</title>
+  <desc id="desc">一个更标准的俯卧撑侧视动画，展示平板起始位、屈肘下放，再推回起始位。</desc>
+
+  <defs>
+    <linearGradient id="bg" x1="0" x2="0" y1="0" y2="1">
+      <stop offset="0%" stop-color="#fffaf5" />
+      <stop offset="100%" stop-color="#f1e4d8" />
+    </linearGradient>
+  </defs>
+
+  <style>
+    .panel { fill: url(#bg); }
+    .guide {
+      fill: none;
+      stroke: #cdb9a9;
+      stroke-width: 5;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      stroke-dasharray: 7 9;
+      opacity: 0.48;
+    }
+    .body {
+      fill: none;
+      stroke: #1f232a;
+      stroke-width: 8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .limb {
+      fill: none;
+      stroke: #d86d42;
+      stroke-width: 8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+    }
+    .joint {
+      fill: #fffaf5;
+      stroke: #1f232a;
+      stroke-width: 4;
+    }
+    .end { fill: #6a938a; }
+    .ground {
+      fill: none;
+      stroke: #b8a99b;
+      stroke-width: 3;
+      stroke-linecap: round;
+      opacity: 0.9;
+    }
+    .shadow { fill: #1f232a; opacity: 0.08; }
+    .label {
+      fill: #61656d;
+      font-family: "SF Pro Text", "PingFang SC", "Noto Sans CJK SC", sans-serif;
+      font-size: 14px;
+      letter-spacing: 0.06em;
+    }
+  </style>
+
+  <rect class="panel" x="12" y="12" width="296" height="296" rx="26" />
+  <text class="label" x="28" y="42">PUSH-UP</text>
+  <text class="label" x="28" y="62">俯卧撑</text>
+
+  <ellipse class="shadow" cx="170" cy="267" rx="102" ry="10">
+    <animate attributeName="rx" values="102;110;102" dur="1.6s" repeatCount="indefinite" />
+    <animate attributeName="opacity" values="0.08;0.13;0.08" dur="1.6s" repeatCount="indefinite" />
+  </ellipse>
+  <path class="ground" d="M48 274 H272" />
+
+  <g aria-hidden="true">
+    <circle class="guide" cx="88" cy="144" r="18" />
+    <path class="guide" d="M104 154 L114 162 L200 170 L258 176 L274 178" />
+    <path class="guide" d="M114 162 L146 176 L120 236" />
+    <path class="guide" d="M130 165 L160 180 L140 238" />
+    <path class="ground" d="M112 252 H132" opacity="0.35" />
+    <path class="ground" d="M132 254 H152" opacity="0.28" />
+  </g>
+
+  <text class="label" x="190" y="108">身体一线</text>
+  <text class="label" x="26" y="238">手在肩下</text>
+
+  <path class="guide" d="M206 112 C226 104, 242 102, 262 102" />
+  <path class="guide" d="M74 232 C56 232, 42 234, 24 238" />
+
+  <g>
+    <circle class="joint" r="18">
+      <animate attributeName="cx" values="86;88;86" dur="1.6s" repeatCount="indefinite" />
+      <animate attributeName="cy" values="124;144;124" dur="1.6s" repeatCount="indefinite" />
+    </circle>
+
+    <line class="body">
+      <animate attributeName="x1" values="102;104;102" dur="1.6s" repeatCount="indefinite" />
+      <animate attributeName="y1" values="134;154;134" dur="1.6s" repeatCount="indefinite" />
+      <animate attributeName="x2" values="108;114;108" dur="1.6s" repeatCount="indefinite" />
+      <animate attributeName="y2" values="136;162;136" dur="1.6s" repeatCount="indefinite" />
+    </line>
+
+    <line class="body">
+      <animate attributeName="x1" values="108;114;108" dur="1.6s" repeatCount="indefinite" />
+      <animate attributeName="y1" values="136;162;136" dur="1.6s" repeatCount="indefinite" />
+      <animate attributeName="x2" values="196;200;196" dur="1.6s" repeatCount="indefinite" />
+      <animate attributeName="y2" values="144;170;144" dur="1.6s" repeatCount="indefinite" />
+    </line>
+
+    <line class="body">
+      <animate attributeName="x1" values="196;200;196" dur="1.6s" repeatCount="indefinite" />
+      <animate attributeName="y1" values="144;170;144" dur="1.6s" repeatCount="indefinite" />
+      <animate attributeName="x2" values="256;258;256" dur="1.6s" repeatCount="indefinite" />
+      <animate attributeName="y2" values="152;176;152" dur="1.6s" repeatCount="indefinite" />
+    </line>
+
+    <line class="body">
+      <animate attributeName="x1" values="256;258;256" dur="1.6s" repeatCount="indefinite" />
+      <animate attributeName="y1" values="152;176;152" dur="1.6s" repeatCount="indefinite" />
+      <animate attributeName="x2" values="274;274;274" dur="1.6s" repeatCount="indefinite" />
+      <animate attributeName="y2" values="154;178;154" dur="1.6s" repeatCount="indefinite" />
+    </line>
+
+    <line class="limb" x1="108" y1="144" x2="122" y2="182" opacity="0.42">
+      <animate attributeName="x1" values="114;130;114" dur="1.6s" repeatCount="indefinite" />
+      <animate attributeName="y1" values="142;165;142" dur="1.6s" repeatCount="indefinite" />
+      <animate attributeName="x2" values="128;160;128" dur="1.6s" repeatCount="indefinite" />
+      <animate attributeName="y2" values="182;180;182" dur="1.6s" repeatCount="indefinite" />
+    </line>
+
+    <line class="limb" x1="122" y1="182" x2="136" y2="238" opacity="0.42">
+      <animate attributeName="x1" values="128;160;128" dur="1.6s" repeatCount="indefinite" />
+      <animate attributeName="y1" values="182;180;182" dur="1.6s" repeatCount="indefinite" />
+      <animate attributeName="x2" values="136;140;136" dur="1.6s" repeatCount="indefinite" />
+      <animate attributeName="y2" values="238;238;238" dur="1.6s" repeatCount="indefinite" />
+    </line>
+
+    <line class="limb">
+      <animate attributeName="x1" values="108;114;108" dur="1.6s" repeatCount="indefinite" />
+      <animate attributeName="y1" values="136;162;136" dur="1.6s" repeatCount="indefinite" />
+      <animate attributeName="x2" values="122;146;122" dur="1.6s" repeatCount="indefinite" />
+      <animate attributeName="y2" values="178;176;178" dur="1.6s" repeatCount="indefinite" />
+    </line>
+
+    <line class="limb">
+      <animate attributeName="x1" values="122;146;122" dur="1.6s" repeatCount="indefinite" />
+      <animate attributeName="y1" values="178;176;178" dur="1.6s" repeatCount="indefinite" />
+      <animate attributeName="x2" values="118;120;118" dur="1.6s" repeatCount="indefinite" />
+      <animate attributeName="y2" values="236;236;236" dur="1.6s" repeatCount="indefinite" />
+    </line>
+
+    <circle class="joint" r="5">
+      <animate attributeName="cx" values="108;114;108" dur="1.6s" repeatCount="indefinite" />
+      <animate attributeName="cy" values="136;162;136" dur="1.6s" repeatCount="indefinite" />
+    </circle>
+
+    <circle class="joint" r="5">
+      <animate attributeName="cx" values="196;200;196" dur="1.6s" repeatCount="indefinite" />
+      <animate attributeName="cy" values="144;170;144" dur="1.6s" repeatCount="indefinite" />
+    </circle>
+
+    <circle class="joint" r="5">
+      <animate attributeName="cx" values="122;146;122" dur="1.6s" repeatCount="indefinite" />
+      <animate attributeName="cy" values="178;176;178" dur="1.6s" repeatCount="indefinite" />
+    </circle>
+
+    <circle class="end" r="6">
+      <animate attributeName="cx" values="118;120;118" dur="1.6s" repeatCount="indefinite" />
+      <animate attributeName="cy" values="236;236;236" dur="1.6s" repeatCount="indefinite" />
+    </circle>
+
+    <circle class="end" r="6">
+      <animate attributeName="cx" values="274;274;274" dur="1.6s" repeatCount="indefinite" />
+      <animate attributeName="cy" values="154;178;154" dur="1.6s" repeatCount="indefinite" />
+    </circle>
+
+    <path class="ground" d="M108 252 H128" />
+  </g>
+</svg>
