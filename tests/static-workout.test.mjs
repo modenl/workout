@@ -9,7 +9,7 @@ const root = new URL('../', import.meta.url);
 const [library, motion, app, wav] = await Promise.all(['public/library.js','public/motion.js','public/app.js','public/audio/count-cycle.wav'].map((p,i)=>readFile(new URL(p,root),i===3?undefined:'utf8')));
 function harness({deferred=false,blockedStorage=false,audioSession,outputTimestamp,storage={}}={}) {
   let now=0;const store=new Map(Object.entries(storage));const nodes=[],resumers=[],events=[],elements=new Map(),timers=new Map();let timerId=0;
-  const makeElement=()=>({textContent:'',innerHTML:'',hidden:false,dataset:{},style:{},disabled:false,tagName:'BUTTON',classList:{add(){},remove(){},toggle(){}},setAttribute(){},addEventListener(){},focus(){},showModal(){this.open=true},close(){this.open=false},querySelectorAll(){return Array.from({length:4},makeElement)},getBoundingClientRect(){return {width:0,height:0}}});
+  const makeElement=()=>({textContent:'',innerHTML:'',hidden:false,dataset:{},style:{},disabled:false,tagName:'BUTTON',classList:{add(){},remove(){},toggle(){}},setAttribute(){},addEventListener(){},focus(){},showModal(){this.open=true},close(){this.open=false},querySelectorAll(){return Array.from({length:4},makeElement)},querySelector(){return null},getBoundingClientRect(){return {width:0,height:0}}});
   const el=id=>{if(!elements.has(id))elements.set(id,makeElement());return elements.get(id)};
   el('count-audio-source').dataset.src='data:audio/wav;base64,'+wav.toString('base64');
   class AudioContext {
@@ -22,7 +22,7 @@ function harness({deferred=false,blockedStorage=false,audioSession,outputTimesta
   }
   const document={hidden:false,getElementById:el,querySelectorAll(){return []},addEventListener(){},activeElement:makeElement(),body:makeElement()};
   const context=vm.createContext({document,window:{AudioContext,navigator:{audioSession},crypto:webcrypto,matchMedia:()=>({matches:false}),addEventListener(){}},localStorage:{getItem(key){if(blockedStorage)throw Error('blocked');return store.get(key)??null},setItem(key,value){if(blockedStorage)throw Error('blocked');store.set(key,String(value))}},performance:{now:()=>now*1000},requestAnimationFrame(){},atob:s=>Buffer.from(s,'base64').toString('binary'),setTimeout(fn){const id=++timerId;timers.set(id,fn);return id},clearTimeout:id=>timers.delete(id),console});
-  vm.runInContext(library+'\n'+motion+'\n'+app+'\n;globalThis.subject={Motion,ITEMS,LEVELS,CATEGORIES,DEFAULT_PLANS,selectLevel,renderLibrary,getLevel:()=>level,state,audio,newPlan,openPractice,closePractice,resumePractice,pausePractice,toggleVoice,navigateExercise,frame,holdRest,restNext,testSound,selectAvatar,getPlan:()=>plan};',context);
+  vm.runInContext(library+'\n'+motion+'\n'+app+'\n;globalThis.subject={Motion,ITEMS,LEVELS,CATEGORIES,DEFAULT_PLANS,selectLevel,setLibrary,getLevel:()=>level,state,audio,newPlan,openPractice,closePractice,resumePractice,pausePractice,toggleVoice,navigateExercise,frame,holdRest,restNext,testSound,selectAvatar,getPlan:()=>plan};',context);
   return {s:context.subject,el,nodes,resumers,timers,events,store,setNow(t){now=t}};
 }
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
@@ -109,20 +109,23 @@ test('every level covers all 7 categories with at least 3 moves; moves are compl
 test('choosing a level filters the plan and library, and is remembered with its own plan',()=>{
   const {s,el,store}=harness();assert.equal(s.getLevel(),'gentle');assert.equal(s.getPlan().map(i=>i.id).join(),s.DEFAULT_PLANS.gentle.join());
   const defaults=Object.values(s.DEFAULT_PLANS).flat();assert.equal(new Set(defaults).size,21,'default plans share no moves');
-  s.selectLevel('strong');const plan=s.getPlan().map(i=>i.name);assert.ok(plan.every(name=>el('level-hint').textContent.includes(name)),'switching names the new plan');
-  s.selectLevel('strong');assert.doesNotMatch(el('level-hint').textContent,/已换成/,'re-selecting the same level changes nothing');
+  s.selectLevel('strong');const plan=s.getPlan().map(i=>i.name);assert.equal(el('toast').hidden,false);assert.ok(plan.every(name=>el('toast').textContent.includes(name)),'switching names the new plan');
+  el('toast').textContent='';s.selectLevel('strong');assert.equal(el('toast').textContent,'','re-selecting the same level says nothing');
   for(const key of ['strong','standard','gentle']){
     s.selectLevel(key);assert.equal(s.getLevel(),key);assert.equal(store.get('cq-level-v1'),key);
     assert.ok(s.getPlan().every(i=>i.levels.includes(key)));assert.match(el('level-hint').textContent,/./);
     const shown=[...el('library-list').innerHTML.matchAll(/data-preview="(\w+)"/g)].map(m=>m[1]);
     assert.equal(shown.join(),s.ITEMS.filter(i=>i.levels.includes(key)).map(i=>i.id).join());
   }
-  s.renderLibrary('every');assert.equal([...el('library-list').innerHTML.matchAll(/data-preview=/g)].length,51);
+  s.setLibrary({scope:'every'});assert.equal([...el('library-list').innerHTML.matchAll(/data-preview=/g)].length,51);
+  s.setLibrary({category:'push'});assert.equal([...el('library-list').innerHTML.matchAll(/data-preview=/g)].length,s.ITEMS.filter(i=>i.key==='push').length,'all levels, one category');
+  s.selectLevel(s.getLevel());assert.equal([...el('library-list').innerHTML.matchAll(/data-preview=/g)].length,s.ITEMS.filter(i=>i.key==='push'&&i.levels.includes(s.getLevel())).length,'choosing a level returns to that level');
+  s.setLibrary({category:'all'});
   s.selectLevel('strong');s.newPlan();const strongPlan=store.get('cq-plan-v3-strong');
   s.selectLevel('gentle');s.selectLevel('strong');assert.equal(JSON.stringify(s.getPlan().map(i=>i.id)),strongPlan,'each level keeps its plan');
   s.selectLevel('nonsense');assert.equal(s.getLevel(),'strong');
   s.openPractice();s.selectLevel('gentle');assert.equal(s.getLevel(),'strong','level is fixed during a workout');
-  const again=harness({storage:{'cq-level-v1':'standard','cq-plan-v3-standard':strongPlan}});
+  const again=harness({storage:{'cq-level-v1':'standard','cq-plan-v3-standard':JSON.stringify(s.DEFAULT_PLANS.strong)}});
   assert.equal(again.s.getLevel(),'standard');assert.equal(again.s.getPlan().map(i=>i.id).join(),s.DEFAULT_PLANS.standard.join(),'a plan outside the level is replaced');
   const old=['march','stand','wallPush','elbowPull','kneePress','seatedHeel','side'];
   assert.equal(harness({storage:{'cq-plan-v2':JSON.stringify(old)}}).s.getPlan().map(i=>i.id).join(),old.join(),'plans saved before levels still load');
