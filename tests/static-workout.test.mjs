@@ -7,13 +7,13 @@ import { execFileSync } from 'node:child_process';
 
 const root = new URL('../', import.meta.url);
 const [library, motion, app, wav] = await Promise.all(['public/library.js','public/motion.js','public/app.js','public/audio/count-cycle.wav'].map((p,i)=>readFile(new URL(p,root),i===3?undefined:'utf8')));
-function harness({deferred=false,blockedStorage=false,audioSession}={}) {
+function harness({deferred=false,blockedStorage=false,audioSession,outputTimestamp}={}) {
   let now=0;const nodes=[],resumers=[],events=[],elements=new Map(),timers=new Map();let timerId=0;
   const makeElement=()=>({textContent:'',innerHTML:'',hidden:false,dataset:{},style:{},disabled:false,tagName:'BUTTON',classList:{add(){},remove(){},toggle(){}},setAttribute(){},addEventListener(){},focus(){},showModal(){this.open=true},close(){this.open=false},querySelectorAll(){return Array.from({length:4},makeElement)},getBoundingClientRect(){return {width:0,height:0}}});
   const el=id=>{if(!elements.has(id))elements.set(id,makeElement());return elements.get(id)};
   el('count-audio-source').dataset.src='data:audio/wav;base64,'+wav.toString('base64');
   class AudioContext {
-    constructor(){events.push({event:'create',sessionType:audioSession?.type});this.state=deferred?'suspended':'running';this.currentTime=0;this.sampleRate=48000;this.destination={};}
+    constructor(){events.push({event:'create',sessionType:audioSession?.type});this.state=deferred?'suspended':'running';this.currentTime=0;this.sampleRate=48000;this.destination={};if(outputTimestamp)this.getOutputTimestamp=outputTimestamp;}
     createGain(){return {connect(){},gain:{setValueAtTime(){}}}}
     createBuffer(channels,length,rate){const data=new Float32Array(length);return {duration:length/rate,getChannelData(){return data}}}
     createBufferSource(){const node={connect(){},disconnect(){},start(...args){this.started=args},stop(){this.stopped=true}};nodes.push(node);return node}
@@ -57,11 +57,13 @@ test('a rejected optional media-session setting does not break audio startup',as
 test('both avatars render every exercise without changing rig or playback',async()=>{
   const {s,el}=harness();s.openPractice();await settle();const node=s.audio.node,mode=s.state.mode;
   const poses=s.ITEMS.map(item=>JSON.stringify(s.Motion.pose(item.id,.5)));
-  const ctx=new Proxy({},{get:(target,key)=>target[key]??(()=>{}),set:(target,key,value)=>{target[key]=value;return true}});
+  // Every drawing call must receive finite numbers; gradient factories return a stub gradient.
+  const gradient={addColorStop(){}};
+  const ctx=new Proxy({},{get:(target,key)=>target[key]??((...args)=>{if(args.some(a=>typeof a==='number'&&!Number.isFinite(a)))throw Error('non-finite argument to '+String(key));return gradient}),set:(target,key,value)=>{target[key]=value;return true}});
   const canvas={width:360,height:260,getBoundingClientRect:()=>({width:360,height:260}),getContext:()=>ctx};
   for(const avatar of ['male','female']){
     s.selectAvatar(avatar);assert.equal(s.Motion.getAvatar(),avatar);assert.equal(el('trainer-avatar').value,avatar);assert.equal(s.audio.node,node);assert.equal(s.state.mode,mode);
-    s.ITEMS.forEach((item,i)=>{assert.equal(JSON.stringify(s.Motion.pose(item.id,.5)),poses[i]);s.Motion.draw(canvas,item.id,.5);s.Motion.draw(canvas,item.id,.5,1,{comparison:true})});
+    s.ITEMS.forEach((item,i)=>{assert.equal(JSON.stringify(s.Motion.pose(item.id,.5)),poses[i]);s.Motion.draw(canvas,item.id,.5);s.Motion.draw(canvas,item.id,.5,1,{comparison:true});s.Motion.draw(canvas,item.id,.3,-1,{phase:.2});s.Motion.draw(canvas,item.id,.8,1,{small:true,phase:.7})});
   }
   s.selectAvatar('invalid');assert.equal(s.Motion.getAvatar(),'male');
 });
@@ -91,6 +93,52 @@ test('new moves are complete, distinct, and preserve stationary supports',()=>{
     const p=s.Motion.pose(id,t);for(const a of p.arms){assert.ok(Math.abs(a.hand[1]-190)<.001);assert.ok(Math.abs(a.hand[2]-80)<.001);}
   }
   for(const id of ['bicepsCurl','shoulderRotate']){const a=s.Motion.pose(id,0),b=s.Motion.pose(id,1);assert.deepEqual(a.arms.map(x=>x.elbow),b.arms.map(x=>x.elbow));}
+});
+test('movement timing eases into both end poses, reaching the end pose on beat 3',()=>{
+  const {s}=harness(),ease=s.Motion.ease;
+  assert.equal(ease(0),0);assert.equal(ease(.5),1);assert.ok(Math.abs(ease(1))<1e-12);
+  for(let p=0;p<.5;p+=.01){assert.ok(ease(p+.01)>=ease(p)-1e-12);assert.ok(Math.abs(ease(p)-ease(1-p))<1e-9);}
+  assert.ok(ease(.05)<.03&&ease(.45)>.97,'settles near both end poses');
+});
+test('sit-to-stand leans forward before the hips leave the seat, then rises upright',()=>{
+  const {s}=harness(),at=t=>s.Motion.pose('stand',t),lean=p=>Math.atan2(p.shoulder[2]-p.hip[2],p.shoulder[1]-p.hip[1])*180/Math.PI;
+  assert.equal(at(.2).hip[1],88,'still seated while leaning');assert.ok(lean(at(.2))>15);
+  assert.ok(lean(at(.3))>28&&lean(at(.3))<36,'lean peaks at lift-off');assert.ok(at(.3).head[2]>=8,'head over the toes');
+  assert.equal(lean(at(1)),0);assert.equal(at(1).hip[1],160);
+  let front=-1e9;for(let t=0;t<=1;t+=.02){const z=at(t).head[2];front=Math.max(front,z);assert.ok(front-z<12,'head rises without swinging back');}
+  for(const t of [0,.2])for(const a of at(t).arms)assert.ok(a.hand[1]>95&&a.hand[1]<110,'hands rest on the thighs');
+});
+test('motion arrows trace each working joint and stay readable',()=>{
+  const {s}=harness();
+  for(const item of s.ITEMS)for(const side of [-1,1]){
+    const paths=s.Motion.guides(item.id,side);
+    if(item.id==='palmPress'||item.id==='towelPull'){assert.equal(paths.length,0,'isometric moves use press/pull arrows');continue;}
+    assert.ok(paths.length>=1&&paths.length<=4,item.id);
+    for(const g of paths){let len=0;for(let i=1;i<g.length;i++)len+=Math.hypot(g[i][0]-g[i-1][0],g[i][1]-g[i-1][1]);assert.ok(len>=30,item.id+' arrow is long enough to read');assert.doesNotMatch(JSON.stringify(g),/null|NaN/);}
+    assert.equal(s.Motion.guides(item.id,side),paths,'paths are computed once');
+  }
+  const knee=side=>s.Motion.guides('march',side)[0][0][0];assert.ok(knee(1)>0&&knee(-1)<0,'alternating moves show the working side');
+});
+test('animation clock follows the audio reaching the speaker',async()=>{
+  let stamp={contextTime:0,performanceTime:0};const {s,setNow}=harness({outputTimestamp:()=>stamp});await s.audio.unlock();
+  s.audio.context.currentTime=10;setNow(50);assert.equal(s.audio.now(),10,'no output timestamp yet');
+  stamp={contextTime:9.9,performanceTime:49990};assert.ok(Math.abs(s.audio.now()-9.91)<1e-9,'extrapolated from the output timestamp');
+  stamp={contextTime:9.85,performanceTime:49990};assert.ok(Math.abs(s.audio.now()-9.91)<1e-9,'never runs backwards');
+  stamp={contextTime:11,performanceTime:49990};assert.equal(s.audio.now(),10,'implausible timestamps fall back to currentTime');
+  s.openPractice();await settle();const start=s.state.clockStart;s.audio.context.currentTime=start+2.1;stamp={contextTime:start+2,performanceTime:50000};
+  s.pausePractice();assert.ok(Math.abs(s.state.elapsed-2)<1e-9,'pausing keeps the position that was heard');
+});
+test('rest screen previews the next move, and the final screen hides it',async()=>{
+  const {s,el,setNow}=harness();s.openPractice();await settle();const calls=[],draw=s.Motion.draw;s.Motion.draw=(canvas,id,...rest)=>{calls.push([canvas,id]);return draw(canvas,id,...rest)};
+  setNow(32);s.audio.context.currentTime=s.state.clockStart+32;s.frame(32000);assert.equal(s.state.mode,'rest');assert.equal(el('transition-canvas').hidden,false);
+  calls.length=0;s.frame(33000);assert.deepEqual(calls,[[el('transition-canvas'),s.getPlan()[1].id]]);
+  s.navigateExercise(6);await settle();s.audio.context.currentTime=s.state.clockStart+32;s.frame(90000);assert.equal(s.state.mode,'done');assert.equal(el('transition-canvas').hidden,true);
+});
+test('a device that keeps missing frames settles at a steady 30 fps',async()=>{
+  const {s}=harness();s.openPractice();await settle();let draws=0;const draw=s.Motion.draw;s.Motion.draw=(...a)=>{draws++;return draw(...a)};
+  let t=1000;for(let i=0;i<120;i++)s.frame(t+=16.7);assert.equal(draws,120,'smooth devices draw every frame');
+  for(let i=0;i<5;i++)s.frame(t+=33.4);draws=0;for(let i=0;i<60;i++)s.frame(t+=16.7);assert.equal(draws,60,'a brief hiccup changes nothing');
+  for(let i=0;i<60;i++)s.frame(t+=33.4);draws=0;for(let i=0;i<60;i++)s.frame(t+=16.7);assert.equal(draws,30);
 });
 test('changing plans preserves all 7 categories, with no repeated previous move',()=>{
   const {s}=harness({blockedStorage:true});const variants=new Set();
