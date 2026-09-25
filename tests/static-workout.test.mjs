@@ -7,8 +7,8 @@ import { execFileSync } from 'node:child_process';
 
 const root = new URL('../', import.meta.url);
 const [library, motion, app, wav] = await Promise.all(['public/library.js','public/motion.js','public/app.js','public/audio/count-cycle.wav'].map((p,i)=>readFile(new URL(p,root),i===3?undefined:'utf8')));
-function harness({deferred=false,blockedStorage=false,audioSession,outputTimestamp}={}) {
-  let now=0;const nodes=[],resumers=[],events=[],elements=new Map(),timers=new Map();let timerId=0;
+function harness({deferred=false,blockedStorage=false,audioSession,outputTimestamp,storage={}}={}) {
+  let now=0;const store=new Map(Object.entries(storage));const nodes=[],resumers=[],events=[],elements=new Map(),timers=new Map();let timerId=0;
   const makeElement=()=>({textContent:'',innerHTML:'',hidden:false,dataset:{},style:{},disabled:false,tagName:'BUTTON',classList:{add(){},remove(){},toggle(){}},setAttribute(){},addEventListener(){},focus(){},showModal(){this.open=true},close(){this.open=false},querySelectorAll(){return Array.from({length:4},makeElement)},getBoundingClientRect(){return {width:0,height:0}}});
   const el=id=>{if(!elements.has(id))elements.set(id,makeElement());return elements.get(id)};
   el('count-audio-source').dataset.src='data:audio/wav;base64,'+wav.toString('base64');
@@ -21,9 +21,9 @@ function harness({deferred=false,blockedStorage=false,audioSession,outputTimesta
     resume(){events.push({event:'resume',sessionType:audioSession?.type});if(deferred)return new Promise(resolve=>resumers.push(()=>{this.state='running';resolve()}));this.state='running';return Promise.resolve()}
   }
   const document={hidden:false,getElementById:el,querySelectorAll(){return []},addEventListener(){},activeElement:makeElement(),body:makeElement()};
-  const context=vm.createContext({document,window:{AudioContext,navigator:{audioSession},crypto:webcrypto,matchMedia:()=>({matches:false}),addEventListener(){}},localStorage:{getItem(){if(blockedStorage)throw Error('blocked');return null},setItem(){if(blockedStorage)throw Error('blocked')}},performance:{now:()=>now*1000},requestAnimationFrame(){},atob:s=>Buffer.from(s,'base64').toString('binary'),setTimeout(fn){const id=++timerId;timers.set(id,fn);return id},clearTimeout:id=>timers.delete(id),console});
-  vm.runInContext(library+'\n'+motion+'\n'+app+'\n;globalThis.subject={Motion,ITEMS,state,audio,newPlan,openPractice,closePractice,resumePractice,pausePractice,toggleVoice,navigateExercise,frame,holdRest,restNext,testSound,selectAvatar,getPlan:()=>plan};',context);
-  return {s:context.subject,el,nodes,resumers,timers,events,setNow(t){now=t}};
+  const context=vm.createContext({document,window:{AudioContext,navigator:{audioSession},crypto:webcrypto,matchMedia:()=>({matches:false}),addEventListener(){}},localStorage:{getItem(key){if(blockedStorage)throw Error('blocked');return store.get(key)??null},setItem(key,value){if(blockedStorage)throw Error('blocked');store.set(key,String(value))}},performance:{now:()=>now*1000},requestAnimationFrame(){},atob:s=>Buffer.from(s,'base64').toString('binary'),setTimeout(fn){const id=++timerId;timers.set(id,fn);return id},clearTimeout:id=>timers.delete(id),console});
+  vm.runInContext(library+'\n'+motion+'\n'+app+'\n;globalThis.subject={Motion,ITEMS,LEVELS,CATEGORIES,DEFAULT_PLANS,selectLevel,renderLibrary,getLevel:()=>level,state,audio,newPlan,openPractice,closePractice,resumePractice,pausePractice,toggleVoice,navigateExercise,frame,holdRest,restNext,testSound,selectAvatar,getPlan:()=>plan};',context);
+  return {s:context.subject,el,nodes,resumers,timers,events,store,setNow(t){now=t}};
 }
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
 // A sized canvas whose 2D context rejects non-finite numbers, in calls and in property writes.
@@ -71,13 +71,13 @@ test('both avatars render every exercise without changing rig or playback',async
   s.selectAvatar('invalid');assert.equal(s.Motion.getAvatar(),'male');
 });
 
-test('35 poses have connected, fixed-length limbs and finite joints',()=>{
-  const {s}=harness();assert.equal(s.ITEMS.length,35);
+test('51 poses have connected, fixed-length limbs, finite joints, and feet on or above the floor',()=>{
+  const {s}=harness();assert.equal(s.ITEMS.length,51);
   const dist=(a,b)=>Math.hypot(...a.map((x,i)=>x-b[i]));
   for(const item of s.ITEMS)for(const side of [-1,1])for(const t of [0,.25,.5,.75,1]){
     const p=s.Motion.pose(item.id,t,side);
     for(const a of p.arms){assert.ok(Math.abs(dist(a.sh,a.elbow)-56)<.001,item.id+' upper arm');assert.ok(Math.abs(dist(a.elbow,a.hand)-54)<.001,item.id+' forearm')}
-    for(const l of p.legs){assert.ok(Math.abs(dist(l.h,l.k)-76)<.001,item.id+' thigh');assert.ok(Math.abs(dist(l.k,l.f)-76)<.001,item.id+' shin');assert.ok(Math.abs(dist(l.f,l.toe)-23)<.001,item.id+' foot')}
+    for(const l of p.legs){assert.ok(Math.abs(dist(l.h,l.k)-76)<.001,item.id+' thigh');assert.ok(Math.abs(dist(l.k,l.f)-76)<.001,item.id+' shin');assert.ok(Math.abs(dist(l.f,l.toe)-23)<.001,item.id+' foot');assert.ok(Math.min(l.f[1],l.toe[1])>9.99,item.id+' foot above the floor')}
     assert.doesNotMatch(JSON.stringify(p),/null|NaN/);
   }
 });
@@ -85,17 +85,44 @@ test('wall push keeps palms on wall; calf raises keep toes planted',()=>{
   const {s}=harness();for(const t of [0,.25,.5,.75,1]){
     const wall=s.Motion.pose('wallPush',t);for(const a of wall.arms)assert.ok(Math.abs(a.hand[2]-132)<.001);
     for(const id of ['heel','seatedHeel']){const p=s.Motion.pose(id,t);for(const l of p.legs){assert.equal(l.toe[1],id==='heel'?10:12);assert.equal(l.toe[2],id==='heel'?29:31)}}
+    for(const side of [-1,1]){const l=s.Motion.pose('singleCalf',t,side).legs.find(x=>x.s===side);assert.equal(l.toe[1],10);assert.equal(l.toe[2],29);}
   }
 });
-test('new moves are complete, distinct, and preserve stationary supports',()=>{
-  const {s}=harness();const added=s.ITEMS.filter(i=>i.isNew);assert.equal(added.length,14);
-  for(const key of new Set(s.ITEMS.map(i=>i.key)))assert.equal(s.ITEMS.filter(i=>i.key===key).length,5);
+test('every level covers all 7 categories with at least 3 moves; moves are complete and keep supports still',()=>{
+  const {s}=harness(),keys=[...s.LEVELS.map(l=>l.key)];assert.deepEqual(keys,['strong','standard','gentle']);
+  for(const key of keys)for(const c of s.CATEGORIES)assert.ok(s.ITEMS.filter(i=>i.key===c.key&&i.levels.includes(key)).length>=3,key+' '+c.key);
+  assert.ok(s.ITEMS.some(i=>i.levels.length>1),'levels overlap');
   const joints=p=>JSON.stringify([p.hip,p.shoulder,p.head,p.legs,p.arms]);
-  for(const item of added){assert.equal(item.steps.length,2);assert.ok(item.name&&item.purpose&&item.cue);assert.notEqual(joints(s.Motion.pose(item.id,0)),joints(s.Motion.pose(item.id,1)));}
-  for(const id of ['hamstringCurl','forwardTap','sideTap'])for(const t of [0,.25,.5,.75,1]){
-    const p=s.Motion.pose(id,t);for(const a of p.arms){assert.ok(Math.abs(a.hand[1]-190)<.001);assert.ok(Math.abs(a.hand[2]-80)<.001);}
+  for(const item of s.ITEMS){
+    assert.ok(item.levels.length>=1&&item.levels.every(l=>keys.includes(l)),item.id);
+    assert.equal(item.steps.length,2);assert.ok(item.name&&item.purpose&&item.cue);
+    if(!['palmPress','towelPull'].includes(item.id))assert.notEqual(joints(s.Motion.pose(item.id,0)),joints(s.Motion.pose(item.id,1)),item.id+' moves (isometric presses excepted)');
+  }
+  // Hands that rest on a chair back, a table edge or a seat stay exactly there.
+  const still={hamstringCurl:[30,190,80],forwardTap:[30,190,80],sideTap:[30,190,80],singleCalf:[30,190,80],singleLegStand:[30,190,80],singleLegHinge:[30,190,80],chairDip:[32,82,-27]};
+  for(const side of [-1,1])for(const t of [0,.25,.5,.75,1]){
+    for(const [id,[x,y,z]] of Object.entries(still))for(const a of s.Motion.pose(id,t,side).arms)assert.ok(Math.hypot(a.hand[0]-a.s*x,a.hand[1]-y,a.hand[2]-z)<.001,id);
+    const table=JSON.stringify(s.Motion.pose('inclinePush',0).arms.map(a=>a.hand));for(const id of ['inclinePush','tableKneeDrive'])assert.equal(JSON.stringify(s.Motion.pose(id,t,side).arms.map(a=>a.hand)),table,id);
   }
   for(const id of ['bicepsCurl','shoulderRotate']){const a=s.Motion.pose(id,0),b=s.Motion.pose(id,1);assert.deepEqual(a.arms.map(x=>x.elbow),b.arms.map(x=>x.elbow));}
+});
+test('choosing a level filters the plan and library, and is remembered with its own plan',()=>{
+  const {s,el,store}=harness();assert.equal(s.getLevel(),'gentle');assert.equal(s.getPlan().map(i=>i.id).join(),s.DEFAULT_PLANS.gentle.join());
+  for(const key of ['strong','standard','gentle']){
+    s.selectLevel(key);assert.equal(s.getLevel(),key);assert.equal(store.get('cq-level-v1'),key);
+    assert.ok(s.getPlan().every(i=>i.levels.includes(key)));assert.match(el('level-hint').textContent,/./);
+    const shown=[...el('library-list').innerHTML.matchAll(/data-preview="(\w+)"/g)].map(m=>m[1]);
+    assert.equal(shown.join(),s.ITEMS.filter(i=>i.levels.includes(key)).map(i=>i.id).join());
+  }
+  s.renderLibrary('every');assert.equal([...el('library-list').innerHTML.matchAll(/data-preview=/g)].length,51);
+  s.selectLevel('strong');s.newPlan();const strongPlan=store.get('cq-plan-v3-strong');
+  s.selectLevel('gentle');s.selectLevel('strong');assert.equal(JSON.stringify(s.getPlan().map(i=>i.id)),strongPlan,'each level keeps its plan');
+  s.selectLevel('nonsense');assert.equal(s.getLevel(),'strong');
+  s.openPractice();s.selectLevel('gentle');assert.equal(s.getLevel(),'strong','level is fixed during a workout');
+  const again=harness({storage:{'cq-level-v1':'standard','cq-plan-v3-standard':strongPlan}});
+  assert.equal(again.s.getLevel(),'standard');assert.equal(again.s.getPlan().map(i=>i.id).join(),s.DEFAULT_PLANS.standard.join(),'a plan outside the level is replaced');
+  const old=['march','stand','wallPush','elbowPull','kneePress','seatedHeel','side'];
+  assert.equal(harness({storage:{'cq-plan-v2':JSON.stringify(old)}}).s.getPlan().map(i=>i.id).join(),old.join(),'plans saved before levels still load');
 });
 test('movement timing eases into both end poses, reaching the end pose on beat 3',()=>{
   const {s}=harness(),ease=s.Motion.ease;
@@ -158,10 +185,11 @@ test('the count stops exactly at the end of the eighth repetition',async()=>{
   s.audio.context.currentTime=s.state.clockStart+10;s.pausePractice();await s.resumePractice();assert.ok(Math.abs(s.audio.node.stopped[0]-(s.state.clockStart+22))<1e-9,'resuming keeps the same end');
   s.closePractice();s.openPractice('march');await settle();assert.equal(s.audio.node.stopped,undefined,'previews loop without an end');
 });
-test('changing plans preserves all 7 categories, with no repeated previous move',()=>{
-  const {s}=harness({blockedStorage:true});const variants=new Set();
-  for(let n=0;n<100;n++){const previous=s.getPlan().map(x=>x.id);s.newPlan();const next=s.getPlan();assert.equal(new Set(next.map(x=>x.key)).size,7);next.forEach((x,i)=>assert.notEqual(x.id,previous[i]));variants.add(next.map(x=>x.id).join(','))}
-  assert.ok(variants.size>30);
+test('changing plans preserves all 7 categories and the level, with no repeated previous move',()=>{
+  const {s}=harness({blockedStorage:true});
+  for(const key of ['gentle','standard','strong']){s.selectLevel(key);const variants=new Set();
+    for(let n=0;n<100;n++){const previous=s.getPlan().map(x=>x.id);s.newPlan();const next=s.getPlan();assert.equal(new Set(next.map(x=>x.key)).size,7);next.forEach((x,i)=>{assert.notEqual(x.id,previous[i]);assert.ok(x.levels.includes(key),key+' '+x.id)});variants.add(next.map(x=>x.id).join(','))}
+    assert.ok(variants.size>30,key);}
 });
 test('embedded recording has audible samples in each of the four beats',()=>{
   const {s}=harness();s.audio.ensure();assert.equal(s.audio.buffer.duration,4);const data=s.audio.buffer.getChannelData(0);
@@ -181,5 +209,5 @@ test('workout automatically rests and advances; final move ends the workout',asy
 });
 test('build is a single HTML with no remote runtime dependencies or TTS fallbacks',async()=>{
   const out='/tmp/workout-test-built.html';execFileSync(process.execPath,['build/build-github-page.mjs',out],{cwd:root});const html=await readFile(out,'utf8');
-  assert.doesNotMatch(html,/<script\s+src=|<link[^>]+rel="stylesheet"|speechSynthesis|decodeAudioData|new Audio\(/);assert.match(html,/data:audio\/wav;base64,/);assert.ok(Buffer.byteLength(html)<250000);
+  assert.doesNotMatch(html,/<script\s+src=|<link[^>]+rel="stylesheet"|speechSynthesis|decodeAudioData|new Audio\(/);assert.match(html,/data:audio\/wav;base64,/);assert.ok(Buffer.byteLength(html)<300000);
 });

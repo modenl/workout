@@ -12,3 +12,12 @@ dialog{border:0;margin:0;padding:0;max-width:none;max-height:none;width:100%;hei
 @media(max-height:710px){.transition{gap:10px;padding:18px 24px}.transition h2{font-size:27px}.transition strong{font-size:58px}.transition>p{font-size:15px;line-height:1.5}}
 @media(max-height:480px){.transition canvas{display:none}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+.level-picker{margin:24px 0 0;max-width:460px}
+.level-picker>span{display:block;font-size:14px;color:var(--muted);margin-bottom:8px}
+.level-picker>div{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.level-picker button{min-height:60px;padding:7px 6px;font-size:15px;line-height:1.35;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.level-picker button b{font-size:16px;font-weight:750}
+.level-picker button[aria-pressed=true]{background:var(--green);color:white;border-color:var(--green)}
+#level-hint{font-size:14px;line-height:1.6;color:var(--muted);margin:9px 0 0}
+.level-tags{display:flex;flex-wrap:wrap;gap:5px;margin:0 0 7px}
+.level-tags span{font-size:12px;line-height:1.6;padding:0 8px;border-radius:10px;background:#e7eadf;color:var(--green);font-weight:650}
