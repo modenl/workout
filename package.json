@@ -8,6 +8,8 @@
   },
   "scripts": {
     "build": "node build/build-github-page.mjs index.html",
-    "test": "node --test tests/static-workout.test.mjs"
+    "test": "node --test tests/static-workout.test.mjs",
+    "build:cloudflare": "node build/build-github-page.mjs dist/cloudflare/index.html",
+    "deploy": "npm run build:cloudflare && npx -y wrangler@4 deploy"
   }
 }
