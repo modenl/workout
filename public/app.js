@@ -32,12 +32,16 @@ const storage={get(key){try{return localStorage.getItem(key);}catch{return null;
 Motion.setAvatar(storage.get("cq-avatar-v1"));
 function selectAvatar(value){
   Motion.setAvatar(value);storage.set("cq-avatar-v1",Motion.getAvatar());syncAvatar();observeThumbnails();renderPractice();
-  Motion.draw($("hero-canvas"),"stand",.5);
 }
 function syncAvatar(){
   const value=Motion.getAvatar();document.querySelectorAll("[data-avatar]").forEach(button=>button.setAttribute("aria-pressed",String(button.dataset.avatar===value)));
-  $("trainer-avatar").value=value;
-  $("hero-canvas").setAttribute("aria-label",(value==="female"?"女":"男")+"示范人物，坐站起身关节动画");
+  $("trainer-avatar").value=value;syncHero();
+}
+// The home figure demonstrates a signature move of the chosen level.
+const HERO_MOVES={strong:"reverseLunge",standard:"squat",gentle:"stand"};
+function syncHero(){
+  const item=ITEM_BY_ID[HERO_MOVES[level]];$("hero-move").textContent=item.name;
+  $("hero-canvas").setAttribute("aria-label",(Motion.getAvatar()==="female"?"女":"男")+"示范人物，"+item.name+"关节动画");Motion.draw($("hero-canvas"),item.id,.5);
 }
 // Each level keeps its own plan; the gentle level still reads plans saved before levels existed.
 function loadPlan(key){
@@ -45,16 +49,21 @@ function loadPlan(key){
     if(Array.isArray(saved)&&saved.length===7&&saved.every((id,i)=>ITEM_BY_ID[id]?.key===CATEGORIES[i].key&&inLevel(ITEM_BY_ID[id],key)))return saved.map(id=>ITEM_BY_ID[id]);}catch{}
   return DEFAULT_PLANS[key].map(id=>ITEM_BY_ID[id]);
 }
-let level=LEVEL_BY_KEY[storage.get("cq-level-v1")]?storage.get("cq-level-v1"):"gentle",plan=loadPlan(level),libraryFilter="all";
+let level=LEVEL_BY_KEY[storage.get("cq-level-v1")]?storage.get("cq-level-v1"):"gentle",plan=loadPlan(level);
 function levelLabel(key=level){return LEVEL_BY_KEY[key].age+" · "+LEVEL_BY_KEY[key].name;}
+// One level for the whole page: the hero picker and the library tabs both set it.
 function selectLevel(key){
-  if(!LEVEL_BY_KEY[key]||state.open)return;const changed=key!==level;level=key;storage.set("cq-level-v1",key);plan=loadPlan(key);syncLevel(changed);renderPlan();renderLibrary("all");
+  if(!LEVEL_BY_KEY[key]||state.open)return;const changed=key!==level;level=key;storage.set("cq-level-v1",key);plan=loadPlan(key);libraryScope="level";
+  syncLevel();renderPlan();renderLibrary();
+  // The plan list is usually off screen, so name the new plan wherever the switch happened.
+  if(changed)toast("已切换到 "+levelLabel()+"。今日跟练："+plan.map(i=>i.name).join("、")+"。");
 }
-// The plan list sits below the fold on phones, so say right here that it changed.
-function syncLevel(changed=false){
-  document.querySelectorAll("[data-level]").forEach(button=>button.setAttribute("aria-pressed",String(button.dataset.level===level)));
-  $("level-hint").textContent=LEVEL_BY_KEY[level].hint+(changed?"。今日跟练已换成这一档："+plan.map(i=>i.name).join("、")+"。":"");
+function syncLevel(){
+  document.querySelectorAll(".level-options [data-level]").forEach(button=>button.setAttribute("aria-pressed",String(button.dataset.level===level)));
+  $("level-hint").textContent=LEVEL_BY_KEY[level].hint;syncHero();
 }
+let toastTimer;
+function toast(text){const box=$("toast");box.textContent=text;box.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{box.hidden=true;},6000);}
 const state={open:false,preview:false,index:0,list:plan,mode:"closed",elapsed:0,clockStart:0,clockBase:0,clockAudio:false,voice:true,operation:0,reference:false,restUntil:0,restRemaining:20,holdRest:false,beat:-1,opener:null};
 let visibleCanvases=new Set(),heroVisible=true;
 const reducedMotion=window.matchMedia?.("(prefers-reduced-motion: reduce)").matches||false;
@@ -132,22 +141,27 @@ async function testSound(){
 function randomIndex(n){const v=new Uint32Array(1);if(window.crypto?.getRandomValues){window.crypto.getRandomValues(v);return v[0]%n;}return Math.floor(Math.random()*n);}
 function newPlan(){
   plan=CATEGORIES.map((c,i)=>{const options=ITEMS.filter(x=>x.key===c.key&&inLevel(x,level)&&x.id!==plan[i].id);return options[randomIndex(options.length)];});
-  storage.set("cq-plan-v3-"+level,JSON.stringify(plan.map(i=>i.id)));renderPlan();$("plan-summary").textContent="已换好一组（"+levelLabel()+"）：七个类别均保留，每个动作都与上一组不同。";
+  storage.set("cq-plan-v3-"+level,JSON.stringify(plan.map(i=>i.id)));renderPlan();$("plan-summary").textContent="已换好一组：7 个动作都和上一组不同。";
 }
 function thumbnail(item){return '<canvas data-exercise="'+item.id+'" aria-hidden="true"></canvas>';}
 const observer=typeof IntersectionObserver==="function"?new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)visibleCanvases.add(e.target);else visibleCanvases.delete(e.target);});},{rootMargin:"50px"}):null;
 function observeThumbnails(){visibleCanvases.clear();if(observer)observer.disconnect();document.querySelectorAll("canvas[data-exercise]").forEach(canvas=>{Motion.draw(canvas,canvas.dataset.exercise,.55,1,{small:true});if(observer)observer.observe(canvas);});}
 function renderPlan(){
-  $("coverage-strip").innerHTML=CATEGORIES.map(c=>"<span>"+c.label+"</span>").join("");
-  $("plan-list").innerHTML=plan.map(item=>"<li>"+thumbnail(item)+'<div><h3>'+item.name+'</h3><p>'+item.category+" · "+(item.alternating?"每侧 4 次":"共 8 次")+'</p></div><button data-preview="'+item.id+'" aria-label="预览'+item.name+'">预览 ↗</button></li>').join("");
-  $("plan-summary").textContent=levelLabel()+" · 7 个动作 · 动作间休息 20 秒 · 可延长休息";observeThumbnails();
+  $("plan-list").innerHTML=plan.map(item=>"<li>"+thumbnail(item)+'<div><h3>'+item.name+'</h3><p>'+item.category+" · "+(item.alternating?"每侧 4 次":"共 8 次")+'</p></div><button data-preview="'+item.id+'" aria-label="预览'+item.name+'">预览</button></li>').join("");
+  $("plan-level").textContent=levelLabel();$("plan-summary").textContent="7 个动作 · 约 6 分钟";observeThumbnails();
 }
-function levelTags(item){return '<span class="level-tags">'+LEVELS.filter(l=>inLevel(item,l.key)).map(l=>"<span>"+l.age+"</span>").join("")+"</span>";}
-// "all" and the categories show the current level; "every" shows all three levels.
-function renderLibrary(filter=libraryFilter){
-  libraryFilter=filter;const mine=ITEMS.filter(i=>inLevel(i,level));
-  $("library-filters").innerHTML=[{key:"all",label:levelLabel()+" · "+mine.length+" 个"},...CATEGORIES.map(c=>({...c,label:c.label+" · "+mine.filter(i=>i.key===c.key).length})),{key:"every",label:"三档全部 "+ITEMS.length+" 个"}].map(c=>'<button data-filter="'+c.key+'" aria-pressed="'+(filter===c.key)+'">'+c.label+"</button>").join("");
-  $("library-list").innerHTML=(filter==="every"?ITEMS:mine.filter(i=>filter==="all"||i.key===filter)).map(item=>'<article class="library-item">'+thumbnail(item)+'<div><h3>'+item.name+'</h3>'+levelTags(item)+'<p>'+item.purpose+'</p><button data-preview="'+item.id+'">查看动作与要点 ↗</button></div></article>').join("");observeThumbnails();
+function levelTags(item){return '<span class="level-tags">'+LEVELS.filter(l=>inLevel(item,l.key)).map(l=>"<span"+(l.key===level?' class="current"':"")+">"+l.age.replace(" 岁","")+"</span>").join("")+"</span>";}
+// The library shows the current level ("level") or all three ("every"), narrowed by category.
+let libraryScope="level",libraryCategory="all";
+function setLibrary({scope,category}={}){if(scope)libraryScope=scope;if(category)libraryCategory=category;renderLibrary();}
+function renderLibrary(){
+  const pool=libraryScope==="every"?ITEMS:ITEMS.filter(i=>inLevel(i,level)),levels=$("library-levels"),filters=$("library-filters");
+  // Buttons are built once and then updated, so keyboard focus survives a switch.
+  if(!levels.childElementCount)levels.innerHTML=LEVELS.map(l=>'<button data-level="'+l.key+'" aria-label="'+l.age+" · "+l.name+'"><b>'+l.age.replace(" 岁","")+"</b><span>"+l.name+"</span></button>").join("")+'<button data-scope="every"><b>全部</b><span>'+ITEMS.length+" 个</span></button>";
+  if(!filters.childElementCount)filters.innerHTML=[{key:"all",label:"全部"},...CATEGORIES].map(c=>'<button data-filter="'+c.key+'">'+c.label+"<small></small></button>").join("");
+  levels.querySelectorAll("button").forEach(b=>b.setAttribute("aria-pressed",String(b.dataset.scope?libraryScope==="every":libraryScope==="level"&&b.dataset.level===level)));
+  filters.querySelectorAll("button").forEach(b=>{const key=b.dataset.filter;b.setAttribute("aria-pressed",String(libraryCategory===key));const count=b.querySelector("small");if(count)count.textContent=key==="all"?pool.length:pool.filter(i=>i.key===key).length;});
+  $("library-list").innerHTML=pool.filter(i=>libraryCategory==="all"||i.key===libraryCategory).map(item=>'<article class="library-item">'+thumbnail(item)+'<div class="library-body"><h3>'+item.name+"</h3>"+levelTags(item)+"<p>"+item.purpose+'</p><button data-preview="'+item.id+'" aria-label="查看'+item.name+'的动作要点">看动作要点 →</button></div></article>').join("");observeThumbnails();
 }
 function current(){return state.list[state.index];}
 function updateExercise(){
@@ -215,12 +229,12 @@ function animate(now){
     }
     if(state.mode==="done")return;if(state.mode==="running"&&!state.preview&&elapsedNow()>=32){startRest();return;}renderPractice();
   }else{
-    if(now-lastThumbs<30)return;lastThumbs=now;if(heroVisible)Motion.draw($("hero-canvas"),"stand",loop);
+    if(now-lastThumbs<30)return;lastThumbs=now;if(heroVisible)Motion.draw($("hero-canvas"),HERO_MOVES[level],loop,side);
     if(!reducedMotion)visibleCanvases.forEach(c=>Motion.draw(c,c.dataset.exercise,loop,side,{small:true}));
   }
 }
 $("test-sound").addEventListener("click",testSound);$("start-workout").addEventListener("click",()=>openPractice());$("start-workout-2").addEventListener("click",()=>openPractice());$("new-plan").addEventListener("click",newPlan);
-document.addEventListener("click",event=>{const preview=event.target.closest("[data-preview]");if(preview)openPractice(preview.dataset.preview);const filter=event.target.closest("[data-filter]");if(filter)renderLibrary(filter.dataset.filter);const avatar=event.target.closest("[data-avatar]");if(avatar)selectAvatar(avatar.dataset.avatar);const lv=event.target.closest("[data-level]");if(lv)selectLevel(lv.dataset.level);});
+document.addEventListener("click",event=>{const preview=event.target.closest("[data-preview]");if(preview)openPractice(preview.dataset.preview);const filter=event.target.closest("[data-filter]");if(filter)setLibrary({category:filter.dataset.filter});const scope=event.target.closest("[data-scope]");if(scope)setLibrary({scope:scope.dataset.scope});const avatar=event.target.closest("[data-avatar]");if(avatar)selectAvatar(avatar.dataset.avatar);const lv=event.target.closest("[data-level]");if(lv)selectLevel(lv.dataset.level);});
 $("trainer-avatar").addEventListener("change",event=>selectAvatar(event.target.value));
 $("close-trainer").addEventListener("click",closePractice);$("trainer").addEventListener("cancel",e=>{e.preventDefault();closePractice();});$("pause-workout").addEventListener("click",togglePause);$("voice-toggle").addEventListener("click",toggleVoice);
 $("previous-exercise").addEventListener("click",()=>navigateExercise(-1));$("next-exercise").addEventListener("click",()=>state.index===state.list.length-1?startRest():navigateExercise(1));
