@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>火柴人动作原型</title>
+<style>
+:root{--paper:#f4f1e8;--surface:#fbfaf6;--sage:#e7eadf;--ink:#1a3c34;--green:#1f4d40;--orange:#b44a28;--line:#dadccf;--muted:#56685f;font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;color:var(--ink);background:var(--paper)}
+*{box-sizing:border-box}body{margin:0}
+.wrap{max-width:1040px;margin:0 auto;padding:28px 24px 60px}
+.eyebrow{margin:0 0 8px;font-size:13px;font-weight:700;letter-spacing:.14em;color:var(--orange)}
+h1{margin:0 0 8px;font:600 34px/1.25 "Songti SC","STSong",serif}
+.lead{margin:0 0 20px;color:var(--muted);line-height:1.7}
+button{font:inherit;cursor:pointer;color:inherit;border:1px solid var(--line);background:var(--surface);border-radius:999px;min-height:44px;padding:8px 16px;font-weight:650;font-size:15px}
+button[aria-pressed=true]{background:var(--green);border-color:var(--green);color:#fff}
+button:focus-visible,input:focus-visible{outline:3px solid #c45532;outline-offset:2px}
+.tabs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.tabs button small{margin-left:6px;font-size:12px;opacity:.7}
+.stage{position:relative;aspect-ratio:16/10;border-radius:24px;overflow:hidden;touch-action:none;cursor:grab;box-shadow:0 10px 30px rgba(22,58,48,.18)}
+.stage:active{cursor:grabbing}
+.stage canvas{display:block;width:100%;height:100%}
+.hud{position:absolute;pointer-events:none;color:#f5f2e8;text-shadow:0 1px 6px rgba(0,0,0,.35)}
+.light .hud{color:var(--ink);text-shadow:none}
+.beat{left:20px;top:14px;display:flex;align-items:baseline;gap:6px}
+.beat strong{font-size:52px;line-height:1;font-variant-numeric:tabular-nums}
+.beat span{font-size:14px;opacity:.8}
+.dots{left:22px;top:76px;display:flex;gap:6px}
+.dots i{width:9px;height:9px;border-radius:50%;background:currentColor;opacity:.25}
+.dots i.on{opacity:1;background:#ff7a45}
+.phase{right:20px;top:18px;text-align:right;font-size:17px;font-weight:700;max-width:50%}
+.phase small{display:block;font-size:13px;font-weight:500;opacity:.75;margin-top:3px}
+.hint{left:0;right:0;bottom:12px;text-align:center;font-size:12px;opacity:.6}
+.stage-box{position:relative}
+.compare[hidden]{display:none}
+.compare{position:absolute;right:14px;bottom:14px;width:26%;aspect-ratio:3/4;border-radius:14px;overflow:hidden;background:#e7eadf;box-shadow:0 6px 18px rgba(0,0,0,.25)}
+.compare canvas{width:100%;height:100%;display:block}
+.compare span{position:absolute;left:8px;top:6px;font-size:12px;font-weight:700;color:var(--ink)}
+.chart{margin-top:12px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:10px 14px 8px}
+.chart header{display:flex;justify-content:space-between;font-size:13px;color:var(--muted);margin-bottom:4px}
+.chart canvas{display:block;width:100%;height:110px}
+.controls{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:12px}
+.controls .sep{flex-basis:100%;height:0}
+#play{min-width:96px;background:var(--green);color:#fff;border-color:var(--green)}
+input[type=range]{flex:1;min-width:160px;accent-color:#1f4d40;height:44px}
+.group{display:inline-flex;gap:4px;padding:3px;border-radius:999px;background:var(--sage)}
+.group button{border:0;min-height:38px;padding:6px 12px;background:transparent}
+.group button[aria-pressed=true]{background:var(--surface);color:var(--ink);box-shadow:0 1px 3px rgba(0,0,0,.15)}
+.notes{margin-top:22px;background:var(--surface);border:1px solid var(--line);border-radius:20px;padding:20px 24px}
+.notes h2{margin:0 0 10px;font:600 22px/1.3 "Songti SC","STSong",serif}
+.notes li{line-height:1.8;color:var(--muted)}
+@media(max-width:700px){.wrap{padding:18px 14px 40px}h1{font-size:28px}.stage{aspect-ratio:4/5}.phase{font-size:15px}.beat strong{font-size:42px}.dots{top:64px}.compare{position:relative;right:auto;bottom:auto;width:100%;aspect-ratio:16/10;margin-top:10px}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <p class="eyebrow">原型 · 5 个动作</p>
+  <h1>火柴人动作演示</h1>
+  <p class="lead">3D 骨架，脚掌贴地不滑；速度按真实发力节奏：下降慢、发力快、停顿前减速；垂下的手臂按摆锤物理摆动。拖动画面可旋转视角。</p>
+  <nav class="tabs" id="tabs" aria-label="选择动作"></nav>
+  <div class="stage-box">
+  <div class="stage" id="stage">
+    <canvas id="canvas" role="img" aria-label="火柴人动作动画"></canvas>
+    <div class="hud beat"><strong id="beat">1</strong><span>拍</span><span id="rep"></span></div>
+    <div class="hud dots" id="dots"><i></i><i></i><i></i><i></i></div>
+    <div class="hud phase"><span id="phase"></span><small id="level"></small></div>
+    <div class="hud hint">拖动旋转视角 · 双击复原</div>
+  </div>
+  <div class="compare" id="compare" hidden><canvas id="old"></canvas><span>现版</span></div>
+  </div>
+  <div class="controls">
+    <button id="play">❚❚ 暂停</button>
+    <span class="group" id="speeds"><button data-speed="1" aria-pressed="true">1×</button><button data-speed=".5">0.5×</button><button data-speed=".25">0.25×</button></span>
+    <input type="range" id="scrub" min="0" max="1000" value="0" aria-label="拖动查看任一时刻">
+    <span class="sep"></span>
+    <button data-toggle="ghost" aria-pressed="true">残影</button>
+    <button data-toggle="trail" aria-pressed="true">轨迹</button>
+    <button data-toggle="com" aria-pressed="false">重心</button>
+    <button data-toggle="glow" aria-pressed="true">发力高亮</button>
+    <button data-toggle="orbit" aria-pressed="false">自动旋转</button>
+    <button data-toggle="compare" aria-pressed="false">对比现版</button>
+    <span class="group" id="themes"><button data-theme="dark" aria-pressed="true">深色</button><button data-theme="light">浅色</button></span>
+  </div>
+  <section class="chart"><header><span id="metric"></span><span>橙 = 向上/加速 · 绿 = 向下 · 竖线 = 每拍</span></header><canvas id="chart"></canvas></section>
+  <section class="notes"><h2 id="title"></h2><ul id="notes"></ul></section>
+</div>
+<script src="stickman.js"></script>
+<script src="../public/motion.js"></script>
+<script>
+"use strict";
+const $=id=>document.getElementById(id),EX=Stickman.EXERCISES;
+const view={ex:EX[0],t:0,playing:true,speed:1,yaw:0,pitch:0,theme:"dark",ghost:true,trail:true,com:false,glow:true,orbit:false,compare:false};
+$("tabs").innerHTML=EX.map((e,i)=>'<button data-ex="'+i+'" aria-pressed="'+(i===0)+'">'+e.name+'<small>'+e.level+'</small></button>').join("");
+function select(i){
+  view.ex=EX[i];view.t=0;view.yaw=view.ex.view.yaw;view.pitch=view.ex.view.pitch;Stickman.prepare(view.ex);
+  document.querySelectorAll("[data-ex]").forEach(b=>b.setAttribute("aria-pressed",String(+b.dataset.ex===i)));
+  $("title").textContent=view.ex.name+" · 细节说明";$("notes").innerHTML=view.ex.notes.map(n=>"<li>"+n+"</li>").join("");
+  $("metric").textContent=view.ex.metric.label+(view.ex.reps>1?" · 左右各一次":"");$("level").textContent="适合 "+view.ex.level;drawChart();
+}
+function size(c){const r=c.getBoundingClientRect(),d=Math.min(devicePixelRatio||1,2);if(c.width!==Math.round(r.width*d)||c.height!==Math.round(r.height*d)){c.width=Math.round(r.width*d);c.height=Math.round(r.height*d);}const x=c.getContext("2d");x.setTransform(d,0,0,d,0,0);return [x,r.width,r.height];}
+// The speed curve over one cycle; the playhead is drawn on top each frame.
+let chartImage=null;
+function drawChart(){
+  const [x,w,h]=size($("chart")),d=Stickman.prepare(view.ex),m=d.metric,max=Math.max(...m.map(Math.abs))||1,signed=view.ex.metric.mode==="vy",zero=signed?h/2:h-6;
+  x.clearRect(0,0,w,h);x.strokeStyle="#dadccf";x.lineWidth=1;
+  for(let b=0;b<=d.duration;b++){const X=b/d.duration*w;x.beginPath();x.moveTo(X,0);x.lineTo(X,h);x.stroke();}
+  x.beginPath();x.moveTo(0,zero);x.lineTo(w,zero);x.stroke();
+  const Y=v=>zero-v/max*(signed?h/2-8:h-14);
+  for(let i=0;i<d.N;i++){const v=m[i],X=i/d.N*w;x.fillStyle=v>=0?"rgba(196,85,50,.55)":"rgba(38,150,136,.55)";const y=Y(v);x.fillRect(X,Math.min(y,zero),w/d.N+.6,Math.abs(y-zero));}
+  x.strokeStyle="#1a3c34";x.lineWidth=1.5;x.beginPath();for(let i=0;i<d.N;i++){const X=i/d.N*w;i?x.lineTo(X,Y(m[i])):x.moveTo(X,Y(m[i]));}x.stroke();
+  chartImage=x.getImageData(0,0,$("chart").width,$("chart").height);
+}
+function frame(now){
+  requestAnimationFrame(frame);
+  const dt=Math.min(.05,(now-(frame.last||now))/1000);frame.last=now;
+  const D=view.ex.reps*4;if(view.playing)view.t=(view.t+dt*view.speed)%D;if(view.orbit)view.yaw+=dt*14;
+  const [ctx,w,h]=size($("canvas"));
+  $("stage").classList.toggle("light",view.theme==="light");
+  const r=Stickman.render(ctx,w,h,view.ex,view.t,view);
+  const beat=Math.floor(view.t%4)+1;$("beat").textContent=beat;$("rep").textContent=view.ex.reps>1?(r.rep?"右腿":"左腿"):"";
+  [...$("dots").children].forEach((e,i)=>e.classList.toggle("on",i===beat-1));
+  const ph=view.ex.phases.find(p=>r.q>=p[0]&&r.q<p[1])||view.ex.phases[0];$("phase").textContent=ph[2];
+  if(document.activeElement!==$("scrub"))$("scrub").value=Math.round(view.t/D*1000);
+  if(chartImage){const c=$("chart"),x=c.getContext("2d");x.setTransform(1,0,0,1,0,0);x.putImageData(chartImage,0,0);const X=view.t/D*c.width;x.fillStyle="#b44a28";x.fillRect(X-1.5*(devicePixelRatio||1),0,3*(devicePixelRatio||1),c.height);}
+  if(view.compare&&typeof Motion!=="undefined"){const [ox,ow,oh]=size($("old")),p=(view.t%4)/4;Motion.draw($("old"),view.ex.oldId,Motion.ease(p),Math.floor(view.t/4)%2?-1:1,{phase:p});}
+}
+document.addEventListener("click",e=>{
+  const b=e.target.closest("button");if(!b)return;
+  if(b.dataset.ex)select(+b.dataset.ex);
+  if(b.dataset.speed){view.speed=+b.dataset.speed;document.querySelectorAll("[data-speed]").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));}
+  if(b.dataset.theme){view.theme=b.dataset.theme;document.querySelectorAll("[data-theme]").forEach(x=>x.setAttribute("aria-pressed",String(x===b)));}
+  if(b.dataset.toggle){const k=b.dataset.toggle;view[k]=!view[k];b.setAttribute("aria-pressed",String(view[k]));if(k==="compare")$("compare").hidden=!view.compare;}
+  if(b.id==="play"){view.playing=!view.playing;b.textContent=view.playing?"❚❚ 暂停":"▶ 播放";}
+});
+$("scrub").addEventListener("input",e=>{view.playing=false;$("play").textContent="▶ 播放";view.t=e.target.value/1000*view.ex.reps*4*.9999;});
+let drag=null;
+$("stage").addEventListener("pointerdown",e=>{drag={x:e.clientX,y:e.clientY,yaw:view.yaw,pitch:view.pitch};$("stage").setPointerCapture(e.pointerId);});
+$("stage").addEventListener("pointermove",e=>{if(!drag)return;view.yaw=drag.yaw+(e.clientX-drag.x)*.45;view.pitch=Math.max(0,Math.min(40,drag.pitch+(e.clientY-drag.y)*.25));});
+$("stage").addEventListener("pointerup",()=>{drag=null;});
+$("stage").addEventListener("dblclick",()=>{view.yaw=view.ex.view.yaw;view.pitch=view.ex.view.pitch;});
+document.addEventListener("keydown",e=>{if(e.code==="Space"&&e.target.tagName!=="BUTTON"){e.preventDefault();$("play").click();}});
+addEventListener("resize",drawChart);
+select(0);requestAnimationFrame(frame);
+</script>
+</body>
+</html>
