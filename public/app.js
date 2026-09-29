@@ -29,19 +29,19 @@ const DEFAULT_PLANS={
 const LEVEL_BY_KEY=Object.fromEntries(LEVELS.map(l=>[l.key,l]));
 const inLevel=(item,key)=>item.levels.includes(key);
 const storage={get(key){try{return localStorage.getItem(key);}catch{return null;}},set(key,value){try{localStorage.setItem(key,value);}catch{}}};
-Motion.setAvatar(storage.get("cq-avatar-v1"));
+Stickman.setAvatar(storage.get("cq-avatar-v1"));
 function selectAvatar(value){
-  Motion.setAvatar(value);storage.set("cq-avatar-v1",Motion.getAvatar());syncAvatar();observeThumbnails();renderPractice();
+  Stickman.setAvatar(value);storage.set("cq-avatar-v1",Stickman.getAvatar());syncAvatar();observeThumbnails();renderPractice();
 }
 function syncAvatar(){
-  const value=Motion.getAvatar();document.querySelectorAll("[data-avatar]").forEach(button=>button.setAttribute("aria-pressed",String(button.dataset.avatar===value)));
+  const value=Stickman.getAvatar();document.querySelectorAll("[data-avatar]").forEach(button=>button.setAttribute("aria-pressed",String(button.dataset.avatar===value)));
   $("trainer-avatar").value=value;syncHero();
 }
 // The home figure demonstrates a signature move of the chosen level.
 const HERO_MOVES={strong:"reverseLunge",standard:"squat",gentle:"stand"};
 function syncHero(){
   const item=ITEM_BY_ID[HERO_MOVES[level]];$("hero-move").textContent=item.name;
-  $("hero-canvas").setAttribute("aria-label",(Motion.getAvatar()==="female"?"女":"男")+"示范人物，"+item.name+"关节动画");Motion.draw($("hero-canvas"),item.id,.5);
+  $("hero-canvas").setAttribute("aria-label",(Stickman.getAvatar()==="female"?"女":"男")+"示范人物，"+item.name+"动画");Stickman.draw($("hero-canvas"),item.id,PEAK,STAGE);
 }
 // Each level keeps its own plan; the gentle level still reads plans saved before levels existed.
 function loadPlan(key){
@@ -145,7 +145,9 @@ function newPlan(){
 }
 function thumbnail(item){return '<canvas data-exercise="'+item.id+'" aria-hidden="true"></canvas>';}
 const observer=typeof IntersectionObserver==="function"?new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)visibleCanvases.add(e.target);else visibleCanvases.delete(e.target);});},{rootMargin:"50px"}):null;
-function observeThumbnails(){visibleCanvases.clear();if(observer)observer.disconnect();document.querySelectorAll("canvas[data-exercise]").forEach(canvas=>{Motion.draw(canvas,canvas.dataset.exercise,.55,1,{small:true});if(observer)observer.observe(canvas);});}
+// Thumbnails show the most-worked pose; moves not yet computed are queued and drawn once ready.
+const PEAK=1.9,STAGE={theme:"dark",sync:true,trail:true,ghost:true},THUMB={theme:"light",small:true};let pendingThumbs=new Set();
+function observeThumbnails(){visibleCanvases.clear();pendingThumbs.clear();if(observer)observer.disconnect();document.querySelectorAll("canvas[data-exercise]").forEach(canvas=>{if(!Stickman.draw(canvas,canvas.dataset.exercise,PEAK,THUMB))pendingThumbs.add(canvas);if(observer)observer.observe(canvas);});}
 function renderPlan(){
   $("plan-list").innerHTML=plan.map(item=>"<li>"+thumbnail(item)+'<div><h3>'+item.name+'</h3><p>'+item.category+" · "+(item.alternating?"每侧 4 次":"共 8 次")+'</p></div><button data-preview="'+item.id+'" aria-label="预览'+item.name+'">预览</button></li>').join("");
   $("plan-level").textContent=levelLabel();$("plan-summary").textContent="7 个动作 · 约 6 分钟";observeThumbnails();
@@ -171,7 +173,7 @@ function updateExercise(){
   $("exercise-category").textContent=item.category+(item.alternating?" · 左右交替":"");
   $("exercise-name").textContent=item.name;$("exercise-purpose").textContent=item.purpose;
   $("exercise-steps").innerHTML=item.steps.map(s=>"<li>"+s+"</li>").join("");$("exercise-cue").textContent=item.cue;
-  $("view-label").textContent=Motion.view(item.id);$("trainer-canvas").setAttribute("aria-label",item.name+"，"+Motion.view(item.id)+"，橙色表示动作部位");
+  $("view-label").textContent=Stickman.viewLabel(item.id);$("trainer-canvas").setAttribute("aria-label",item.name+"，"+Stickman.viewLabel(item.id)+"，橙色表示发力部位");
   $("previous-exercise").disabled=state.preview||state.index===0;$("next-exercise").disabled=state.preview;
   $("rep-total").textContent=state.preview?"/ 示范":"/ 8 次";$("transition").hidden=true;setStatus("");renderPractice();
   if(!reducedMotion)$("trainer-canvas").animate?.([{opacity:0},{opacity:1}],{duration:450,easing:"ease-out"});
@@ -205,7 +207,7 @@ function restNext(){if(state.mode==="done"){closePractice();return;}if(state.mod
 function holdRest(){state.holdRest=!state.holdRest;if(!state.holdRest)state.restUntil=performance.now()/1000+state.restRemaining;$("transition-pause").textContent=state.holdRest?"恢复倒计时":"多休息一下";}
 function renderPractice(){
   if(!state.open)return;const item=current(),time=elapsedNow(),phase=(time%4)/4,rep=Math.min(8,Math.floor(time/4)+1),beat=Math.floor(time%4)+1;
-  const side=Math.floor(time/4)%2?-1:1;Motion.draw($("trainer-canvas"),item.id,Motion.ease(phase),side,{comparison:state.reference,phase});
+  Stickman.draw($("trainer-canvas"),item.id,time,{...STAGE,pair:state.reference,rep:Math.floor(time/4)%2});
   if(state.beat!==beat){state.beat=beat;$("beat-count").textContent=beat;$("rep-count").textContent=state.preview?"—":rep;[...$("rhythm-bar").querySelectorAll("span")].forEach((e,i)=>e.classList.toggle("active",i===beat-1));
     if(state.mode==="running"&&!reducedMotion)$("beat-count").animate?.([{transform:"scale(1.25)"},{transform:"scale(1)"}],{duration:280,easing:"ease-out"});}
   const cue=state.reference?"对照起点与终点":state.mode==="paused"?"已暂停":PHASES[item.id][phase<.5?0:1];if($("phase-cue").textContent!==cue)$("phase-cue").textContent=cue;
@@ -219,18 +221,19 @@ function frame(now){
   animate(now);
 }
 function animate(now){
-  const cycle=reducedMotion?.25:now/4000,loop=Motion.ease(cycle),side=Math.floor(cycle)%2?-1:1;
+  const t=reducedMotion?PEAK:now/1000;
   if(state.open){
     if(state.mode==="rest"){
       if(!state.holdRest)state.restRemaining=Math.max(0,Math.ceil(state.restUntil-now/1000));
       const count=String(state.holdRest?"休息":state.restRemaining);if($("transition-count").textContent!==count)$("transition-count").textContent=count;
       if(!state.holdRest&&state.restRemaining===0){restNext();return;}
-      Motion.draw($("transition-canvas"),state.list[state.index+1].id,loop,side,{small:true,phase:cycle});return;
+      Stickman.draw($("transition-canvas"),state.list[state.index+1].id,t,{theme:"light",sync:true});return;
     }
     if(state.mode==="done")return;if(state.mode==="running"&&!state.preview&&elapsedNow()>=32){startRest();return;}renderPractice();
   }else{
-    if(now-lastThumbs<30)return;lastThumbs=now;if(heroVisible)Motion.draw($("hero-canvas"),HERO_MOVES[level],loop,side);
-    if(!reducedMotion)visibleCanvases.forEach(c=>Motion.draw(c,c.dataset.exercise,loop,side,{small:true}));
+    if(now-lastThumbs<30)return;lastThumbs=now;if(heroVisible)Stickman.draw($("hero-canvas"),HERO_MOVES[level],t,STAGE);
+    pendingThumbs.forEach(c=>{if(Stickman.draw(c,c.dataset.exercise,PEAK,THUMB))pendingThumbs.delete(c);});
+    if(!reducedMotion)visibleCanvases.forEach(c=>Stickman.draw(c,c.dataset.exercise,t,THUMB));
   }
 }
 $("test-sound").addEventListener("click",testSound);$("start-workout").addEventListener("click",()=>openPractice());$("start-workout-2").addEventListener("click",()=>openPractice());$("new-plan").addEventListener("click",newPlan);

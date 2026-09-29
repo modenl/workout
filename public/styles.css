@@ -299,3 +299,14 @@ dialog::backdrop{background:#173e35}
 .transition strong{font-size:58px}
 .transition>p{font-size:15px;line-height:1.5}}
 @media(max-height:480px){.transition canvas{display:none}}
+
+/* Stick-figure stages: the trainer and the home figure use the dark stage the renderer paints. */
+.trainer-visual{background:#0f1d19}
+.trainer-visual .counter,.trainer-visual .reps strong{color:#f5f2e8}
+.trainer-visual .reps span{color:#b6c9bc}
+.hero-art{background:linear-gradient(180deg,#1f3d35,#0e1b17);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
+.hero-art small{color:#b6c9bc}
+.hero-art figcaption b{color:#f5f2e8}
+.hero-art .avatar-picker{background:rgba(255,255,255,.12)}
+.hero-art .avatar-picker button{color:#f5f2e8}
+.hero-art .avatar-picker button[aria-pressed=true]{background:#f5f2e8;color:#153a30}
