@@ -70,6 +70,13 @@ const Stickman=(()=>{
   // Segment mass fractions (Winter): they sum to 1.
   const MASS={head:.081,trunk:.497,upper:.028,fore:.016,hand:.006,thigh:.1,shank:.0465,foot:.0145};
   const SIDES=[1,-1];
+  // Two builds on the same limb lengths, so every contact still fits: broad shoulders and narrow hips
+  // with heavier lines for the man, narrow shoulders and wider hips with lighter lines for the woman.
+  const BUILDS={male:{shoulder:20.5,hip:7.8,stroke:1.18,head:11},female:{shoulder:14.5,hip:10.5,stroke:.8,head:9.8}};
+  let avatar="male";
+  function setAvatar(v){avatar=v==="female"?"female":"male";B.shoulder=BUILDS[avatar].shoulder;B.hip=BUILDS[avatar].hip;B.head=BUILDS[avatar].head;}
+  const getAvatar=()=>avatar;
+  setAvatar("male");
 
   function ik(a,t,l1,l2,pole){
     const d=sub(t,a),raw=len(d),D=clamp(raw,Math.abs(l1-l2)+.01,l1+l2-.001),dir=raw>1e-9?mul(d,1/raw):[0,-1,0];
@@ -605,7 +612,7 @@ const Stickman=(()=>{
   }
   const STRIDE=POINTS.length*3;
   function prepare(ex){
-    if(ex.data)return ex.data;
+    ex.cache=ex.cache||{};if(ex.cache[avatar])return ex.cache[avatar];
     const duration=ex.reps*4,N=Math.round(duration*RATE),dt=duration/N,raw=[];
     for(let i=0;i<N;i++){const p=i/N*ex.reps,rep=Math.floor(p);raw.push({q:p-rep,rep,ch:ex.channels(p-rep,rep)});}
     for(const [key,[freq,zeta,lo=-Infinity,hi=Infinity]] of Object.entries(ex.springs||{})){
@@ -630,14 +637,13 @@ const Stickman=(()=>{
     for(const pr of ex.props){const b=pr.type==="chair"?[[-pr.half,0,pr.back],[pr.half,pr.top,pr.front]]:[[-pr.half,0,pr.near],[pr.half,pr.top,pr.far]];for(let a=0;a<3;a++){lo[a]=Math.min(lo[a],b[0][a]);hi[a]=Math.max(hi[a],b[1][a]);}}
     const base=[bx/N,bz/N];let floorR=0;
     for(let i=0;i<N;i+=4)for(const k of ["HEL","TOL","HER","TOR"]){const p=get(i,k);floorR=Math.max(floorR,Math.hypot(p[0]-base[0],p[2]-base[1]));}
-    ex.data={N,dt,duration,pts,effort,seat,reps,loads,metric,bounds:[lo,hi],base,floorR:floorR+30,reach,get};
-    return ex.data;
+    return ex.cache[avatar]={N,dt,duration,pts,effort,seat,reps,loads,metric,bounds:[lo,hi],base,floorR:floorR+30,reach,get,fits:new Map()};
   }
   // ---------- rendering ----------
   const THEMES={
-    dark:{bg0:"#1f3d35",bg1:"#0a1411",floor:"255,255,255",ring:"rgba(255,255,255,.09)",near:"#f5f2e8",far:"#86a194",outline:"#0e1b17",accent:"#ff7a45",
+    dark:{hair:"#a8734f",bg0:"#1f3d35",bg1:"#0a1411",floor:"255,255,255",ring:"rgba(255,255,255,.09)",near:"#f5f2e8",far:"#86a194",outline:"#0e1b17",accent:"#ff7a45",
       glow:"255,122,69",trail:"111,227,193",ghost:"245,242,232",prop:"rgba(205,225,214,.38)",propFill:"rgba(205,225,214,.07)",shadow:"0,0,0",com:"#ffd166",support:"111,227,193",lighter:true},
-    light:{bg0:"#f3f5ee",bg1:"#dce4d3",floor:"26,60,52",ring:"rgba(26,60,52,.12)",near:"#17332c",far:"#8da396",outline:"#eef1e8",accent:"#c45532",
+    light:{hair:"#8a5a3b",bg0:"#f3f5ee",bg1:"#dce4d3",floor:"26,60,52",ring:"rgba(26,60,52,.12)",near:"#17332c",far:"#8da396",outline:"#eef1e8",accent:"#c45532",
       glow:"196,85,50",trail:"38,150,136",ghost:"23,51,44",prop:"rgba(26,60,52,.4)",propFill:"rgba(26,60,52,.06)",shadow:"20,45,38",com:"#d48806",support:"38,150,136",lighter:false}
   };
   const rgb=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)),hex=c=>"rgb("+c.map(Math.round).join(",")+")";
@@ -649,12 +655,19 @@ const Stickman=(()=>{
   }
   // The frame fits the whole cycle's bounding box, so the view never zooms while playing.
   // Fit uses the projected points of the whole cycle (plus props), so rotating never crops or zooms mid-move.
-  function fitView(ex,data,cam,w,h){
+  function extent(ex,data,cam){
     let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;const see=v=>{const p=cam(v);x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);y0=Math.min(y0,p[1]);y1=Math.max(y1,p[1]);};
     for(let i=0;i<data.N;i+=6)for(let k=0;k<POINTS.length;k++){const o=i*STRIDE+k*3;see([data.pts[o],data.pts[o+1],data.pts[o+2]]);}
     for(const pr of ex.props){const z=pr.type==="chair"?[pr.back,pr.front]:pr.type==="wall"?[pr.near,pr.near]:[pr.near,pr.near+25];for(const x of [-pr.half,pr.half])for(const y of [0,pr.top])for(const zz of z)see([x,y,zz]);}
-    see([data.base[0],0,data.base[1]]);y1+=B.head*1.2;
-    const pad=Math.min(w,h)*.08,s=Math.min((w-2*pad)/(x1-x0),(h-2*pad)/(y1-y0));
+    see([data.base[0],0,data.base[1]]);y1+=B.head*1.2;return [x0,x1,y0,y1];
+  }
+  // The scale fits every yaw of the camera's sway, so the figure never zooms while the view turns.
+  function fitView(ex,data,cam,w,h,range){
+    const key=w+"|"+h+"|"+(range?range.join():"");let s=data.fits.get(key);const [x0,x1,y0,y1]=extent(ex,data,cam),pad=Math.min(w,h)*.08;
+    if(s===undefined){
+      s=1e9;for(let k=0;k<=(range?8:0);k++){const [a0,a1,b0,b1]=range?extent(ex,data,camera(range[0]-range[1]+2*range[1]*k/8,range[2])):[x0,x1,y0,y1];s=Math.min(s,(w-2*pad)/(a1-a0),(h-2*pad)/(b1-b0));}
+      data.fits.set(key,s);
+    }
     return {s,cx:w/2-(x0+x1)/2*s,cy:h/2+(y0+y1)/2*s};
   }
   // Points at a fractional frame, interpolated so slow motion stays smooth.
@@ -730,7 +743,7 @@ const Stickman=(()=>{
     else ctx.lineTo(pts[1][0],pts[1][1]);
     ctx.stroke();
   }
-  function drawFigure(ctx,proj,at,pal,parts,effort,{glow=true,ghost=0}={}){
+  function drawFigure(ctx,proj,at,pal,parts,effort,{glow=true,ghost=0,hair=null}={}){
     const P={};for(const k of POINTS)P[k]=proj(at(k));
     const center=(P.P[2]+P.C7[2])/2,s=proj.s;
     const items=SEGMENTS.map(sg=>{const pts=(sg.curve||[sg.a,sg.b]).map(k=>P[k]);return {sg,pts,depth:pts.reduce((a,p)=>a+p[2],0)/pts.length};});
@@ -742,17 +755,27 @@ const Stickman=(()=>{
         const c=P.HC,r=B.head*s;
         if(ghost){ctx.strokeStyle="rgba("+pal.ghost+","+ghost+")";ctx.lineWidth=2.2*s;ctx.beginPath();ctx.arc(c[0],c[1],r,0,2*Math.PI);ctx.stroke();continue;}
         const hc0=at("HC"),fw0=unit(sub(at("HF"),hc0)),up0=unit(sub(at("HU"),hc0));
-        if(avatar==="female"){const b=proj(add(hc0,add(mul(fw0,-B.head*.78),mul(up0,B.head*.5)))),br=B.head*.46*s;
-          ctx.fillStyle=pal.outline;ctx.beginPath();ctx.arc(b[0],b[1],br+1.8,0,2*Math.PI);ctx.fill();ctx.fillStyle=base;ctx.beginPath();ctx.arc(b[0],b[1],br,0,2*Math.PI);ctx.fill();}
+        // Hair: a short crop for him; a ponytail for her that trails the head's motion.
+        if(avatar==="female"&&hair){
+          const root=add(hc0,add(mul(fw0,-B.head*.9),mul(up0,B.head*.35))),v=sub(hc0,hair.prev),tip=add(root,add(add(mul(fw0,-6),mul([0,-1,0],21)),mul(v,-2.6)));
+          const a=proj(root),m=proj(add(mix3(root,tip,.5),mul(fw0,-3))),b=proj(tip);
+          ctx.lineCap="round";ctx.strokeStyle=pal.outline;ctx.lineWidth=7*s+3;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.quadraticCurveTo(m[0],m[1],b[0],b[1]);ctx.stroke();
+          ctx.strokeStyle=pal.hair;ctx.lineWidth=7*s;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.quadraticCurveTo(m[0],m[1],b[0],b[1]);ctx.stroke();
+        }
         ctx.fillStyle=pal.outline;ctx.beginPath();ctx.arc(c[0],c[1],r+1.8,0,2*Math.PI);ctx.fill();
         ctx.fillStyle=base;ctx.beginPath();ctx.arc(c[0],c[1],r,0,2*Math.PI);ctx.fill();
         // A visor band on the face side shows where the head points, from any angle.
         const hc=at("HC"),fw=unit(sub(at("HF"),hc)),up=unit(sub(at("HU"),hc)),side=cross(up,fw),vis=[];
         for(let a=-70;a<=70;a+=7){const v=proj(add(hc,add(mul(up,1.4),mul(add(mul(fw,Math.cos(rad(a))),mul(side,Math.sin(rad(a)))),B.head*.93))));if(v[2]>=c[2]-B.head*.1)vis.push(v);}
         if(vis.length>1){ctx.strokeStyle=pal.accent;ctx.lineWidth=2.4*s;polyline(ctx,vis);ctx.stroke();}
+        // A hair cap over the crown and the back of the head: short and flat for him, fuller for her.
+        const cap=[],deep=avatar==="female"?1.02:.86,back=avatar==="female"?175:140;
+        for(let a=-60;a<=back;a+=10){const d=add(mul(up0,Math.cos(rad(a))),mul(fw0,-Math.sin(rad(a))));cap.push(proj(add(hc0,mul(d,B.head*1.02))));}
+        for(let a=back;a>=-60;a-=10){const d=add(mul(up0,Math.cos(rad(a))),mul(fw0,-Math.sin(rad(a))));cap.push(proj(add(hc0,mul(d,B.head*(avatar==="female"?.62:.72)*deep))));}
+        ctx.fillStyle=pal.hair;polyline(ctx,cap,true);ctx.fill();
         continue;
       }
-      const w=it.sg.w*s;
+      const w=it.sg.w*s*BUILDS[avatar].stroke;
       if(ghost){ctx.strokeStyle="rgba("+pal.ghost+","+ghost+")";ctx.lineWidth=w*.8;strokeSeg(ctx,it.pts);continue;}
       const e=clamp((parts[it.sg.part||it.sg.id]||0)*effort);
       if(glow&&e>.04){
@@ -780,7 +803,9 @@ const Stickman=(()=>{
   }
   // One view of the figure at fractional frame f, inside the box (x0, y0, w, h).
   function scene(ctx,x0,y0,w,h,ex,data,f,o,pal){
-    const yaw=o.yaw??ex.view.yaw,pitch=o.pitch??ex.view.pitch,cam=camera(yaw,pitch),F=fitView(ex,data,cam,w,h);
+    // `sway` turns the camera slowly back and forth around the move's home view (o.clock in seconds).
+    const base=o.yaw??ex.view.yaw,sway=o.sway||0,yaw=base+sway*Math.sin(2*Math.PI*(o.clock||0)/14),pitch=o.pitch??ex.view.pitch;
+    const cam=camera(yaw,pitch),F=fitView(ex,data,cam,w,h,sway?[base,sway,pitch]:null);
     const proj=v=>{const c=cam(v);return [x0+F.cx+c[0]*F.s,y0+F.cy-c[1]*F.s,c[2]];};proj.s=F.s;
     const i=Math.floor(f)%data.N,at=sampler(data,f),rep=data.reps[i];
     drawFloor(ctx,proj,data,pal,pitch);
@@ -789,7 +814,7 @@ const Stickman=(()=>{
     if(o.trail&&!o.small)drawTrails(ctx,proj,data,f,ex.trails,pal);
     const parts=ex.parts(rep),effort=data.effort[i];
     if(o.ghost&&!o.small)for(const [lag,a] of [[30,.07],[20,.11],[10,.17]])drawFigure(ctx,proj,sampler(data,f-lag),pal,parts,0,{ghost:a});
-    drawFigure(ctx,proj,at,pal,parts,effort,{glow:o.glow!==false});
+    drawFigure(ctx,proj,at,pal,parts,effort,{glow:o.glow!==false,hair:{prev:sampler(data,f-6)("HC")}});
     if(ex.towel){const a=proj(at("WL")),b=proj(at("WR"));ctx.strokeStyle="#c9a36a";ctx.lineCap="round";ctx.lineWidth=2.6*F.s;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();}
     return {q:(f/data.N*ex.reps)%1,rep,effort};
   }
@@ -807,8 +832,6 @@ const Stickman=(()=>{
     scene(ctx,0,top,w/2,h-top,ex,data,a,{...o,ghost:false,trail:false},pal);scene(ctx,w/2,top,w/2,h-top,ex,data,b,{...o,ghost:false,trail:false},pal);
     ctx.fillStyle=pal.near;ctx.globalAlpha=.8;ctx.font="600 13px system-ui";ctx.textAlign="center";ctx.fillText("起始姿势",w*.25,20);ctx.fillText("动作终点",w*.75,20);ctx.globalAlpha=1;
   }
-  let avatar="male";
-  const setAvatar=v=>{avatar=v==="female"?"female":"male";},getAvatar=()=>avatar;
   const BY_ID=Object.fromEntries(EXERCISES.map(e=>[e.id,e]));
   const find=id=>BY_ID[id];
   const viewLabel=id=>BY_ID[id].view.yaw>45?"侧面 · 面向右 →":"正面 · 如照镜子";
@@ -818,7 +841,7 @@ const Stickman=(()=>{
   function pump(){const ex=queue.shift();if(!ex){pumping=false;return;}prepare(ex);setTimeout(pump,0);}
   function draw(canvas,id,t,o={}){
     const ex=BY_ID[id];if(!ex)return false;
-    if(!ex.data&&!o.sync){if(!queue.includes(ex))queue.push(ex);if(!pumping){pumping=true;setTimeout(pump,0);}return false;}
+    if(!(ex.cache&&ex.cache[avatar])&&!o.sync){if(!queue.includes(ex))queue.push(ex);if(!pumping){pumping=true;setTimeout(pump,0);}return false;}
     const box=canvas.getBoundingClientRect(),w=box.width,h=box.height;if(!w||!h)return false;
     const dpr=Math.min((typeof window!=="undefined"&&window.devicePixelRatio)||1,2);
     if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr)){canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);}

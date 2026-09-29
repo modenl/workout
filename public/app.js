@@ -66,6 +66,7 @@ let toastTimer;
 function toast(text){const box=$("toast");box.textContent=text;box.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{box.hidden=true;},6000);}
 const state={open:false,preview:false,index:0,list:plan,mode:"closed",elapsed:0,clockStart:0,clockBase:0,clockAudio:false,voice:true,operation:0,reference:false,restUntil:0,restRemaining:20,holdRest:false,beat:-1,opener:null};
 let visibleCanvases=new Set(),heroVisible=true;
+state.sway=storage.get("cq-sway-v1")!=="0"&&!(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
 const reducedMotion=window.matchMedia?.("(prefers-reduced-motion: reduce)").matches||false;
 class CountAudio {
   constructor(){this.context=null;this.buffer=null;this.node=null;this.gain=null;this.sessionMode="default";}
@@ -166,6 +167,9 @@ function renderLibrary(){
   $("library-list").innerHTML=pool.filter(i=>libraryCategory==="all"||i.key===libraryCategory).map(item=>'<article class="library-item">'+thumbnail(item)+'<div class="library-body"><h3>'+item.name+"</h3>"+levelTags(item)+"<p>"+item.purpose+'</p><button data-preview="'+item.id+'" aria-label="查看'+item.name+'的动作要点">看动作要点 →</button></div></article>').join("");observeThumbnails();
 }
 function current(){return state.list[state.index];}
+// The trainer's camera turns slowly around the move by default, so its shape reads from every side.
+function syncView(){const b=$("view-label");b.textContent=state.sway?"↻ 视角转动中":"固定 · "+Stickman.viewLabel(current().id);b.setAttribute("aria-pressed",String(state.sway));}
+function toggleView(){state.sway=!state.sway;storage.set("cq-sway-v1",state.sway?"1":"0");syncView();}
 function updateExercise(){
   const item=current();state.beat=-1;state.reference=false;$("trainer").classList.remove("reference-mode");$("reference-toggle").setAttribute("aria-pressed","false");$("reference-toggle").textContent="看起止姿势";
   $("progress-label").textContent=state.preview?"动作预览":"动作 "+(state.index+1)+" / "+state.list.length;
@@ -173,7 +177,7 @@ function updateExercise(){
   $("exercise-category").textContent=item.category+(item.alternating?" · 左右交替":"");
   $("exercise-name").textContent=item.name;$("exercise-purpose").textContent=item.purpose;
   $("exercise-steps").innerHTML=item.steps.map(s=>"<li>"+s+"</li>").join("");$("exercise-cue").textContent=item.cue;
-  $("view-label").textContent=Stickman.viewLabel(item.id);$("trainer-canvas").setAttribute("aria-label",item.name+"，"+Stickman.viewLabel(item.id)+"，橙色表示发力部位");
+  syncView();$("trainer-canvas").setAttribute("aria-label",item.name+"，"+Stickman.viewLabel(item.id)+"，橙色表示发力部位");
   $("previous-exercise").disabled=state.preview||state.index===0;$("next-exercise").disabled=state.preview;
   $("rep-total").textContent=state.preview?"/ 示范":"/ 8 次";$("transition").hidden=true;setStatus("");renderPractice();
   if(!reducedMotion)$("trainer-canvas").animate?.([{opacity:0},{opacity:1}],{duration:450,easing:"ease-out"});
@@ -207,7 +211,7 @@ function restNext(){if(state.mode==="done"){closePractice();return;}if(state.mod
 function holdRest(){state.holdRest=!state.holdRest;if(!state.holdRest)state.restUntil=performance.now()/1000+state.restRemaining;$("transition-pause").textContent=state.holdRest?"恢复倒计时":"多休息一下";}
 function renderPractice(){
   if(!state.open)return;const item=current(),time=elapsedNow(),phase=(time%4)/4,rep=Math.min(8,Math.floor(time/4)+1),beat=Math.floor(time%4)+1;
-  Stickman.draw($("trainer-canvas"),item.id,time,{...STAGE,pair:state.reference,rep:Math.floor(time/4)%2});
+  Stickman.draw($("trainer-canvas"),item.id,time,{...STAGE,sway:state.sway?36:0,clock:performance.now()/1000,pair:state.reference,rep:Math.floor(time/4)%2});
   if(state.beat!==beat){state.beat=beat;$("beat-count").textContent=beat;$("rep-count").textContent=state.preview?"—":rep;[...$("rhythm-bar").querySelectorAll("span")].forEach((e,i)=>e.classList.toggle("active",i===beat-1));
     if(state.mode==="running"&&!reducedMotion)$("beat-count").animate?.([{transform:"scale(1.25)"},{transform:"scale(1)"}],{duration:280,easing:"ease-out"});}
   const cue=state.reference?"对照起点与终点":state.mode==="paused"?"已暂停":PHASES[item.id][phase<.5?0:1];if($("phase-cue").textContent!==cue)$("phase-cue").textContent=cue;
@@ -231,14 +235,14 @@ function animate(now){
     }
     if(state.mode==="done")return;if(state.mode==="running"&&!state.preview&&elapsedNow()>=32){startRest();return;}renderPractice();
   }else{
-    if(now-lastThumbs<30)return;lastThumbs=now;if(heroVisible)Stickman.draw($("hero-canvas"),HERO_MOVES[level],t,STAGE);
+    if(now-lastThumbs<30)return;lastThumbs=now;if(heroVisible)Stickman.draw($("hero-canvas"),HERO_MOVES[level],t,{...STAGE,sway:reducedMotion?0:30,clock:t});
     pendingThumbs.forEach(c=>{if(Stickman.draw(c,c.dataset.exercise,PEAK,THUMB))pendingThumbs.delete(c);});
     if(!reducedMotion)visibleCanvases.forEach(c=>Stickman.draw(c,c.dataset.exercise,t,THUMB));
   }
 }
 $("test-sound").addEventListener("click",testSound);$("start-workout").addEventListener("click",()=>openPractice());$("start-workout-2").addEventListener("click",()=>openPractice());$("new-plan").addEventListener("click",newPlan);
 document.addEventListener("click",event=>{const preview=event.target.closest("[data-preview]");if(preview)openPractice(preview.dataset.preview);const filter=event.target.closest("[data-filter]");if(filter)setLibrary({category:filter.dataset.filter});const scope=event.target.closest("[data-scope]");if(scope)setLibrary({scope:scope.dataset.scope});const avatar=event.target.closest("[data-avatar]");if(avatar)selectAvatar(avatar.dataset.avatar);const lv=event.target.closest("[data-level]");if(lv)selectLevel(lv.dataset.level);});
-$("trainer-avatar").addEventListener("change",event=>selectAvatar(event.target.value));
+$("trainer-avatar").addEventListener("change",event=>selectAvatar(event.target.value));$("view-label").addEventListener("click",toggleView);
 $("close-trainer").addEventListener("click",closePractice);$("trainer").addEventListener("cancel",e=>{e.preventDefault();closePractice();});$("pause-workout").addEventListener("click",togglePause);$("voice-toggle").addEventListener("click",toggleVoice);
 $("previous-exercise").addEventListener("click",()=>navigateExercise(-1));$("next-exercise").addEventListener("click",()=>state.index===state.list.length-1?startRest():navigateExercise(1));
 $("reference-toggle").addEventListener("click",()=>{state.reference=!state.reference;$("trainer").classList.toggle("reference-mode",state.reference);if(state.reference&&(state.mode==="running"||state.mode==="starting"))pausePractice();$("reference-toggle").setAttribute("aria-pressed",String(state.reference));$("reference-toggle").textContent=state.reference?"返回动画":"看起止姿势";renderPractice();});

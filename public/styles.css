@@ -285,6 +285,8 @@ dialog::backdrop{background:#173e35}
 #trainer-avatar{font:600 13px var(--sans);color:var(--green);background:var(--paper);border:1px solid var(--line);border-radius:8px;min-height:44px;padding:6px;width:82px;flex-shrink:0}
 .viewbar{gap:7px}
 .view-description{margin-right:auto}
+.view-toggle{min-height:32px;padding:3px 10px;border-radius:999px;font-size:12px;background:var(--surface);align-self:flex-start}
+.view-toggle[aria-pressed=true]{background:var(--green);border-color:var(--green);color:#fff}
 #trainer-avatar:focus-visible{outline:3px solid var(--orange);outline-offset:2px}
 @media(max-width:380px){#trainer-avatar{font-size:12px;width:75px}
 .viewbar .reference-toggle{padding-left:8px;padding-right:8px}}

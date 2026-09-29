@@ -8,7 +8,8 @@ const context = vm.createContext({});
 vm.runInContext(source + ';globalThis.S=Stickman;', context);
 const S = context.S;
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
-const each = fn => { for (const ex of S.EXERCISES) fn(ex, S.prepare(ex)); };
+// Both builds (different shoulder and hip widths) must keep every contact.
+const each = fn => { for (const build of ['male', 'female']) { S.setAvatar(build); for (const ex of S.EXERCISES) fn(ex, S.prepare(ex)); } S.setAvatar('male'); };
 
 test('51 exercises with unique ids, each a periodic cycle of 4 s per rep at 120 samples/s', () => {
   const ids = S.EXERCISES.map(e => e.id);assert.equal(ids.length, 51);assert.equal(new Set(ids).size, 51);
@@ -89,4 +90,12 @@ test('the start/end view shows two different poses, whatever rep the app asks fo
   for (const rep of [0, 1, 5]) S.renderPair(ctx, 360, 260, S.find('squat'), rep, {});
   const d = S.prepare(S.find('squat'));let deepest = 0;for (let i = 0; i < d.N; i++) deepest = Math.max(deepest, d.effort[i]);
   assert.ok(deepest > .8);assert.ok(calls.includes('动作终点'));
+});
+
+test('the two builds differ in shoulder and hip width but share limb lengths', () => {
+  const width = (build, a, b) => { S.setAvatar(build); const d = S.prepare(S.find('squat')); return dist(d.get(0, a), d.get(0, b)); };
+  assert.ok(width('male', 'SL', 'SR') - width('female', 'SL', 'SR') > 6, 'his shoulders are broader');
+  assert.ok(width('female', 'HL', 'HR') - width('male', 'HL', 'HR') > 2, 'her hips are wider');
+  assert.ok(Math.abs(width('male', 'HL', 'KL') - width('female', 'HL', 'KL')) < 1e-3);
+  S.setAvatar('male');
 });
