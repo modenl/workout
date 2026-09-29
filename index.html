@@ -309,6 +309,17 @@ dialog::backdrop{background:#173e35}
 .transition>p{font-size:15px;line-height:1.5}}
 @media(max-height:480px){.transition canvas{display:none}}
 
+/* Stick-figure stages: the trainer and the home figure use the dark stage the renderer paints. */
+.trainer-visual{background:#0f1d19}
+.trainer-visual .counter,.trainer-visual .reps strong{color:#f5f2e8}
+.trainer-visual .reps span{color:#b6c9bc}
+.hero-art{background:linear-gradient(180deg,#1f3d35,#0e1b17);box-shadow:inset 0 0 0 1px rgba(255,255,255,.06)}
+.hero-art small{color:#b6c9bc}
+.hero-art figcaption b{color:#f5f2e8}
+.hero-art .avatar-picker{background:rgba(255,255,255,.12)}
+.hero-art .avatar-picker button{color:#f5f2e8}
+.hero-art .avatar-picker button[aria-pressed=true]{background:#f5f2e8;color:#153a30}
+
 </style>
 </head>
 <body>
@@ -547,351 +558,835 @@ const LIBRARY = {
 };
 
 </script><script>
-/* Small orthographic skeleton. World axes: x=left/right, y=up, z=forward.
-   Fixed limb lengths and a two-bone solver keep elbows and knees connected. */
-const Motion = (() => {
-  let avatar="male";
-  function setAvatar(value){avatar=value==="female"?"female":"male";}
-  function getAvatar(){return avatar;}
-  const add=(a,b)=>a.map((v,i)=>v+b[i]), sub=(a,b)=>a.map((v,i)=>v-b[i]);
-  const mul=(a,s)=>a.map(v=>v*s), dot=(a,b)=>a.reduce((s,v,i)=>s+v*b[i],0);
-  const norm=a=>Math.hypot(...a), unit=a=>mul(a,1/(norm(a)||1));
-  const mix=(a,b,t)=>a+(b-a)*t, rad=d=>d*Math.PI/180, lerp=(a,b,t)=>a.map((v,i)=>mix(v,b[i],t));
-  const clamp=(v,lo=0,hi=1)=>Math.min(hi,Math.max(lo,v)), smooth=u=>(u=clamp(u))*u*(3-2*u);
-  // Minimum-jerk timing (natural reaching): out on beats 1–2, back on 3–4, settling at each end.
-  const minJerk=u=>u*u*u*(10+u*(6*u-15));
-  function ease(phase){const p=((phase%1)+1)%1;return minJerk(p<.5?2*p:2-2*p);}
-  function ik(a,target,l1,l2,pole) {
-    const delta=sub(target,a), raw=norm(delta), d=Math.min(l1+l2-.1,Math.max(.1,raw)), axis=unit(delta);
-    const end=add(a,mul(axis,d)), along=(l1*l1-l2*l2+d*d)/(2*d);
-    let bend=sub(pole,mul(axis,dot(pole,axis)));
-    if(norm(bend)<.01)bend=sub([1,0,0],mul(axis,axis[0]));
-    return [add(add(a,mul(axis,along)),mul(unit(bend),Math.sqrt(Math.max(0,l1*l1-along*along)))),end];
+/* 火柴人动作原型 · Stick-figure motion prototype.
+   World axes in cm: x = the figure's left, y = up, z = forward.
+   A 3D rig with contact constraints is driven by keyframed channels. Each move's
+   speed follows a Beta-shaped curve (the peak sits where the body really peaks),
+   body parts lead or lag each other, springs add settle and follow-through, and
+   free-hanging arms are a pendulum driven by the shoulder's acceleration.
+   An exercise is precomputed as one periodic cycle (120 samples/s), so playback,
+   slow motion and scrubbing all show the same frames. */
+const Stickman=(()=>{
+  "use strict";
+  const RATE=120;
+
+  // ---------- vectors ----------
+  const add=(a,b)=>[a[0]+b[0],a[1]+b[1],a[2]+b[2]];
+  const sub=(a,b)=>[a[0]-b[0],a[1]-b[1],a[2]-b[2]];
+  const mul=(a,s)=>[a[0]*s,a[1]*s,a[2]*s];
+  const dot=(a,b)=>a[0]*b[0]+a[1]*b[1]+a[2]*b[2];
+  const cross=(a,b)=>[a[1]*b[2]-a[2]*b[1],a[2]*b[0]-a[0]*b[2],a[0]*b[1]-a[1]*b[0]];
+  const len=a=>Math.hypot(a[0],a[1],a[2]);
+  const unit=a=>{const l=len(a);return l>1e-9?mul(a,1/l):[0,0,0];};
+  const perp=(v,d)=>sub(v,mul(d,dot(v,d)));
+  const mix=(a,b,t)=>a+(b-a)*t;
+  const mix3=(a,b,t)=>[mix(a[0],b[0],t),mix(a[1],b[1],t),mix(a[2],b[2],t)];
+  const clamp=(v,lo=0,hi=1)=>Math.min(hi,Math.max(lo,v));
+  const rad=d=>d*Math.PI/180,deg=r=>r*180/Math.PI;
+  const mixAngle=(a,b,t)=>a+((((b-a)%360)+540)%360-180)*t;
+  // Degrees. Yaw turns +z toward +x, pitch tips +y toward +z, roll tips +y toward +x.
+  function orient(v,{yaw=0,pitch=0,roll=0}={}){
+    let [x,y,z]=v,c=Math.cos(rad(roll)),s=Math.sin(rad(roll));[x,y]=[x*c+y*s,-x*s+y*c];
+    c=Math.cos(rad(pitch));s=Math.sin(rad(pitch));[y,z]=[y*c-z*s,y*s+z*c];
+    c=Math.cos(rad(yaw));s=Math.sin(rad(yaw));[x,z]=[x*c+z*s,-x*s+z*c];
+    return [x,y,z];
   }
-  const sideViews=new Set(["stand","miniSquat","extend","wallPush","forwardPress","reachTap","elbowPull","lowRow","backLeg","toeLift","seatedHeel","armSwing","hamstringCurl","armRaise","bicepsCurl","hipHinge","anklePump","heelToe","forwardTap",
-    "standMarch","squat","reverseLunge","wallSlide","inclinePush","chairDip","hingeRow","tableKneeDrive","goodMorning","singleCalf","wallToe","singleLegHinge"]);
-  const supported=new Set(["miniSquat","heel","side","weightShift","backLeg","hamstringCurl","forwardTap","sideTap","singleCalf","singleLegStand","singleLegHinge"]);
-  const standing=new Set(["stand","wallPush",...supported,"standMarch","stepJack","squat","reverseLunge","wallSlide","inclinePush","hingeRow","tableKneeDrive","standCross","goodMorning","wallToe"]);
-  const lean=d=>[0,100*Math.cos(rad(d)),100*Math.sin(rad(d))];
-  // Incline moves: a straight body pivoting on the toes, hands fixed on a table edge (arms straight at INCLINE).
-  const FOOT_Z=-115,INCLINE=37,plankAt=d=>({hip:[0,10+150*Math.cos(rad(d)),FOOT_Z+150*Math.sin(rad(d))],torso:lean(d)});
-  const TABLE_HAND=[29,10+250*Math.cos(rad(INCLINE))-4-105*Math.sin(rad(INCLINE)),FOOT_Z+250*Math.sin(rad(INCLINE))+105*Math.cos(rad(INCLINE))],TABLE_Y=TABLE_HAND[1]-7;
-  function view(id){return sideViews.has(id)?"侧面 · 面向右 →":"正面 · 如照镜子";}
-  function pose(id,t,side=1) {
-    const seated=!standing.has(id), isSide=sideViews.has(id);
-    let hip=[0,seated?88:160,seated?-68:0], torso=[0,100,0], rise=0;
-    if(id==="stand"){
-      // Lean until the head is over the toes, lift off, then rise as the trunk straightens.
-      rise=smooth((t-.22)/.78);hip=[0,mix(88,160,rise),mix(-68,0,Math.pow(rise,.7))];
-      const headZ=-68+78*smooth(t/.32)-10*smooth((t-.3)/.7),lean=Math.asin(clamp((headZ-hip[2])/134,0,.6));
-      torso=[0,100*Math.cos(lean),100*Math.sin(lean)];
-    }
-    if(id==="miniSquat"){hip=[0,160-30*t,-28*t];torso=[0,98,18*t];}
-    if(id==="heel")hip[1]+=15*t;
-    if(id==="weightShift"){hip[0]=side*21*t;hip[1]-=6*t;}
-    if(id==="sideReach")torso=[side*17*t,100-3*t,0];
-    if(id==="hipHinge")torso=[0,100*Math.cos(rad(12*t)),100*Math.sin(rad(12*t))];
-    if(id==="diagonalReach")torso=[-side*8*t,100-2*t,8*t];
-    if(id==="forwardTap"||id==="sideTap")hip[1]-=9*t;
-    if(id==="wallPush"){const a=rad(15+10*t);hip=[0,10+150*Math.cos(a),150*Math.sin(a)];torso=[0,100*Math.cos(a),100*Math.sin(a)];}
-    if(id==="squat"){hip=[0,160-65*t,-45*t];torso=lean(35*t);}
-    if(id==="reverseLunge"){hip=[0,158-40*t,-12*t];torso=lean(6*t);}
-    if(id==="wallSlide")hip=[0,150-50*t,-32];
-    if(id==="wallToe"){hip=[0,155,-26];torso=lean(-6);}
-    if(id==="inclinePush"||id==="tableKneeDrive")({hip,torso}=plankAt(id==="inclinePush"?INCLINE+9*t:INCLINE));
-    if(id==="chairDip")hip=[0,86-26*t,-6];
-    if(id==="hingeRow"){hip=[0,150,-22];torso=lean(42);}
-    if(id==="goodMorning"){hip=[0,156,-22*t];torso=lean(45*t);}
-    if(id==="singleCalf")hip=[side*8,160+15*t,10];
-    if(id==="singleLegStand")hip[0]=-side*10*t;
-    if(id==="singleLegHinge"){hip=[0,160,-6*t];torso=lean(38*t);}
-    if(id==="standCross")torso=add(lean(16*t),[-side*8*t,0,0]);
-    if(id==="stepJack")hip[1]-=4*t;
-    const shoulder=add(hip,torso), head=add(shoulder,mul(unit(torso),34));
-    if(id==="shoulderLift")shoulder[1]+=8*t;
-    const legs=[],arms=[];
-    for(const s of [-1,1]){
-      const active=s===side, h=add(hip,[s*19,0,0]);
-      let k,f;
-      if(id==="wallPush"){f=[s*22,10,0];[k]=ik(h,f,76,76,[0,0,1]);}
-      else if(id==="stand"||id==="miniSquat"||id==="weightShift"){
-        f=[s*(id==="weightShift"?38:24),10,8];[k]=ik(h,f,76,76,[0,0,1]);
-      }else if(id==="chairDip"){f=[s*22,10,50];[k]=ik(h,f,76,76,[0,0,1]);
-      }else if(seated){
-        let thigh=rad(90),shin=0,lateral=0;
-        if(["march","crossMarch","kneePress"].includes(id)&&active)thigh+=rad(20*t);
-        if(id==="extend"&&active)shin=rad(82*t);
-        if(id==="anklePump"&&active)shin=rad(40*t);
-        if(id==="reachTap"&&active)shin=rad(38*t);
-        if(id==="seatedJack")lateral=s*20*t;
-        if(id==="kneeOpen")lateral=s*22*t;
-        const thighLength=Math.sqrt(76*76-lateral*lateral),shinLength=Math.sqrt(76*76-lateral*lateral/4);
-        k=add(h,[lateral,-Math.cos(thigh)*thighLength,Math.sin(thigh)*thighLength]);
-        f=add(k,[lateral/2,-Math.cos(shin)*shinLength,Math.sin(shin)*shinLength]);
-        if(id==="reachTap"&&active){f=[h[0],12,8+40*t];[k,f]=ik(h,f,76,76,[0,0,1]);}
-        if(id==="seatedHeel"){f=[h[0],12+12*t,31-Math.sqrt(23*23-144*t*t)];[k,f]=ik(h,f,76,76,[0,0,1]);}
-        if(id==="heelToe"&&t>.5){const lift=12*(2*t-1);f=[h[0],12+lift,31-Math.sqrt(23*23-lift*lift)];[k,f]=ik(h,f,76,76,[0,0,1]);}
-      }else{
-        f=[s*24,10,6];if(id==="heel")f=[s*24,10+15*t,29-Math.sqrt(23*23-225*t*t)];
-        if(id==="side"&&active){const a=rad(18*t);f=add(h,[s*150*Math.sin(a),-150*Math.cos(a),2]);}
-        if(id==="backLeg"&&active){const a=rad(16*t);f=add(h,[0,-150*Math.cos(a),-150*Math.sin(a)]);}
-        if(id==="forwardTap"&&active){f[2]+=40*t;f[1]+=8*Math.sin(Math.PI*t);}
-        if(id==="sideTap"&&active){f[0]+=s*35*t;f[1]+=8*Math.sin(Math.PI*t);}
-        if(id==="wallSlide")f=[s*22,10,20];
-        if(id==="wallToe")f=[s*22,10,12];
-        if(id==="inclinePush"||id==="tableKneeDrive")f=[s*22,10,FOOT_Z];
-        if(id==="tableKneeDrive"&&active)f=lerp(f,[s*22,48,-35],t);
-        if(id==="reverseLunge"&&active)f=[s*24,10+12*t+10*Math.sin(Math.PI*t),6-93*t];
-        if(id==="stepJack"&&active){f[0]+=s*30*t;f[1]+=8*Math.sin(Math.PI*t);}
-        if(id==="singleCalf")f=active?[s*24,10+15*t,29-Math.sqrt(23*23-225*t*t)]:[s*22,55+15*t,-24];
-        if(id==="singleLegHinge"&&active){const b=rad(38*t);f=add(h,[0,-150*Math.cos(b),-150*Math.sin(b)]);}
-        // Knee lifts: the thigh swings forward from 10°, the shin stays 10° behind vertical.
-        if(["standMarch","singleLegStand","standCross"].includes(id)&&active){const a=rad(10+({standMarch:70,singleLegStand:60,standCross:80}[id]-10)*t);k=add(h,[0,-76*Math.cos(a),76*Math.sin(a)]);f=add(k,[0,-76*Math.cos(rad(10)),-76*Math.sin(rad(10))]);}
-        else [k,f]=ik(h,f,76,76,[0,0,1]);
-        if(id==="hamstringCurl"&&active){const v=sub(f,k),a=rad(60*t);f=add(k,[v[0],v[1]*Math.cos(a)-v[2]*Math.sin(a),v[1]*Math.sin(a)+v[2]*Math.cos(a)]);}
+
+  // ---------- timing ----------
+  const seg=(q,a,b)=>clamp((q-a)/(b-a));
+  const profiles=new Map();
+  // Position along a move whose speed follows u^a(1-u)^b, so the speed peaks at a/(a+b).
+  // a=b=2 is minimum jerk; a<b drives hard early and brakes long (a lift), a>b the reverse.
+  function profile(a,b){
+    const key=a+"/"+b;if(profiles.has(key))return profiles.get(key);
+    const n=400,table=new Float64Array(n+1),speed=u=>Math.pow(u,a)*Math.pow(1-u,b);
+    for(let i=1;i<=n;i++){const u0=(i-1)/n,u1=i/n;table[i]=table[i-1]+(speed(u0)+4*speed((u0+u1)/2)+speed(u1))/(6*n);}
+    for(let i=1;i<=n;i++)table[i]/=table[n];
+    const f=u=>{u=clamp(u)*n;const i=Math.min(n-1,Math.floor(u));return table[i]+(table[i+1]-table[i])*(u-i);};
+    profiles.set(key,f);return f;
+  }
+  // Keyframes [[q, value, [a,b]]]: each move reaches its value at q along profile(a,b); a repeated value holds.
+  function track(keys){
+    return q=>{
+      if(q<=keys[0][0])return keys[0][1];
+      for(let i=1;i<keys.length;i++){
+        const [q1,v1,shape=[2,2]]=keys[i];
+        if(q<=q1){const [q0,v0]=keys[i-1];return q1>q0?v0+(v1-v0)*profile(shape[0],shape[1])((q-q0)/(q1-q0)):v1;}
       }
-      let toe=add(f,[0,0,23]);
-      if(id==="heel")toe=[f[0],10,29];
-      if(id==="seatedHeel")toe=[f[0],12,31];
-      if(id==="toeLift")toe=add(f,[0,23*Math.sin(rad(40*t)),23*Math.cos(rad(40*t))]);
-      if(id==="anklePump"&&active)toe=add(f,[0,23*Math.sin(rad(35*t)),23*Math.cos(rad(35*t))]);
-      if(id==="heelToe")toe=t>.5?[f[0],12,31]:add(f,[0,23*Math.sin(rad(35*(1-2*t))),23*Math.cos(rad(35*(1-2*t)))]);
-      // The back foot ends on the ball of the foot: heel 12 up, toes on the floor.
-      if(id==="reverseLunge"&&active){const c=Math.asin(12/23)*t;toe=add(f,[0,-23*Math.sin(c),23*Math.cos(c)]);}
-      if(id==="singleCalf")toe=active?[f[0],10,29]:add(f,[0,-8,Math.sqrt(23*23-64)]);
-      if(id==="wallToe")toe=add(f,[0,23*Math.sin(rad(40*t)),23*Math.cos(rad(40*t))]);
-      // The lifted foot stays square to the leg, without dipping into the floor.
-      if(id==="singleLegHinge"&&active){const c=Math.min(rad(38*t),Math.asin(clamp((f[1]-10)/23)));toe=add(f,[0,-23*Math.sin(c),23*Math.cos(c)]);}
-      const legActive=["stand","miniSquat","heel","toeLift","seatedHeel","seatedJack","weightShift","kneeOpen","heelToe","squat","reverseLunge","wallSlide","wallToe","goodMorning"].includes(id)||(["march","extend","reachTap","crossMarch","kneePress","side","backLeg","hamstringCurl","anklePump","forwardTap","sideTap","standMarch","stepJack","standCross","tableKneeDrive","singleCalf","singleLegStand","singleLegHinge"].includes(id)&&active);
-      legs.push({s,h,k,f,toe,active:legActive});
-      const sh=add(shoulder,[s*29,-4,0]);
-      let hand=add(hip,[s*38,15,27]),pole=[s*.4,-1,0],armActive=false;
-      if(id==="stand"){hand=lerp(add(lerp(h,k,.55),[s*3,13,0]),add(hip,[s*30,2,22]),rise*rise);pole=[s*.3,-.4,-1];}
-      if(supported.has(id)){hand=[s*30,190,80];}
-      if(id==="armSwing"){hand=add(hip,[s*37,15+15*t,27+(active?38:-30)*t]);armActive=true;}
-      if(id==="shoulderLift"){hand[1]+=8*t;armActive=true;}
-      if(id==="armRaise"){hand=add(sh,[0,-107*Math.cos(rad(75*t)),107*Math.sin(rad(75*t))]);armActive=true;}
-      if(id==="bicepsCurl"||id==="shoulderRotate")armActive=true;
-      if(id==="chestOpen"){hand=add(hip,[s*(38+40*t),15+10*t,27-40*t]);armActive=true;}
-      if(id==="hipHinge")hand=add(hip,[s*32,8,50]);
-      if(id==="diagonalReach"&&active){const target=add(hip,[-s*19,15,82]);hand=hand.map((v,i)=>mix(v,target[i],t));armActive=true;}
-      if(id==="wallPush"){hand=[s*29,240,132];pole=[s*.6,-1,0];armActive=true;}
-      if(id==="march"){hand=add(hip,[s*37,30+(active?0:20*t),30+(active?0:20*t)]);}
-      if(id==="seatedJack"){hand=add(shoulder,[s*(38+67*t),-80+69*t,9]);armActive=true;}
-      if(["forwardPress","reachTap"].includes(id)){hand=add(shoulder,[s*27,-20,40+64*t]);armActive=true;}
-      if(id==="palmPress"){hand=add(shoulder,[s*3,-30,55]);pole=[s,-.5,0];armActive=true;}
-      if(id==="towelPull"){hand=add(shoulder,[s*70,-22,58]);pole=[s,-.5,-.2];armActive=true;}
-      if(id==="elbowPull"){hand=add(shoulder,[s*32,-12,102-69*t]);pole=[s*.25,-.3,-1];armActive=true;}
-      if(id==="lowRow"){hand=add(shoulder,[s*29,-48,88-54*t]);pole=[s*.25,-.3,-1];armActive=true;}
-      if(id==="sideReach"){hand=add(hip,[s*(38+(active?33*t:0)),18-(active?10*t:0),16]);armActive=active;}
-      if(id==="standMarch"){const a=rad(active?-20*t:35*t);hand=add(sh,[0,-107*Math.cos(a),107*Math.sin(a)]);pole=[s*.2,-.3,-1];}
-      if(id==="stepJack"){hand=add(shoulder,[s*(38+60*t),-80+69*t,9]);armActive=true;}
-      if(id==="squat"){const b=rad(15+70*t);hand=add(sh,[0,-107*Math.cos(b),107*Math.sin(b)]);}
-      if(id==="reverseLunge"){hand=add(hip,[s*33,12,6]);pole=[s,-.2,-.6];}
-      if(id==="wallSlide"){hand=add(lerp(h,k,.55),[s*3,13,0]);pole=[s*.3,-.4,-1];}
-      if(id==="wallToe")hand=add(hip,[s*36,5,4]);
-      if(id==="inclinePush"||id==="tableKneeDrive"){hand=[s*TABLE_HAND[0],TABLE_HAND[1],TABLE_HAND[2]];pole=[s*.5,-.6,-.6];armActive=id==="inclinePush";}
-      if(id==="chairDip"){hand=[s*32,82,-27];pole=[s*.15,0,-1];armActive=true;}
-      if(id==="hingeRow"){hand=add(sh,lerp([0,-100,8],[0,-36,-36],t));pole=[s*.2,.3,-1];armActive=true;}
-      if(id==="towelPulldown"){hand=add(sh,lerp([s*46,92,8],[s*46,4,18],t));pole=[s,-.6,0];armActive=true;}
-      // Arms folded on the chest, carried with the trunk.
-      if(id==="goodMorning"){const u=unit(torso);hand=add(add(shoulder,[-s*12,0,0]),add(mul(u,-24),mul([0,-u[2],u[1]],18)));pole=[s,-.5,0];}
-      arms.push({s,sh,hand,pole,active:armActive});
+      return keys[keys.length-1][1];
+    };
+  }
+  // A damped follower run over three loops, so the result is periodic.
+  function springLoop(xs,dt,freq,zeta){
+    const w=2*Math.PI*freq,out=new Float64Array(xs.length);let y=xs[0],v=0;
+    for(let loop=0;loop<3;loop++)for(let i=0;i<xs.length;i++){v+=(w*w*(xs[i]-y)-2*zeta*w*v)*dt;y+=v*dt;if(loop===2)out[i]=y;}
+    return out;
+  }
+
+  // ---------- body (170 cm adult) ----------
+  const B={ank:6.5,heel:6,ball:14,toe:6,shank:42,thigh:42,hip:8.5,trunk:54,shoulder:17.5,shoulderDrop:4,neck:6,head:10.5,upper:30,fore:25,hand:8};
+  // Standing hip height, knees just soft: straight legs sit on the IK's singular point.
+  const STAND=B.ank+B.shank+B.thigh-.8;
+  // Segment mass fractions (Winter): they sum to 1.
+  const MASS={head:.081,trunk:.497,upper:.028,fore:.016,hand:.006,thigh:.1,shank:.0465,foot:.0145};
+  const SIDES=[1,-1];
+
+  function ik(a,t,l1,l2,pole){
+    const d=sub(t,a),raw=len(d),D=clamp(raw,Math.abs(l1-l2)+.01,l1+l2-.001),dir=raw>1e-9?mul(d,1/raw):[0,-1,0];
+    const x=(l1*l1-l2*l2+D*D)/(2*D),h=Math.sqrt(Math.max(0,l1*l1-x*x));
+    let bend=perp(pole,dir);if(len(bend)<1e-6)bend=perp([0,0,1],dir);
+    return {mid:add(add(a,mul(dir,x)),mul(unit(bend),h)),end:add(a,mul(dir,D)),reach:raw/(l1+l2)};
+  }
+  function footAxes(heading,pitch){
+    const h=rad(heading),p=rad(pitch),sh=Math.sin(h),ch=Math.cos(h),sp=Math.sin(p),cp=Math.cos(p);
+    return {f:[sh*cp,-sp,ch*cp],u:[sh*sp,cp,ch*sp]};
+  }
+  // Ankle that puts the ball of the foot at `ball` with the heel lifted by `pitch` degrees.
+  function ankleAtBall(ball,heading,pitch){const {f,u}=footAxes(heading,pitch);return add(sub(ball,mul(f,B.ball)),mul(u,B.ank));}
+  function footPoints(ankle,heading,pitch,toeBend){
+    const {f,u}=footAxes(heading,pitch),heel=add(add(ankle,mul(f,-B.heel)),mul(u,-B.ank)),ball=add(add(ankle,mul(f,B.ball)),mul(u,-B.ank));
+    const t=rad(pitch-toeBend),h=rad(heading);
+    return {heel,ball,toe:add(ball,mul([Math.sin(h)*Math.cos(t),-Math.sin(t),Math.cos(h)*Math.cos(t)],B.toe))};
+  }
+  const flatFoot=(x,z,heading=0)=>({ankle:[x,B.ank,z],heading,pitch:0});
+  // Toes relax in the air but never dip below the floor while the ball is low.
+  const ballFoot=(ball,heading,pitch,toeBend=pitch)=>({ankle:ankleAtBall(ball,heading,pitch),heading,pitch,toeBend:Math.max(toeBend,pitch-deg(Math.asin(clamp(ball[1]/B.toe))))});
+
+  // Arms from angles in a frame {down, fwd, out}: swing raises the arm forward, abduct sideways.
+  // The elbow flexes toward the way the arm is being raised; twist turns that plane about the upper arm.
+  function armBasis(frame,swing,d){
+    let m=perp(add(mul(frame.fwd,Math.cos(rad(swing))),mul(frame.down,-Math.sin(rad(swing)))),d);
+    if(len(m)<1e-6)m=perp(frame.fwd,d);m=unit(m);return {m,n:cross(d,m)};
+  }
+  function armPose(S,frame,a){
+    const sw=rad(a.swing||0),ab=rad(a.abduct||0);
+    const d=unit(add(add(mul(frame.down,Math.cos(ab)*Math.cos(sw)),mul(frame.fwd,Math.cos(ab)*Math.sin(sw))),mul(frame.out,Math.sin(ab))));
+    const {m,n}=armBasis(frame,a.swing||0,d),el=rad(a.elbow||0),tw=rad(a.twist||0);
+    const f=unit(add(mul(d,Math.cos(el)),mul(add(mul(m,Math.cos(tw)),mul(n,Math.sin(tw))),Math.sin(el))));
+    const E=add(S,mul(d,B.upper)),W=add(E,mul(f,B.fore));
+    let hd=f;
+    if(a.wrist){const flex=unit(perp(m,f));hd=unit(add(mul(f,Math.cos(rad(a.wrist))),mul(flex,Math.sin(rad(a.wrist)))));}
+    // `drop`: the hand trails toward (or, when negative, away from) the floor.
+    if(a.drop){const dn=perp([0,-1,0],hd);if(len(dn)>1e-6)hd=unit(add(mul(hd,Math.cos(rad(a.drop))),mul(unit(dn),Math.sin(rad(a.drop)))));}
+    return {E,W,T:add(W,mul(hd,B.hand))};
+  }
+  // The inverse of armPose for a solved arm, so a constrained arm can hand over to a free one smoothly.
+  function armAngles(S,E,W,T,frame){
+    const d=unit(sub(E,S)),swing=deg(Math.atan2(dot(d,frame.fwd),dot(d,frame.down))),abduct=deg(Math.asin(clamp(dot(d,frame.out),-1,1)));
+    const {m,n}=armBasis(frame,swing,d),f=unit(sub(W,E)),h=unit(sub(T,W)),flex=unit(perp(m,f));
+    return {swing,abduct,elbow:deg(Math.acos(clamp(dot(f,d),-1,1))),twist:deg(Math.atan2(dot(f,n),dot(f,m))),wrist:deg(Math.atan2(dot(h,flex),dot(h,f)))};
+  }
+  const WORLD=s=>({down:[0,-1,0],fwd:[0,0,1],out:[s,0,0]});
+
+  // desc: {pelvis, pelvisYaw, pelvisRoll, trunk:{pitch,roll,yaw,curve}, head:{pitch,roll}, breath, prot:[l,r],
+  //        legs:[{ankle,heading,pitch,toeBend,pole}], arms:[{ik:{wrist,pole,hand}} | {frame:"world"|"trunk",swing,abduct,elbow,twist,wrist,drop}]}
+  function assemble(d){
+    const P=d.pelvis,tr=d.trunk,breath=d.breath||0;
+    const U=orient([0,1,0],tr),F=orient([0,0,1],tr),X=orient([1,0,0],tr),Xp=orient([1,0,0],{yaw:d.pelvisYaw||0,roll:d.pelvisRoll||0});
+    const C7=add(P,add(mul(U,B.trunk+.8*breath),mul(F,-1.5+.6*breath)));
+    const head={pitch:d.head.pitch,yaw:tr.yaw||0,roll:(tr.roll||0)*.5+(d.head.roll||0)},HU=orient([0,1,0],head),HF=orient([0,0,1],head);
+    const NT=add(C7,mul(unit(add(mul(U,.35),mul(HU,.65))),B.neck)),HC=add(NT,mul(HU,B.head));
+    const pts={P,SB:add(P,add(mul(U,3),mul(F,-1.5))),SM:add(P,add(mul(U,B.trunk*.5),mul(F,-1.5-(tr.curve||0)))),C7,NT,HC,HF:add(HC,mul(HF,B.head)),HU:add(HC,mul(HU,B.head))};
+    const frames={world:WORLD,trunk:s=>({down:mul(U,-1),fwd:F,out:mul(X,s)})};
+    let reach=0;
+    const sides=SIDES.map((s,i)=>{
+      const leg=d.legs[i],arm=d.arms[i],H=add(P,mul(Xp,s*B.hip)),heading=leg.heading||0,pitch=leg.pitch||0;
+      const knee=ik(H,leg.ankle,B.thigh,B.shank,leg.pole||[Math.sin(rad(heading)),0,Math.cos(rad(heading))]);
+      const foot=footPoints(knee.end,heading,pitch,leg.toeBend??pitch);reach=Math.max(reach,knee.reach);
+      const S=add(C7,add(add(mul(X,s*B.shoulder),mul(U,-B.shoulderDrop+.35*breath+(d.elev?d.elev[i]:0))),mul(F,d.prot?d.prot[i]:0)));
+      let E,W,T;
+      if(arm.ik){const r=ik(S,arm.ik.wrist,B.upper,B.fore,arm.ik.pole);E=r.mid;W=r.end;T=add(W,mul(unit(arm.ik.hand||sub(W,E)),B.hand));}
+      else ({E,W,T}=armPose(S,frames[arm.frame||"world"](s),arm));
+      return {s,H,K:knee.mid,A:knee.end,HE:foot.heel,BA:foot.ball,TO:foot.toe,S,E,W,T};
+    });
+    let com=mul(HC,MASS.head);com=add(com,mul(mix3(P,C7,.5),MASS.trunk));
+    for(const sd of sides){
+      com=add(com,mul(mix3(sd.S,sd.E,.436),MASS.upper));com=add(com,mul(mix3(sd.E,sd.W,.43),MASS.fore));com=add(com,mul(mix3(sd.W,sd.T,.5),MASS.hand));
+      com=add(com,mul(mix3(sd.H,sd.K,.433),MASS.thigh));com=add(com,mul(mix3(sd.K,sd.A,.433),MASS.shank));com=add(com,mul(mix3(sd.HE,sd.BA,.5),MASS.foot));
     }
-    if(id==="crossMarch"||id==="kneePress"||id==="standCross"){
-      const target=legs.find(l=>l.s===side).k;
-      for(const a of arms)if(id==="kneePress"||a.s!==side){a.hand=add(target,[a.s*5,12,0]);a.active=true;}
+    return {pts,sides,com,reach};
+  }
+  const BODY_KEYS=["P","SB","SM","C7","NT","HC","HF","HU"],SIDE_KEYS=["H","K","A","HE","BA","TO","S","E","W","T"];
+  const POINTS=[...BODY_KEYS,...["L","R"].flatMap(k=>SIDE_KEYS.map(n=>n+k)),"COM"];
+  const INDEX=Object.fromEntries(POINTS.map((k,i)=>[k,i]));
+  function write(pose,out,o){
+    const put=(k,v)=>{const j=o+INDEX[k]*3;out[j]=v[0];out[j+1]=v[1];out[j+2]=v[2];};
+    for(const k of BODY_KEYS)put(k,pose.pts[k]);
+    pose.sides.forEach((sd,i)=>{for(const k of SIDE_KEYS)put(k+(i?"R":"L"),sd[k]);});
+    put("COM",pose.com);
+  }
+  // ---------- exercises ----------
+  // 坐站起身: the four phases of rising (flexion momentum, seat-off, extension, stabilisation),
+  // then a controlled sit. The hips take different paths up and down.
+  function sitToStand(){
+    const chair={type:"chair",seat:47,front:-13,back:-53,half:23,top:95};
+    const SEAT=[53.5,-35.5],UP=[STAND,-1.5];
+    const lean=track([[0,3],[.03,3],[.21,46],[.46,0,[1.8,2.4]],[.54,0],[.71,40,[2,2.2]],[.84,43],[.98,3,[2,2.6]],[1,3]]);
+    const rise=track([[0,0],[.19,0],[.45,1,[1.7,2.4]],[.56,1],[.85,0,[2,2.8]],[1,0]]);
+    const slide=track([[0,0],[.03,0],[.19,2.2],[.45,0],[1,0]]);
+    const free=track([[0,0],[.2,0],[.27,1],[.66,1],[.76,0],[1,0]]);
+    const grip=track([[0,.6],[.04,.6],[.2,.8],[.34,.8],[.66,.72],[.76,.72],[.86,.64],[1,.6]]);
+    const breath=track([[0,0],[.05,1],[.19,1],[.45,0],[.52,.7],[.6,.7],[.85,.1],[1,0]]);
+    const squash=track([[0,0],[.85,0],[.875,-.9],[.93,0],[1,0]]);
+    const effort=track([[0,.12],[.12,.35],[.21,1],[.4,.55],[.5,.12],[.6,.45],[.8,.8],[.86,.2],[1,.12]]);
+    const legs=SIDES.map(s=>flatFoot(s*11,-3,s*7));
+    const body=ch=>{
+      const r=clamp(ch.rise),path=ch.q<.5?1-Math.pow(1-r,2.3):Math.pow(r,2.2);
+      return {pelvis:[0,mix(SEAT[0],UP[0],r)+ch.squash*(1-r),mix(SEAT[1]+ch.slide,UP[1],path)],trunk:{pitch:ch.lean,curve:ch.lean*.05},head:{pitch:ch.head},breath:ch.breath,legs};
+    };
+    return {
+      id:"stand",oldId:"stand",name:"坐站起身",level:"70+ · 55–70",reps:1,view:{yaw:64,pitch:10},props:[chair],
+      channels:q=>{const l=lean(q);return {q,lean:l,rise:rise(q),slide:slide(q),free:free(q),grip:grip(q),breath:breath(q),squash:squash(q),head:6+.42*l,effort:effort(q)};},
+      springs:{lean:[3.2,.6],head:[2.4,.7]},
+      seat:ch=>clamp(1-ch.rise*5),
+      // Hands on the thighs slide toward the knees while leaning; after seat-off they let go.
+      constrained(ch){
+        const d={...body(ch),arms:SIDES.map(()=>({frame:"world"}))},p=assemble(d);
+        d.arms=p.sides.map(sd=>({ik:{wrist:add(mix3(sd.H,sd.K,ch.grip),[sd.s*2.2,5,0]),pole:[sd.s,.1,-.6],hand:add(unit(sub(sd.K,sd.H)),[0,-.25,0])}}));
+        return d;
+      },
+      pendulum:{hang:{swing:3,abduct:6,elbow:14,twist:0,wrist:8}},
+      build:ch=>({...body(ch),arms:ch.armAngles}),
+      parts:()=>({thighL:1,thighR:1,shankL:.55,shankR:.55,pelvis:.8,spine:.35}),
+      metric:{label:"重心上下速度",point:"COM",mode:"vy"},
+      trails:["P","HC"],
+      phases:[[0,.19,"前倾蓄势"],[.19,.27,"离椅 · 动量转移"],[.27,.46,"伸髋伸膝 · 站起"],[.46,.55,"站稳"],[.55,.85,"向后坐 · 控制下降"],[.85,1,"坐稳 · 躯干回正"]],
+      notes:["速度按起身四个阶段安排：前倾蓄势、离椅、伸髋伸膝、站稳。","起身时臀部先向前再向上，坐下时先向后再下降，两条路径不同。打开「轨迹」能看到这个环。","双手扶大腿借力，松开后手臂是摆锤，跟着肩膀的加速度自然摆动。","坐下前明显减速，臀部轻触椅面，有一点压缩回弹。"]
+    };
+  }
+
+  // 徒手深蹲: hips lead back, slow descent, brief bottom pause, faster drive up.
+  // The pelvis is placed every frame so the whole-body centre of mass stays over mid-foot.
+  function squat(){
+    const chair={type:"chair",seat:47,front:-30,back:-70,half:23,top:95},OUT=13;
+    const depth=track([[0,0],[.04,0],[.47,1,[2,2.6]],[.53,1],[.84,0,[1.6,2.6]],[1,0]]);
+    const trunk=track([[0,0],[.025,0],[.45,36,[2,2.6]],[.53,36],[.84,0,[1.6,2.6]],[1,0]]);
+    const arms=track([[0,4],[.03,4],[.44,84,[2,2.4]],[.55,84],[.84,4,[1.8,2.4]],[1,4]]);
+    const breath=track([[0,0],[.04,1],[.47,.85],[.53,.85],[.84,0],[1,0]]);
+    const effort=track([[0,.15],[.04,.3],[.47,.85],[.53,.9],[.6,1],[.84,.3],[1,.15]]);
+    const legs=SIDES.map(s=>({...flatFoot(s*15,0,s*OUT),pole:[Math.sin(rad(s*OUT))+s*.12,0,Math.cos(rad(OUT))]}));
+    return {
+      id:"squat",oldId:"squat",name:"徒手深蹲",level:"55–70 · 40–55",reps:1,view:{yaw:62,pitch:10},props:[chair],
+      channels:q=>{const t=trunk(q);return {q,depth:depth(q),trunk:t,arms:arms(q),breath:breath(q),head:6+.3*t,effort:effort(q)};},
+      springs:{depth:[4.2,.5,0,1.1],trunk:[3,.7],arms:[2.4,.55],head:[2.4,.7]},
+      build(ch){
+        const d={pelvis:[0,STAND-1.2-31*ch.depth,-12*ch.depth],trunk:{pitch:ch.trunk,curve:ch.trunk*.04},head:{pitch:ch.head},breath:ch.breath,legs,
+          arms:SIDES.map(()=>({frame:"world",swing:ch.arms,abduct:7,elbow:6+8*ch.depth,wrist:4}))};
+        for(let k=0;k<5;k++){const p=assemble(d);d.pelvis=[0,d.pelvis[1],d.pelvis[2]+(3.5-p.com[2])];}
+        return d;
+      },
+      parts:()=>({thighL:1,thighR:1,shankL:.6,shankR:.6,pelvis:.9,spine:.45}),
+      metric:{label:"髋部上下速度",point:"P",mode:"vy"},
+      trails:["P","TL","TR"],
+      phases:[[0,.04,"吸气 · 收紧核心"],[.04,.47,"下蹲 · 离心控制"],[.47,.53,"底部停顿"],[.53,.84,"发力站起 · 向心"],[.84,1,"站直 · 呼气"]],
+      notes:["髋部先向后，膝盖随后弯曲；下蹲慢、站起快，底部短暂停顿。","每一帧都让全身重心落在脚掌中部上方，所以臀部后移和躯干前倾是算出来的。打开「重心」可以看到。","双臂前伸配重；下蹲的惯性让身体在底部有一点下沉回弹。","膝盖沿脚尖方向（稍向外）移动。"]
+    };
+  }
+  // 后撤步蹲: shift weight to the front foot, peel the back heel, step back onto the ball of the foot,
+  // sink (the back heel rises, toes fold), drive up, push off and swing the foot home. Legs alternate.
+  function reverseLunge(){
+    const BACK=-72;
+    const py=track([[0,STAND],[.1,STAND],[.47,60,[1.8,2.2]],[.53,60],[.86,STAND,[1.6,2.6]],[1,STAND]]);
+    const pz=track([[0,-1],[.1,-1],[.47,-32,[1.8,2.2]],[.53,-32],[.86,-1,[1.6,2.6]],[1,-1]]);
+    const px=track([[0,0],[.08,3.2],[.33,2.2],[.47,.8],[.53,.8],[.66,2.8],[.86,2.4],[1,0]]);
+    const trunk=track([[0,1],[.1,1.5],[.47,9,[1.8,2.2]],[.53,9],[.86,1.5,[1.6,2.6]],[1,1]]);
+    const TOE=4,HOME=14*Math.cos(rad(TOE));
+    const fz=track([[0,HOME],[.1,HOME],[.33,BACK,[1.8,2.2]],[.67,BACK],[.86,HOME,[1.8,2.2]],[1,HOME]]);
+    const psi=track([[0,0],[.05,0],[.1,26],[.33,38],[.47,58,[2,2.4]],[.58,58],[.67,66],[.76,32],[.84,6],[.86,0],[1,0]]);
+    const breath=track([[0,0],[.1,.3],[.47,1],[.53,1],[.86,0],[1,0]]);
+    const effort=track([[0,.1],[.1,.3],[.33,.55],[.47,.9],[.53,.9],[.6,1],[.72,.6],[.88,.2],[1,.1]]);
+    const lift=q=>q>.1&&q<.33?9*Math.sin(Math.PI*seg(q,.1,.33)):q>.67&&q<.86?11*Math.pow(Math.sin(Math.PI*seg(q,.67,.86)),.8):0;
+    return {
+      id:"reverseLunge",oldId:"reverseLunge",name:"后撤步蹲",level:"40–55",reps:2,view:{yaw:66,pitch:10},props:[],
+      channels:q=>({q,py:py(q),pz:pz(q),px:px(q),trunk:trunk(q),fz:fz(q),psi:psi(q),lift:lift(q),breath:breath(q),head:4,effort:effort(q)}),
+      springs:{py:[4,.55,0,STAND],trunk:[3,.7],px:[2.5,.8]},
+      build(ch,rep){
+        const m=rep?-1:1,st=-m,mi=rep?1:0,legs=[];
+        // The foot that comes home lands exactly where it stands next rep, so nothing slides at the switch.
+        legs[1-mi]=flatFoot(st*10,0,st*TOE);
+        legs[mi]=ballFoot([m*(10+14*Math.sin(rad(TOE))),ch.lift,ch.fz],m*TOE,ch.psi,mix(ch.psi,ch.psi*.3,clamp(ch.lift/3)));
+        const P=[st*ch.px,ch.py,ch.pz];
+        return {pelvis:P,trunk:{pitch:ch.trunk},head:{pitch:ch.head},breath:ch.breath,legs,
+          arms:SIDES.map(s=>({ik:{wrist:add(P,[s*13,11,3]),pole:[s,-.2,-.8],hand:[-s*.15,-.35,1]}}))};
+      },
+      parts:rep=>{const f=rep?"L":"R",b=rep?"R":"L";return {["thigh"+f]:1,["shank"+f]:.7,["thigh"+b]:.55,pelvis:.7};},
+      metric:{label:"髋部上下速度",point:"P",mode:"vy"},
+      trails:["TOL","TOR","P"],
+      phases:[[0,.1,"重心移到前脚"],[.1,.33,"向后退步 · 前脚掌着地"],[.33,.47,"下沉 · 离心"],[.47,.53,"底部停顿"],[.53,.67,"前脚发力站起"],[.67,.86,"后脚蹬地收回"],[.86,1,"站稳"]],
+      notes:["先把重心移到前脚，后脚跟抬起、离地，再向后迈步，用前脚掌着地。","下沉时后脚跟越抬越高、脚趾弯折；站起时后脚蹬地、离地、摆回。","后脚落地时身体已在下沉，迈步和下蹲连成一个动作，不是先迈后蹲。","左右腿交替，两次为一个循环。"]
+    };
+  }
+
+  // 扶桌俯卧撑: the body is a rigid plank pivoting on the balls of the feet; the hands stay on the table.
+  // The driver is the elbow angle; the body angle is solved each frame so the arms fit exactly.
+  function inclinePush(){
+    const table={type:"table",top:74,near:40,far:100,half:58},WR=[21,77.5,44],PSI=60;
+    const elbow=track([[0,172],[.05,172],[.47,80,[2.2,2.4]],[.53,80],[.86,172,[1.6,2.6]],[1,172]]);
+    const prot=track([[0,1],[.05,1],[.47,-2,[2.2,2.4]],[.53,-2],[.86,1,[1.6,2.6]],[.93,2.4],[1,1]]);
+    const breath=track([[0,0],[.05,.2],[.47,1],[.53,1],[.86,.1],[1,0]]);
+    const effort=track([[0,.2],[.05,.3],[.47,.85],[.53,.9],[.62,1],[.86,.45],[.93,.55],[1,.2]]);
+    const wrist=s=>[s*WR[0],WR[1],WR[2]],gap=e=>Math.sqrt(B.upper**2+B.fore**2-2*B.upper*B.fore*Math.cos(rad(e)));
+    // Rigid rotation (deg, + raises the body) about the ball of the foot, from a reference plank at angle a0.
+    const ankle0=ankleAtBall([0,0,0],0,PSI);
+    function plank(ballZ,a0,delta,ch){
+      const c=Math.cos(rad(delta)),s=Math.sin(rad(delta)),A=[0,ankle0[2]*s+ankle0[1]*c,ballZ+ankle0[2]*c-ankle0[1]*s],a=a0+delta;
+      const u=[0,Math.sin(rad(a)),Math.cos(rad(a))],P=add(A,mul(u,83.9));
+      return {pelvis:P,trunk:{pitch:90-a},head:{pitch:90-a+6},breath:ch.breath,prot:[ch.prot,ch.prot],
+        legs:SIDES.map(sd=>({ankle:[sd*9,A[1],A[2]],heading:0,pitch:PSI-delta,toeBend:PSI-delta,pole:[0,-.3,1]})),
+        arms:SIDES.map(sd=>({ik:{wrist:wrist(sd),pole:[sd*.9,.3,-.7],hand:[0,-.12,1]}}))};
     }
-    for(const a of arms){
-      if(id==="bicepsCurl"){const angle=rad(8+130*t);a.elbow=add(a.sh,[0,-56,0]);a.hand=add(a.elbow,[0,-54*Math.cos(angle),54*Math.sin(angle)]);}
-      else if(id==="shoulderRotate"){const angle=rad(55*t);a.elbow=add(a.sh,[0,-56,0]);a.hand=add(a.elbow,[a.s*54*Math.sin(angle),0,54*Math.cos(angle)]);}
-      else [a.elbow,a.hand]=ik(a.sh,a.hand,56,54,a.pole);
+    const shoulderGap=d=>len(sub(assemble(d).sides[0].S,wrist(1)));
+    const bisect=(f,lo,hi)=>{let flo=f(lo);for(let k=0;k<24;k++){const mid=(lo+hi)/2,fm=f(mid);if((fm<0)===(flo<0)){lo=mid;flo=fm;}else hi=mid;}return (lo+hi)/2;};
+    // Start pose: arms at 172°, square to the body, balls of the feet on the floor.
+    const top={breath:0,prot:1};let A0=45,BZ=-90;
+    for(let k=0;k<4;k++){
+      A0=bisect(a=>{const d=plank(0,a,0,top),S=assemble(d).sides[0].S,dy=S[1]-WR[1],dx=S[0]-WR[0];
+        const z=WR[2]-Math.sqrt(Math.max(0,gap(172)**2-dy*dy-dx*dx))-S[2],arm=unit(sub(wrist(1),add(S,[0,0,z]))),U=[0,Math.sin(rad(a)),Math.cos(rad(a))];
+        BZ=z;return dot(arm,U);},25,70);
     }
-    return {hip,shoulder,head,legs,arms,seated,isSide,id,t,side};
+    return {
+      id:"inclinePush",oldId:"inclinePush",name:"扶桌俯卧撑",level:"55–70 · 40–55",reps:1,view:{yaw:66,pitch:10},props:[table],handSupport:true,
+      channels:q=>({q,elbow:elbow(q),prot:prot(q),breath:breath(q),effort:effort(q)}),
+      springs:{elbow:[4,.5],prot:[3,.7]},
+      build(ch){const D=gap(ch.elbow),delta=bisect(dl=>shoulderGap(plank(BZ,A0,dl,ch))-D,-35,15);return plank(BZ,A0,delta,ch);},
+      rig:{plank:(delta,ch)=>plank(BZ,A0,delta,ch),table},
+      parts:()=>({upperL:1,upperR:1,foreL:.8,foreR:.8,clavL:.8,clavR:.8,spine:.5}),
+      metric:{label:"胸口上下速度",point:"C7",mode:"vy"},
+      trails:["C7","EL","ER"],
+      phases:[[0,.05,"撑稳 · 身体成直线"],[.05,.47,"屈肘下降 · 离心"],[.47,.53,"胸口靠近桌边"],[.53,.86,"推回 · 向心"],[.86,1,"肩胛前推 · 回稳"]],
+      notes:["身体像一块板，以前脚掌为支点整体转动；双手固定在桌边。","驱动量是肘角：下降慢、推起快，底部有一点缓冲。身体角度每帧解算，手臂长度严格不变。","推到顶再把肩胛向前推一点；脚跟随身体角度自然起落。"]
+    };
   }
-  // Joints with a motion arrow: H hands, E elbows, S shoulders, F toes, A heels, K knees, T head, P pelvis;
-  // lower case: working side only (o: the other hand).
-  const TRACE={standMarch:"k",stepJack:"Hf",squat:"P",reverseLunge:"fP",wallSlide:"P",inclinePush:"T",chairDip:"P",hingeRow:"E",towelPulldown:"H",standCross:"ko",tableKneeDrive:"k",goodMorning:"T",singleCalf:"a",wallToe:"F",singleLegStand:"k",singleLegHinge:"f",march:"k",seatedJack:"HF",reachTap:"Hf",armSwing:"H",shoulderLift:"S",stand:"T",miniSquat:"P",extend:"f",kneeOpen:"K",hamstringCurl:"a",wallPush:"T",forwardPress:"H",armRaise:"H",bicepsCurl:"H",elbowPull:"E",lowRow:"E",chestOpen:"H",shoulderRotate:"H",crossMarch:"ko",kneePress:"k",sideReach:"h",hipHinge:"T",diagonalReach:"h",heel:"A",toeLift:"F",seatedHeel:"A",anklePump:"f",heelToe:"FA",side:"f",weightShift:"T",backLeg:"f",forwardTap:"f",sideTap:"f"};
-  function viewOf(p){const a=rad(p.isSide?73:12),c=Math.cos(a),s=Math.sin(a);return {project:v=>[v[0]*c+v[2]*s,-v[1]+(-v[0]*s+v[2]*c)*.12],depth:v=>-v[0]*s+v[2]*c};}
-  const len2=(a,b)=>Math.hypot(b[0]-a[0],b[1]-a[1]),dir2=(a,b)=>{const l=len2(a,b)||1;return [(b[0]-a[0])/l,(b[1]-a[1])/l];};
-  const guideCache=new Map();
-  function guides(id,side=1){
-    const key=id+side;if(guideCache.has(key))return guideCache.get(key);
-    const n=16,poses=[];for(let i=0;i<=n;i++)poses.push(pose(id,i/n,side));
-    const {project,depth}=viewOf(poses[0]);let paths=[];
-    // [joint, pivot it turns around, clearance]
-    const pick=(p,c)=>{const r=[],u=c==="o"?"H":c.toUpperCase();
-      for(const s of [-1,1]){const arm=p.arms.find(x=>x.s===s),leg=p.legs.find(x=>x.s===s);if(c!==u&&(c==="o")===(s===p.side))continue;
-        const j={H:[arm.hand,arm.sh,14],E:[arm.elbow,arm.sh,13],S:[arm.sh,p.hip,14],F:[leg.toe,leg.h,13],A:[leg.f,p.id==="hamstringCurl"?leg.k:leg.toe,13],K:[leg.k,leg.h,16]}[u];if(j)r.push(j);}
-      if(c==="T")r.push([p.head,p.hip,24]);if(c==="P")r.push([p.hip,[0,0,0],30]);return r;};
-    for(const c of TRACE[id]||""){const lists=poses.map(p=>pick(p,c));
-      // flat: the pivot is on the line of sight, so "away from it" means nothing on screen.
-      lists[0].forEach((_,j)=>{const [q,pv]=lists[n/2][j];paths.push({pts:lists.map(l=>project(l[j][0])),pivot:project(pv),flat:len2(project(q),project(pv))<.5*norm(sub(q,pv)),r:lists[0][j][2],d:depth(q)});});}
-    // Seen from the side, paired limbs trace nearly one line: keep the nearer.
-    const gap=(P,Q)=>P.pts.reduce((s,v,i)=>s+len2(v,Q.pts[i]),0)/n,chord=P=>dir2(P.pts[0],P.pts[n]);
-    paths=paths.filter(P=>!paths.some(Q=>Q.d>P.d+1&&dot(chord(P),chord(Q))>.7&&gap(P,Q)<40));
-    const out=paths.map(P=>offsetPath(P,project(poses[n/2].hip)[0])).filter(Boolean);
-    guideCache.set(key,out);return out;
+  // 开合步: shift onto the stance leg (the swing-side hip dips a little), step out, arms rise with
+  // an overshoot and the hands trailing half a beat; then the arms fall, braking beside the thighs.
+  function stepJack(){
+    const OPEN=34,HOME=6;
+    const px=track([[0,0],[.08,3],[.28,2.2],[.4,0],[.55,0],[.63,3],[.82,2.2],[.95,0],[1,0]]);
+    const py=track([[0,STAND],[.1,STAND-.6],[.3,STAND-4],[.4,STAND-5.2],[.55,STAND-5.2],[.64,STAND-4.4],[.72,STAND-2],[.84,STAND-.8],[.95,STAND],[1,STAND]]);
+    const roll=track([[0,0],[.1,2],[.28,1.5],[.36,0],[.6,0],[.66,2],[.8,1.5],[.88,0],[1,0]]);
+    const fx=track([[0,HOME],[.1,HOME],[.3,OPEN,[1.8,2.4]],[.64,OPEN],[.82,HOME,[1.8,2.4]],[1,HOME]]);
+    const psi=track([[0,0],[.06,0],[.1,16],[.26,10],[.3,5],[.34,0],[.6,0],[.64,16],[.78,10],[.82,5],[.86,0],[1,0]]);
+    const heading=track([[0,5],[.1,5],[.3,14],[.64,14],[.82,5],[1,5]]);
+    const abd=track([[0,8],[.04,8],[.36,92,[1.8,2.2]],[.56,92],[.86,8,[2.4,1.8]],[1,8]]);
+    const breath=track([[0,0],[.36,1],[.56,1],[.86,0],[1,0]]);
+    const effort=track([[0,.1],[.1,.35],[.3,.75],[.36,.9],[.55,.7],[.8,.35],[1,.1]]);
+    const lift=q=>q>.1&&q<.3?7*Math.sin(Math.PI*seg(q,.1,.3)):q>.64&&q<.82?6*Math.sin(Math.PI*seg(q,.64,.82)):0;
+    return {
+      id:"stepJack",oldId:"stepJack",name:"开合步",level:"55–70 · 40–55",reps:2,view:{yaw:14,pitch:9},props:[],
+      channels:q=>({q,px:px(q),py:py(q),roll:roll(q),fx:fx(q),psi:psi(q),heading:heading(q),lift:lift(q),abd:abd(q),breath:breath(q),head:2,effort:effort(q)}),
+      springs:{abd:[2.6,.42],px:[3,.7]},
+      // The hand is a light spring chasing the forearm: it trails while the arm rises, then flicks past on the stop.
+      post(chs,dt){
+        const hand=springLoop(chs.map(c=>c.abd),dt,1.5,.3);
+        chs.forEach((c,i)=>{c.drop=clamp(c.abd-hand[i],-25,25);});
+      },
+      build(ch,rep){
+        const m=rep?-1:1,st=-m,mi=rep?1:0,legs=[],h=m*ch.heading;
+        legs[1-mi]=flatFoot(st*HOME,0,st*5);
+        legs[mi]=ballFoot([m*ch.fx+14*Math.sin(rad(h)),ch.lift,14*Math.cos(rad(h))],h,ch.psi,mix(ch.psi,ch.psi*.3,clamp(ch.lift/3)));
+        const raise=clamp((ch.abd-8)/84);
+        return {pelvis:[st*ch.px,ch.py,-1],pelvisRoll:m*ch.roll,trunk:{roll:-m*.6*ch.roll},head:{pitch:ch.head},breath:ch.breath,legs,
+          arms:SIDES.map(()=>({frame:"trunk",abduct:ch.abd,elbow:8+8*raise,drop:ch.drop}))};
+      },
+      parts:rep=>{const m=rep?"R":"L",s=rep?"L":"R";return {upperL:1,upperR:1,clavL:.6,clavR:.6,["thigh"+m]:.8,["thigh"+s]:.45};},
+      metric:{label:"手的速度",point:"TL",mode:"speed"},
+      trails:["TL","TR","TOL","TOR"],
+      phases:[[0,.1,"重心移到支撑腿"],[.1,.3,"向旁迈步 · 抬臂"],[.3,.55,"打开 · 站稳"],[.55,.82,"收回 · 放臂"],[.82,1,"并拢站稳"]],
+      notes:["迈步前先把重心移到支撑腿，骨盆向迈步一侧轻微下沉。","手臂上抬到肩高时有一点过冲再回稳；手比前臂慢半拍，停下时再轻轻甩过去。","放下时手臂先加速，在大腿旁减速。左右交替，两次为一个循环。"]
+    };
   }
-  // Puts a path beside the limb: outside a clear curve, else away from its pivot, else outward.
-  function offsetPath({pts,pivot,flat,r},bodyX){
-    const path=[pts[0]];for(const q of pts)if(len2(q,path[path.length-1])>.8)path.push(q);
-    let len=0;for(let i=1;i<path.length;i++)len+=len2(path[i-1],path[i]);
-    if(len<3)return null;
-    const a=path[0],b=path[path.length-1],m=path[path.length>>1],c=lerp(a,b,.5),u=dir2(a,b),nrm=[-u[1],u[0]],bulge=dot(sub(m,c),nrm),pd=dot(dir2(pivot,m),nrm);
-    const sign=Math.abs(bulge)>.3*len2(a,b)?Math.sign(bulge):!flat&&Math.abs(pd)>.7?Math.sign(pd):Math.abs(nrm[0])>.5?Math.sign((m[0]-bodyX)*nrm[0])||1:Math.sign(nrm[1]);
-    // Short moves, or paths offset into their own curve, get a straight arrow.
-    let line=[];
-    if(len<34||sign*bulge<-2){const k=Math.max(18,len2(a,b)/2);line=[-k,k].map(k=>add(c,mul(u,k)));}
-    else{let need=0;for(let i=1;i<path.length;i++){const p=path[i-1],q=path[i],d=len2(p,q);for(;need<=d;need+=6)line.push(lerp(p,q,need/d));need-=d;}
-      if(len2(b,line[line.length-1])>2)line.push(b);
-      for(let k=0;k<3;k++)for(let i=1;i<line.length-1;i++)line[i]=mul(add(add(line[i-1],line[i+1]),mul(line[i],2)),.25);}
-    const tan=i=>dir2(line[Math.max(0,i-1)],line[Math.min(line.length-1,i+1)]),t=tan(line.length>>1),off=(t[0]*nrm[1]-t[1]*nrm[0])*sign>=0?r+12:-r-12;
-    return line.map((q,i)=>{const t=tan(i);return [q[0]-t[1]*off,q[1]+t[0]*off];});
+
+
+  // ---------- shared pieces for the whole library ----------
+  const CHAIR={type:"chair",seat:47,front:-13,back:-53,half:23,top:95};
+  const RAIL={type:"chair",seat:47,back:22,front:62,half:23,top:95};   // a chair in front, its back toward the person
+  const SEAT=[53.5,-35.5];
+  const hipAt=(P,s,roll=0)=>add(P,orient([s*B.hip,0,0],{roll}));
+  const ankleAtHeel=(heel,heading,pitch)=>{const {f,u}=footAxes(heading,pitch);return add(add(heel,mul(f,B.heel)),mul(u,B.ank));};
+  // A planted foot that rocks onto its heel (pitch<0, toes up) or its ball (pitch>0, heel up) from flat at `ankle`.
+  function rockFoot(ankle,heading,pitch,lift=0){
+    const flat=footPoints(ankle,heading,0,0);
+    return pitch<0?{ankle:ankleAtHeel(add(flat.heel,[0,lift,0]),heading,pitch),heading,pitch,toeBend:0}:ballFoot(add(flat.ball,[0,lift,0]),heading,pitch);
   }
-  const SKIN="#d9a27f",ACTIVE="#c45532",RIM="#f3f1e6",tints=new Map();
-  // Lighten (k>0) or darken (k<0) a #rrggbb colour.
-  function shade(hex,k){
-    if(!tints.has(hex+k)){const n=parseInt(hex.slice(1),16);tints.set(hex+k,"#"+[16,8,0].map(b=>Math.round(mix(n>>b&255,k>0?255:18,Math.abs(k))).toString(16).padStart(2,"0")).join(""));}
-    return tints.get(hex+k);
+  // A free leg from angles at the hip: flex swings the thigh forward, abduct out, knee bends the shin back.
+  function freeLeg(H,s,{flex=0,abduct=0,knee=3,pitch=0,heading=0}){
+    const t=rad(flex),a=rad(abduct),k=rad(Math.max(knee,3));
+    const thigh=[s*Math.sin(a),-Math.cos(t)*Math.cos(a),Math.sin(t)*Math.cos(a)],shin=[s*Math.sin(a),-Math.cos(t-k)*Math.cos(a),Math.sin(t-k)*Math.cos(a)];
+    const K=add(H,mul(thigh,B.thigh)),A=add(K,mul(shin,B.shank));
+    return {ankle:A,heading,pitch,toeBend:pitch*.3,pole:sub(K,mix3(H,A,.5))};
   }
-  function capsule(ctx,a,b,r1,r2){
-    const g=Math.atan2(b[1]-a[1],b[0]-a[0]),d=Math.asin(clamp((r1-r2)/(len2(a,b)||1e-6),-1,1)),q=Math.PI/2;
-    ctx.moveTo(a[0]+r1*Math.cos(g+q-d),a[1]+r1*Math.sin(g+q-d));ctx.arc(a[0],a[1],r1,g+q-d,g+3*q+d);ctx.arc(b[0],b[1],r2,g-q+d,g+q-d);ctx.closePath();
+  const HANG={frame:"world",swing:2,abduct:6,elbow:10,wrist:6};
+  // Missing arms rest: "thigh" (hands on the thighs), "seat" (holding the chair sides), "rail" (on the chair back), "hang".
+  function restArms(d,rest){
+    if(d.arms.every(Boolean))return d;
+    if(rest==="hang"){d.arms=d.arms.map(a=>a||HANG);return d;}
+    const p=assemble({...d,arms:d.arms.map(a=>a||HANG)});
+    d.arms=d.arms.map((a,i)=>{
+      if(a)return a;const sd=p.sides[i],s=sd.s;
+      if(rest==="thigh")return {ik:{wrist:add(mix3(sd.H,sd.K,.62),[s*2.2,5,0]),pole:[s,.1,-.6],hand:add(unit(sub(sd.K,sd.H)),[0,-.25,0])}};
+      if(rest==="seat")return {ik:{wrist:[s*21,CHAIR.seat+2,d.pelvis[2]+12],pole:[s,.2,-.5],hand:[0,-1,.3]}};
+      return {ik:{wrist:[s*20,RAIL.top+1.5,RAIL.back+2],pole:[s*.7,-.3,-.6],hand:[0,-.25,1]}};
+    });
+    return d;
   }
-  function draw(canvas,id,t=0,side=1,{comparison=false,small=false,phase=null}={}) {
-    const box=canvas.getBoundingClientRect(), w=box.width,h=box.height;
-    if(!w||!h)return;
-    const dpr=Math.min(window.devicePixelRatio||1,2);
+  function seated(o={}){
+    return restArms({pelvis:[o.px||0,SEAT[0]+(o.dy||0),SEAT[1]+(o.dz||0)],pelvisRoll:o.pelvisRoll||0,
+      trunk:{pitch:3+(o.pitch||0),roll:o.roll||0,yaw:o.yaw||0,curve:(o.pitch||0)*.05},head:{pitch:o.head??(8+(o.pitch||0)*.4)},breath:o.breath||0,elev:o.elev,prot:o.prot,
+      legs:SIDES.map((s,i)=>o.legs&&o.legs[i]||flatFoot(s*12,3,s*6)),arms:SIDES.map((s,i)=>o.arms&&o.arms[i]||null)},o.rest||"thigh");
+  }
+  function standing(o={}){
+    return restArms({pelvis:[o.px||0,STAND-(o.drop||0),o.pz??-1],pelvisRoll:o.pelvisRoll||0,trunk:{pitch:o.pitch||0,roll:o.roll||0,curve:(o.pitch||0)*.04},
+      head:{pitch:o.head??(4+(o.pitch||0)*.4)},breath:o.breath||0,elev:o.elev,prot:o.prot,
+      legs:SIDES.map((s,i)=>o.legs&&o.legs[i]||flatFoot(s*(o.feetX||10),0,s*5)),arms:SIDES.map((s,i)=>o.arms&&o.arms[i]||null)},o.rest||"hang");
+  }
+  // One rep inside four beats. "lift": effort on the way out, quick out and slower back; "lower": the reverse;
+  // "even": symmetric; "press": build, hold and release a push that barely moves.
+  const TIMING={
+    lift:track([[0,0],[.04,0],[.42,1,[1.6,2.6]],[.54,1],[.94,0,[2.2,2.2]],[1,0]]),
+    lower:track([[0,0],[.04,0],[.47,1,[2,2.6]],[.53,1],[.86,0,[1.6,2.6]],[1,0]]),
+    even:track([[0,0],[.04,0],[.46,1,[2,2.2]],[.54,1],[.96,0,[2,2.2]],[1,0]]),
+    press:track([[0,0],[.08,0],[.3,1,[1.8,2.2]],[.62,1],[.82,0,[2,2]],[1,0]])
+  };
+  const PHASES={
+    lift:[[0,.04,"准备"],[.04,.42,"发力 · 向心"],[.42,.54,"停一下"],[.54,.94,"慢慢回到起点"],[.94,1,"放松"]],
+    lower:[[0,.04,"准备"],[.04,.47,"慢慢下去 · 离心"],[.47,.53,"停一下"],[.53,.86,"发力回来 · 向心"],[.86,1,"站稳 · 放松"]],
+    even:[[0,.04,"准备"],[.04,.46,"做出动作"],[.46,.54,"停一下"],[.54,.96,"回到起点"],[.96,1,"放松"]],
+    press:[[0,.08,"准备"],[.08,.3,"逐渐用力"],[.3,.62,"保持用力 · 不憋气"],[.62,.82,"慢慢放松"],[.82,1,"放松"]]
+  };
+  // Shift the weight over the standing leg before a one-leg move, and back after it.
+  const SHIFT=track([[0,0],[.1,1],[.9,1],[1,0]]);
+  const TUCK=track([[0,0],[.08,0],[.26,1],[.84,1],[.97,0]]);   // the free foot of a one-leg calf raise
+  const sideKey=m=>m>0?"L":"R";
+  function lib(id,name,c){
+    const timing=TIMING[c.timing||"even"];
+    return {id,oldId:id,name,level:"",reps:c.alt?2:1,view:{yaw:c.front?14:64,pitch:10,...c.view},props:c.props||[],towel:c.towel,handSupport:c.handSupport,
+      channels:q=>{const u=timing(q);return {q,u,raw:q,sh:SHIFT(q),breath:u*.8,effort:.15+.85*u};},
+      // Alternating moves hand over at the rep boundary, so their progress must land exactly on 0: no overshoot spring.
+      springs:c.spring===false||c.alt?{}:{u:c.spring||[3.2,.62,0,1.06]},
+      build:(ch,rep)=>c.pose(ch.u,rep?-1:1,ch),
+      parts:rep=>typeof c.parts==="function"?c.parts(rep?-1:1):c.parts,
+      metric:{label:"动作速度",point:c.trails[0],mode:"speed"},trails:c.trails,
+      phases:c.phases||PHASES[c.timing||"even"],notes:c.notes||[]};
+  }
+
+  const EXERCISES=[sitToStand(),squat(),reverseLunge(),inclinePush(),stepJack()];
+  const both=(f)=>SIDES.map(f);
+  const trunkArm=(o)=>({frame:"trunk",...o});
+  EXERCISES.push(
+    // ----- seated: warm-up -----
+    lib("march","坐姿踏步",{alt:true,front:true,props:[CHAIR],trails:["KL","KR"],parts:m=>({["thigh"+sideKey(m)]:1,pelvis:.4}),
+      pose:(u,m)=>seated({breath:u*.5,legs:both(s=>s===m?{ankle:[s*12,B.ank+16*u,3+4*u],heading:s*6,pitch:10*u,toeBend:3*u}:null),
+        arms:both(s=>trunkArm({swing:(s===m?-12:28)*u,abduct:8,elbow:75}))})}),
+    lib("seatedJack","坐姿开合",{front:true,spring:false,props:[CHAIR],trails:["TL","TR","TOL","TOR"],parts:{upperL:1,upperR:1,thighL:.6,thighR:.6},
+      pose:u=>seated({breath:u,legs:both(s=>({ankle:[s*(12+18*u),B.ank+5*Math.pow(Math.sin(Math.PI*u),.5),3+5*u],heading:s*(6+14*u),pitch:0,pole:[s*.5*u+Math.sin(rad(s*6)),0,1]})),
+        arms:both(()=>trunkArm({abduct:10+75*u,elbow:15}))})}),
+    lib("reachTap","坐姿前点脚",{alt:true,spring:false,props:[CHAIR],trails:["TOL","TOR","TL"],parts:m=>({["thigh"+sideKey(m)]:1,upperL:.5,upperR:.5}),
+      pose:(u,m)=>seated({legs:both(s=>s===m?{ankle:ankleAtHeel(add(footPoints([s*12,B.ank,3],s*6,0,0).heel,[0,5*Math.pow(Math.sin(Math.PI*u),.5),26*u]),s*6,-20*u),heading:s*6,pitch:-20*u,toeBend:0}:null),
+        arms:both(()=>trunkArm({swing:20+50*u,elbow:90-75*u}))})}),
+    lib("armSwing","坐姿交替摆臂",{alt:true,props:[CHAIR],trails:["TL","TR"],parts:{upperL:1,upperR:1},
+      pose:(u,m)=>seated({arms:both(s=>({frame:"world",swing:(s===m?45:-25)*u,abduct:6,elbow:15,wrist:6}))})}),
+    lib("shoulderLift","坐姿提肩放松",{timing:"lift",front:true,props:[CHAIR],trails:["SL","SR"],parts:{clavL:1,clavR:1,upperL:.4,upperR:.4},
+      pose:u=>seated({elev:[5*u,5*u],breath:u,arms:both(()=>({frame:"world",swing:3,abduct:10,elbow:8,wrist:4}))})}),
+    // ----- seated: push -----
+    lib("palmPress","坐姿合掌推压",{timing:"press",front:true,props:[CHAIR],trails:["EL","ER"],parts:{upperL:1,upperR:1,foreL:.8,foreR:.8,clavL:.9,clavR:.9},
+      pose:(u,m,ch)=>{const P=[0,SEAT[0],SEAT[1]];return seated({breath:ch.breath,arms:both(s=>({ik:{wrist:add(P,[s*(3.5-.8*u),44,27]),pole:[s,-.5-.2*u,-.2],hand:[-s*.15,1,.25]}}))});}}),
+    lib("forwardPress","坐姿向前推",{timing:"lift",props:[CHAIR],trails:["TL","TR"],parts:{upperL:1,upperR:1,foreL:.8,foreR:.8,clavL:.7,clavR:.7},
+      pose:u=>seated({breath:1-u,arms:both(()=>trunkArm({swing:25+55*u,abduct:6,elbow:120-108*u}))})}),
+    lib("armRaise","坐姿前抬臂",{timing:"lift",props:[CHAIR],trails:["TL","TR"],parts:{upperL:1,upperR:1,clavL:.6,clavR:.6},
+      pose:u=>seated({arms:both(()=>trunkArm({swing:5+70*u,abduct:4,elbow:12}))})}),
+    lib("bicepsCurl","坐姿屈肘",{timing:"lift",props:[CHAIR],trails:["TL","TR"],parts:{foreL:1,foreR:1,upperL:.7,upperR:.7},
+      pose:u=>seated({arms:both(()=>trunkArm({swing:3,abduct:6,elbow:12+120*u}))})}),
+    // ----- seated: pull -----
+    lib("elbowPull","坐姿拉肘夹背",{timing:"lift",props:[CHAIR],trails:["EL","ER"],parts:{clavL:1,clavR:1,upperL:.8,upperR:.8,spine:.4},
+      pose:u=>seated({prot:[-3*u,-3*u],arms:both(()=>trunkArm({swing:70-90*u,abduct:8,elbow:10+95*u}))})}),
+    lib("towelPull","坐姿毛巾拉开",{timing:"press",front:true,props:[CHAIR],towel:true,trails:["WL"],parts:{clavL:1,clavR:1,upperL:.8,upperR:.8},
+      pose:u=>seated({prot:[-1.5*u,-1.5*u],arms:both(()=>trunkArm({swing:60,abduct:12+5*u,elbow:70}))})}),
+    lib("lowRow","坐姿低位划臂",{timing:"lift",props:[CHAIR],trails:["EL","ER"],parts:{clavL:1,clavR:1,upperL:.8,upperR:.8,spine:.4},
+      pose:u=>seated({prot:[-3*u,-3*u],arms:both(()=>trunkArm({swing:45-65*u,abduct:8,elbow:10+90*u}))})}),
+    lib("chestOpen","坐姿展胸开臂",{timing:"lift",front:true,props:[CHAIR],trails:["TL","TR"],parts:{clavL:1,clavR:1,upperL:.7,upperR:.7},
+      pose:u=>seated({prot:[-3*u,-3*u],breath:u,arms:both(()=>trunkArm({abduct:10+40*u,swing:-12*u,elbow:12}))})}),
+    lib("shoulderRotate","坐姿肩部外旋",{timing:"lift",front:true,props:[CHAIR],trails:["TL","TR"],parts:{upperL:1,upperR:1,clavL:.6,clavR:.6},
+      pose:u=>seated({arms:both(s=>trunkArm({swing:2,abduct:5,elbow:90,twist:-s*60*u}))})}),
+    lib("towelPulldown","毛巾下拉",{timing:"lift",front:true,props:[CHAIR],towel:true,trails:["TL","TR"],parts:{upperL:1,upperR:1,clavL:.8,clavR:.8,spine:.4},
+      pose:u=>seated({elev:[-1.5*u,-1.5*u],arms:both(s=>trunkArm({abduct:150-58*u,elbow:15+70*u,twist:-s*90}))})})
+  );
+  // Straighten a seated knee: the thigh stays put and the shin swings forward about the knee.
+  function kneeSwing(d,i,angle,pitch=0,lift=0){
+    const sd=assemble({...d,arms:d.arms.map(a=>a||HANG)}).sides[i],leg=d.legs[i],shin=unit(sub(sd.A,sd.K));
+    const fwd=unit(perp([Math.sin(rad(leg.heading||0)),0,Math.cos(rad(leg.heading||0))],shin)),dir=add(mul(shin,Math.cos(rad(angle))),mul(fwd,Math.sin(rad(angle))));
+    d.legs[i]={ankle:add(add(sd.K,mul(dir,B.shank)),[0,lift,0]),heading:leg.heading,pitch,toeBend:pitch*.3,pole:sub(sd.K,mix3(sd.H,sd.A,.5))};
+    return d;
+  }
+  // Two passes: place the legs, then aim hands at a knee.
+  function kneeOf(d,i){return assemble({...d,arms:d.arms.map(a=>a||HANG)}).sides[i].K;}
+  const liftFoot=(s,up,fwd=0)=>({ankle:[s*12,B.ank+up,3+fwd*clamp(up/6)],heading:s*6,pitch:up*.6,toeBend:up*.2});
+  EXERCISES.push(
+    // ----- seated: legs, core, ankles -----
+    lib("extend","坐姿伸膝",{alt:true,timing:"lift",spring:false,props:[CHAIR],trails:["TOL","TOR"],parts:m=>({["thigh"+sideKey(m)]:1,["shank"+sideKey(m)]:.5}),
+      pose:(u,m)=>{const d=seated({rest:"seat"});return restArms(kneeSwing(d,m>0?0:1,78*u,-12*u*u,3*Math.sqrt(clamp(u*30))),"seat");}}),
+    lib("kneeOpen","坐姿开膝",{timing:"lift",front:true,props:[CHAIR],trails:["KL","KR"],parts:{thighL:1,thighR:1,pelvis:.6},
+      pose:u=>seated({rest:"seat",legs:both(s=>({...flatFoot(s*12,3,s*6),pole:[s*Math.sin(rad(8+34*u)),0,Math.cos(rad(8+34*u))]}))})}),
+    lib("crossMarch","坐姿对侧触膝",{alt:true,front:true,props:[CHAIR],trails:["KL","KR","TL","TR"],parts:m=>({["thigh"+sideKey(m)]:1,spine:.8,pelvis:.5}),
+      pose:(u,m)=>{const i=m>0?0:1,d=seated({pitch:9*u,roll:m*3*u,legs:both(s=>s===m?liftFoot(s,20*u,4*u):null)}),K=kneeOf(d,i);
+        const a=d.arms[1-i].ik;d.arms[1-i]={ik:{wrist:mix3(a.wrist,add(K,[-m*4,9,0]),u),pole:[-m,.2,-.6],hand:mix3(a.hand,[m*.3,-.4,1],u)}};return d;}}),
+    lib("kneePress","坐姿手膝相推",{alt:true,timing:"press",front:true,props:[CHAIR],trails:["KL"],parts:m=>({["thigh"+sideKey(m)]:1,spine:1,upperL:.5,upperR:.5}),
+      pose:(u,m,ch)=>{const i=m>0?0:1,g=ch.sh,d=seated({pitch:4*g,legs:both(s=>s===m?liftFoot(s,9*g,2*g):null)}),K=kneeOf(d,i);
+        d.arms=both((s,j)=>({ik:{wrist:mix3(d.arms[j].ik.wrist,add(K,[s*5,6+.6*u,-2]),g),pole:[s,.1,-.6],hand:[0,-.3,1]}}));return d;}}),
+    lib("sideReach","坐姿侧向伸手",{alt:true,front:true,props:[CHAIR],trails:["TL","TR"],parts:{spine:1,pelvis:.4},
+      pose:(u,m)=>seated({rest:"seat",roll:m*13*u,head:8,arms:both(s=>s===m?{ik:{wrist:[s*(21+7*u),CHAIR.seat+2-20*u,SEAT[1]+12+2*u],pole:[s,.2,-.5],hand:[s*.1*u,-1,.3-.3*u]}}:null)})}),
+    lib("hipHinge","坐姿小幅前倾",{timing:"lower",props:[CHAIR],trails:["HC","C7"],parts:{spine:1,pelvis:.7},
+      pose:u=>seated({pitch:22*u})}),
+    lib("diagonalReach","坐姿对角伸手",{alt:true,front:true,props:[CHAIR],trails:["TL","TR"],parts:{spine:1,pelvis:.5},
+      pose:(u,m)=>{const i=m>0?0:1,d=seated({pitch:13*u,yaw:-m*14*u}),K=kneeOf(d,1-i);
+        const a=seated({}).arms[i].ik;d.arms[i]={ik:{wrist:mix3(a.wrist,add(K,[m*3,8,14]),u),pole:[m,-.2,-.5],hand:mix3(a.hand,[-m*.4,-.3,1],u)}};return d;}}),
+    lib("toeLift","坐姿抬脚尖",{timing:"lift",props:[CHAIR],trails:["TOL","TOR"],parts:{shankL:1,shankR:1},
+      pose:u=>seated({legs:both(s=>rockFoot([s*12,B.ank,3],s*6,-25*u))})}),
+    lib("seatedHeel","坐姿提脚跟",{timing:"lift",props:[CHAIR],trails:["HEL","HER"],parts:{shankL:1,shankR:1},
+      pose:u=>seated({legs:both(s=>rockFoot([s*12,B.ank,3],s*6,26*u))})}),
+    lib("anklePump","坐姿伸腿勾脚",{alt:true,spring:false,props:[CHAIR],trails:["TOL","TOR"],parts:m=>({["shank"+sideKey(m)]:1,["thigh"+sideKey(m)]:.5}),
+      pose:(u,m)=>{const d=seated({rest:"seat"});return restArms(kneeSwing(d,m>0?0:1,45*u,-28*u*u,3*Math.sqrt(clamp(u*30))),"seat");}}),
+    lib("heelToe","坐姿脚尖脚跟交替",{props:[CHAIR],trails:["TOL","TOR","HEL"],parts:{shankL:1,shankR:1},
+      phases:[[0,.04,"准备"],[.04,.46,"抬脚尖"],[.46,.54,"换"],[.54,.96,"提脚跟"],[.96,1,"放松"]],
+      pose:(u,m,ch)=>{const q=ch.q,p=q<.5?-24*Math.sin(Math.PI*seg(q,.04,.46))**2:24*Math.sin(Math.PI*seg(q,.54,.96))**2;return seated({legs:both(s=>rockFoot([s*12,B.ank,3],s*6,p))});}}),
+    lib("chairDip","椅子臂屈伸",{timing:"lower",props:[CHAIR],trails:["P","EL"],parts:{upperL:1,upperR:1,foreL:.8,foreR:.8,clavL:.6,clavR:.6},
+      pose:u=>{const d=seated({dy:-1.5-14*u,dz:27.5,pitch:4,legs:both(s=>flatFoot(s*12,38,s*6))});
+        d.arms=both(s=>({ik:{wrist:[s*20,CHAIR.seat+2,CHAIR.front-2],pole:[s*.2,0,-1],hand:[0,-.2,-1]}}));return d;}})
+  );
+  // Standing one-leg moves: the working foot leaves the floor by blending from its planted pose.
+  const flatAt=(s,x=10)=>flatFoot(s*x,0,s*5);
+  // Hip and knee angles of a planted leg, in freeLeg's terms.
+  function legAngles(H,A,s){
+    const K=ik(H,A,B.thigh,B.shank,[Math.sin(rad(s*5)),0,Math.cos(rad(s*5))]).mid,th=sub(K,H),sh=sub(A,K);
+    const flex=deg(Math.atan2(th[2],-th[1]));
+    return {flex,knee:flex-deg(Math.atan2(sh[2],-sh[1])),abduct:deg(Math.asin(clamp(th[0]*s/B.thigh,-1,1)))};
+  }
+  // A foot leaving the floor: hip and knee angles move from the planted leg's to the target's, starting
+  // slowly while a small lift clears the floor, so the foot neither slides nor drags. The planted
+  // position is matched exactly at g=0 by a correction that fades out as the leg moves.
+  function lifted(s,P,angles,g){
+    const H=hipAt(P,s),flat=flatAt(s),a0=legAngles(H,flat.ankle,s),a=clamp(g)**2;
+    const at=k=>({flex:mix(a0.flex,angles.flex||0,k),knee:mix(a0.knee,angles.knee??3,k),abduct:mix(a0.abduct,angles.abduct||0,k)});
+    const free=freeLeg(H,s,at(a)),fix=sub(flat.ankle,freeLeg(H,s,at(0)).ankle);
+    let ankle=add(free.ankle,mul(fix,1-a));const pitch=(angles.pitch||0)*clamp(g);
+    // Keep the whole foot a growing gap above the floor while it travels.
+    const fp=footPoints(ankle,s*5,pitch,pitch*.3),gap=3*Math.sqrt(Math.sin(Math.PI*clamp(g)));
+    ankle=add(ankle,[0,Math.max(0,gap-Math.min(fp.heel[1],fp.ball[1],fp.toe[1])),0]);
+    return {ankle,heading:s*5,pitch,toeBend:pitch*.3,pole:free.pole};
+  }
+  const onRail=o=>standing({rest:"rail",...o});
+  const wallAt=z=>({type:"wall",near:z,far:z,top:185,half:48});
+  const bisect=(f,lo,hi)=>{let flo=f(lo);for(let k=0;k<24;k++){const mid=(lo+hi)/2,fm=f(mid);if((fm<0)===(flo<0)){lo=mid;flo=fm;}else hi=mid;}return (lo+hi)/2;};
+  const armGap=e=>Math.sqrt(B.upper**2+B.fore**2-2*B.upper*B.fore*Math.cos(rad(e)));
+  // Wall push-up: a straight body leaning from the ankles; the lean is solved so the hands stay on the wall.
+  const wallPush=(()=>{
+    const lean=(b,u)=>{const dir=[0,Math.cos(rad(b)),Math.sin(rad(b))];return standing({legs:both(s=>flatAt(s)),breath:u,arms:both(()=>HANG)}).pelvis&&
+      {...standing({breath:u,legs:both(s=>flatAt(s))}),pelvis:add([0,B.ank,0],mul(dir,83.9)),trunk:{pitch:b},head:{pitch:b+4}};};
+    const shoulder=(b)=>assemble(lean(b,0)).sides[0].S,B0=14,S0=shoulder(B0),HANDY=128;
+    const WZ=S0[2]+Math.sqrt(armGap(172)**2-(S0[1]-HANDY)**2-(S0[0]-20)**2)+2;
+    const wrist=s=>[s*20,HANDY,WZ-2];
+    return {wall:wallAt(WZ),build:(u)=>{const D=armGap(172-86*u),b=bisect(x=>len(sub(assemble(lean(x,u)).sides[0].S,wrist(1)))-D,B0-2,40),d=lean(b,u);
+      d.arms=both(s=>({ik:{wrist:wrist(s),pole:[s*.8,-.4,-.5],hand:[0,1,.2]}}));return d;}};
+  })();
+  const push=EXERCISES.find(e=>e.id==="inclinePush").rig;
+  EXERCISES.push(
+    // ----- holding a chair back -----
+    lib("miniSquat","扶椅小蹲",{timing:"lower",props:[RAIL],trails:["P"],parts:{thighL:1,thighR:1,pelvis:.8,shankL:.5,shankR:.5},
+      pose:u=>onRail({drop:18*u,pz:-1-11*u,pitch:15*u,breath:u})}),
+    lib("heel","扶椅踮脚",{timing:"lift",front:true,props:[RAIL],trails:["HC"],parts:{shankL:1,shankR:1},
+      pose:u=>{const f=both(s=>rockFoot(flatAt(s).ankle,s*5,24*u)),a=f[0].ankle;return onRail({drop:-(a[1]-B.ank),pz:-1+a[2],legs:f});}}),
+    lib("singleCalf","单腿提踵",{alt:true,timing:"lift",props:[RAIL],trails:["HC"],parts:m=>({["shank"+sideKey(m)]:1}),
+      pose:(u,m,ch)=>{const up=rockFoot(flatAt(m).ankle,m*5,24*u),a=up.ankle,P=[m*6*ch.sh,STAND+a[1]-B.ank,-1+a[2]];
+        return onRail({px:P[0],drop:-(a[1]-B.ank),pz:P[2],legs:both(s=>s===m?up:lifted(s,P,{flex:-6,knee:72,pitch:25},TUCK(ch.q)))});}}),
+    lib("side","扶椅侧抬腿",{alt:true,timing:"lift",front:true,props:[RAIL],trails:["TOL","TOR"],parts:m=>({["thigh"+sideKey(m)]:1,pelvis:.7}),
+      pose:(u,m,ch)=>{const P=[-m*3*ch.sh,STAND,-1];return onRail({px:P[0],legs:both(s=>s===m?lifted(s,P,{abduct:22,knee:4,flex:2},u):null)});}}),
+    lib("weightShift","扶椅左右移重心",{alt:true,front:true,props:[RAIL],trails:["P","HC"],parts:{pelvis:1,thighL:.5,thighR:.5},
+      pose:(u,m)=>onRail({feetX:16,px:m*8*u,drop:1+2*u,legs:both(s=>flatFoot(s*16,0,s*7))})}),
+    lib("backLeg","扶椅向后抬腿",{alt:true,timing:"lift",props:[RAIL],trails:["TOL","TOR"],parts:m=>({["thigh"+sideKey(m)]:1,pelvis:.8}),
+      pose:(u,m,ch)=>{const P=[-m*3*ch.sh,STAND,-1];return onRail({px:P[0],pitch:5*u,legs:both(s=>s===m?lifted(s,P,{flex:-17,knee:4,pitch:12},u):null)});}}),
+    lib("hamstringCurl","扶稳屈膝",{alt:true,timing:"lift",props:[RAIL],trails:["HEL","HER"],parts:m=>({["thigh"+sideKey(m)]:.8,["shank"+sideKey(m)]:1}),
+      pose:(u,m,ch)=>{const P=[-m*3*ch.sh,STAND,-1];return onRail({px:P[0],legs:both(s=>s===m?lifted(s,P,{flex:3,knee:78,pitch:22},u):null)});}}),
+    lib("forwardTap","扶稳向前点步",{alt:true,props:[RAIL],trails:["TOL","TOR"],parts:m=>({["thigh"+sideKey(m)]:.7,pelvis:.5}),
+      pose:(u,m,ch)=>{const heel=add(footPoints(flatAt(m).ankle,m*5,0,0).heel,[0,5*Math.pow(Math.sin(Math.PI*u),.5),26*u]);
+        return onRail({px:-m*3*ch.sh,drop:3+2*u,legs:both(s=>s===m?{ankle:ankleAtHeel(heel,s*5,-16*u),heading:s*5,pitch:-16*u,toeBend:0}:null)});}}),
+    lib("sideTap","扶稳侧向点步",{alt:true,front:true,props:[RAIL],trails:["TOL","TOR"],parts:m=>({["thigh"+sideKey(m)]:.8,pelvis:.6}),
+      pose:(u,m,ch)=>{const ball=add(footPoints(flatAt(m).ankle,m*5,0,0).ball,[m*24*u,5*Math.pow(Math.sin(Math.PI*u),.5),0]);
+        return onRail({px:-m*3*ch.sh,drop:3+2*u,legs:both(s=>s===m?ballFoot(ball,s*5,8*u):null)});}}),
+    lib("singleLegStand","单腿站立提膝",{alt:true,timing:"lift",front:true,props:[RAIL],trails:["KL","KR"],parts:m=>({["thigh"+sideKey(-m)]:1,pelvis:.8}),
+      pose:(u,m,ch)=>{const P=[-m*4*ch.sh,STAND,-1];return onRail({px:P[0],legs:both(s=>s===m?lifted(s,P,{flex:62,knee:72,pitch:15},u):null)});}}),
+    lib("singleLegHinge","单腿前倾平衡",{alt:true,timing:"lower",props:[RAIL],trails:["TOL","TOR","HC"],parts:m=>({["thigh"+sideKey(-m)]:1,pelvis:1,spine:.6}),
+      pose:(u,m,ch)=>{const P=[-m*4*ch.sh,STAND,-1-4*u];return onRail({px:P[0],pz:P[2],pitch:38*u,legs:both(s=>s===m?lifted(s,P,{flex:-38,knee:5,pitch:30},u):null)});}}),
+    // ----- standing free -----
+    lib("standMarch","原地踏步摆臂",{alt:true,trails:["KL","KR","TL","TR"],parts:m=>({["thigh"+sideKey(m)]:1,pelvis:.4}),
+      pose:(u,m,ch)=>{const P=[-m*3*ch.sh,STAND,-1];return standing({px:P[0],legs:both(s=>s===m?lifted(s,P,{flex:68,knee:78,pitch:12},u):null),
+        arms:both(s=>({frame:"world",swing:(s===m?-18:32)*u,abduct:6,elbow:25+15*u,wrist:6}))});}}),
+    lib("standCross","站姿对侧提膝",{alt:true,front:true,trails:["KL","KR","TL","TR"],parts:m=>({["thigh"+sideKey(m)]:1,spine:.9,pelvis:.5}),
+      pose:(u,m,ch)=>{const i=m>0?0:1,P=[-m*3*ch.sh,STAND,-1],d=standing({px:P[0],pitch:14*u,roll:m*4*u,legs:both(s=>s===m?lifted(s,P,{flex:80,knee:85,pitch:12},u):null)}),K=kneeOf(d,i);
+        const r=assemble(d).sides[1-i],pole0=unit(sub(r.E,mix3(r.S,r.W,.5)));
+        d.arms[1-i]={ik:{wrist:mix3(r.W,add(K,[-m*4,10,0]),u),pole:mix3(pole0,[-m,.2,-.6],u),hand:mix3(unit(sub(r.T,r.W)),[m*.3,-.4,1],u)}};return d;}}),
+    lib("hingeRow","俯身划臂",{timing:"lift",trails:["EL","ER"],parts:{clavL:1,clavR:1,upperL:.9,upperR:.9,spine:.5},
+      pose:u=>standing({pitch:42,drop:6,pz:-9,prot:[-3*u,-3*u],arms:both(()=>({frame:"world",swing:3-35*u,abduct:8,elbow:10+92*u,wrist:5}))})}),
+    lib("goodMorning","站姿髋铰链",{timing:"lower",trails:["HC","P"],parts:{pelvis:1,thighL:.7,thighR:.7,spine:.8},
+      pose:u=>{const pitch=45*u,U=orient([0,1,0],{pitch}),F=orient([0,0,1],{pitch}),P=[0,STAND-4*u,-1-12*u],C7=add(P,add(mul(U,B.trunk),mul(F,-1.5)));
+        return standing({pitch,drop:4*u,pz:P[2],arms:both(s=>({ik:{wrist:add(C7,add(add([-s*8,0,0],mul(U,-15)),mul(F,11))),pole:[s,-.3,-.3],hand:[-s,0,0]}}))});}}),
+    // ----- against a wall -----
+    lib("wallSlide","靠墙滑蹲",{timing:"lower",props:[wallAt(-42)],trails:["P"],parts:{thighL:1,thighR:1,pelvis:.7},
+      pose:u=>standing({rest:"thigh",drop:STAND-80+22*u,pz:-26-4*u,pitch:-4,legs:both(s=>flatFoot(s*11,8,s*6))})}),
+    lib("wallToe","靠墙抬脚尖",{timing:"lift",props:[wallAt(-33)],trails:["TOL","TOR"],parts:{shankL:1,shankR:1},
+      pose:u=>standing({drop:STAND-84,pz:-18,pitch:-6,legs:both(s=>rockFoot([s*10,B.ank,10],s*5,-24*u))})}),
+    lib("wallPush","墙面俯卧撑",{timing:"lower",props:[wallPush.wall],trails:["HC","EL"],parts:{upperL:1,upperR:1,foreL:.8,foreR:.8,clavL:.8,clavR:.8,spine:.4},
+      pose:u=>wallPush.build(u)}),
+    // ----- hands on a table -----
+    lib("tableKneeDrive","扶桌提膝",{alt:true,timing:"lift",props:[push.table],handSupport:true,trails:["KL","KR"],parts:m=>({["thigh"+sideKey(m)]:1,spine:1,upperL:.4,upperR:.4}),
+      pose:(u,m)=>{const d=push.plank(0,{breath:u,prot:1}),i=m>0?0:1,leg=d.legs[i];
+        d.legs[i]={...leg,ankle:add(leg.ankle,[0,40*Math.sqrt(u),58*Math.pow(u,1.6)]),pitch:leg.pitch+(20-leg.pitch)*u,toeBend:leg.toeBend*(1-u)};return d;}})
+  );
+//@@LIB@@
+
+  // ---------- precompute ----------
+  // Free arms: a driven pendulum (swing and abduction) with muscle tone. While `free` is 0 a stiff
+  // spring holds it to the constrained arm, so letting go continues from the real arm state.
+  const ARM_K=3/(2*(B.upper+B.fore+B.hand)),G=981,TRACK=2*Math.PI*9,TONE=2*Math.PI*1.1,TONE_Z=.22;
+  function swingArms(ex,raw,dt){
+    const N=raw.length,first=raw.map(r=>assemble(ex.constrained(r.ch))),hang=ex.pendulum.hang;
+    raw.forEach(r=>{r.ch.armAngles=[];});
+    SIDES.forEach((s,i)=>{
+      const frame=WORLD(s),Sx=first.map(p=>p.sides[i].S),cons=first.map(p=>{const sd=p.sides[i];return armAngles(sd.S,sd.E,sd.W,sd.T,frame);});
+      const acc=Sx.map((b,k)=>mul(add(sub(Sx[(k+N-1)%N],b),sub(Sx[(k+1)%N],b)),1/(dt*dt)));
+      let sw=rad(cons[0].swing),vs=0,ab=rad(cons[0].abduct),va=0;const outS=new Float64Array(N),outA=new Float64Array(N);
+      for(let loop=0;loop<3;loop++)for(let k=0;k<N;k++){
+        const w=clamp(raw[k].ch.free),a=acc[k],c=cons[k],kw=mix(TRACK,TONE,w),z=mix(1,TONE_Z,w),g=(G+a[1])*w;
+        vs+=(-kw*kw*(sw-rad(mix(c.swing,hang.swing,w)))-2*z*kw*vs-ARM_K*(g*Math.sin(sw)+w*a[2]*Math.cos(sw)))*dt;sw+=vs*dt;
+        va+=(-kw*kw*(ab-rad(mix(c.abduct,hang.abduct,w)))-2*z*kw*va-ARM_K*(g*Math.sin(ab)+w*a[0]*s*Math.cos(ab)))*dt;ab+=va*dt;
+        if(loop===2){outS[k]=deg(sw);outA[k]=deg(ab);}
+      }
+      raw.forEach((r,k)=>{const w=clamp(r.ch.free),c=cons[k];
+        r.ch.armAngles[i]={frame:"world",swing:mix(c.swing,outS[k],w),abduct:mix(c.abduct,outA[k],w),elbow:mix(c.elbow,hang.elbow,w),twist:mixAngle(c.twist,hang.twist,w),wrist:mixAngle(c.wrist,hang.wrist,w)};});
+    });
+  }
+  const STRIDE=POINTS.length*3;
+  function prepare(ex){
+    if(ex.data)return ex.data;
+    const duration=ex.reps*4,N=Math.round(duration*RATE),dt=duration/N,raw=[];
+    for(let i=0;i<N;i++){const p=i/N*ex.reps,rep=Math.floor(p);raw.push({q:p-rep,rep,ch:ex.channels(p-rep,rep)});}
+    for(const [key,[freq,zeta,lo=-Infinity,hi=Infinity]] of Object.entries(ex.springs||{})){
+      const out=springLoop(raw.map(r=>r.ch[key]),dt,freq,zeta);raw.forEach((r,i)=>{r.ch[key]=clamp(out[i],lo,hi);});
+    }
+    if(ex.post)ex.post(raw.map(r=>r.ch),dt);
+    if(ex.pendulum)swingArms(ex,raw,dt);
+    const pts=new Float32Array(N*STRIDE),effort=new Float32Array(N),seat=new Float32Array(N),reps=new Uint8Array(N);let reach=0;
+    raw.forEach((r,i)=>{const pose=assemble(ex.build(r.ch,r.rep));write(pose,pts,i*STRIDE);effort[i]=r.ch.effort||0;seat[i]=ex.seat?ex.seat(r.ch):0;reps[i]=r.rep;reach=Math.max(reach,pose.reach);});
+    const get=(i,k)=>{const o=((i%N+N)%N)*STRIDE+INDEX[k]*3;return [pts[o],pts[o+1],pts[o+2]];};
+    // Foot loads: feet touching the floor share what the seat does not carry, nearer the COM takes more.
+    const loads=new Float32Array(N*2),metric=new Float32Array(N);
+    for(let i=0;i<N;i++){
+      const com=get(i,"COM"),w=["L","R"].map(k=>{const low=Math.min(get(i,"HE"+k)[1],get(i,"BA"+k)[1],get(i,"TO"+k)[1]);if(low>1.2)return 0;const c=mix3(get(i,"HE"+k),get(i,"TO"+k),.5);return 1/(Math.hypot(c[0]-com[0],c[2]-com[2])+4);});
+      const tot=w[0]+w[1]||1;loads[i*2]=w[0]/tot*(1-seat[i]);loads[i*2+1]=w[1]/tot*(1-seat[i]);
+      const a=get(i-1,ex.metric.point),b=get(i+1,ex.metric.point),v=mul(sub(b,a),1/(2*dt));metric[i]=ex.metric.mode==="vy"?v[1]:len(v);
+    }
+    const lo=[1e9,0,1e9],hi=[-1e9,-1e9,-1e9];let bx=0,bz=0;
+    for(let i=0;i<N;i++){for(let k=0;k<POINTS.length;k++){const o=i*STRIDE+k*3;for(let a=0;a<3;a++){lo[a]=Math.min(lo[a],pts[o+a]);hi[a]=Math.max(hi[a],pts[o+a]);}}
+      const f=mix3(get(i,"HEL"),get(i,"TOR"),.5);bx+=f[0];bz+=f[2];}
+    lo[1]=0;hi[1]+=B.head;
+    for(const pr of ex.props){const b=pr.type==="chair"?[[-pr.half,0,pr.back],[pr.half,pr.top,pr.front]]:[[-pr.half,0,pr.near],[pr.half,pr.top,pr.far]];for(let a=0;a<3;a++){lo[a]=Math.min(lo[a],b[0][a]);hi[a]=Math.max(hi[a],b[1][a]);}}
+    const base=[bx/N,bz/N];let floorR=0;
+    for(let i=0;i<N;i+=4)for(const k of ["HEL","TOL","HER","TOR"]){const p=get(i,k);floorR=Math.max(floorR,Math.hypot(p[0]-base[0],p[2]-base[1]));}
+    ex.data={N,dt,duration,pts,effort,seat,reps,loads,metric,bounds:[lo,hi],base,floorR:floorR+30,reach,get};
+    return ex.data;
+  }
+  // ---------- rendering ----------
+  const THEMES={
+    dark:{bg0:"#1f3d35",bg1:"#0a1411",floor:"255,255,255",ring:"rgba(255,255,255,.09)",near:"#f5f2e8",far:"#86a194",outline:"#0e1b17",accent:"#ff7a45",
+      glow:"255,122,69",trail:"111,227,193",ghost:"245,242,232",prop:"rgba(205,225,214,.38)",propFill:"rgba(205,225,214,.07)",shadow:"0,0,0",com:"#ffd166",support:"111,227,193",lighter:true},
+    light:{bg0:"#f3f5ee",bg1:"#dce4d3",floor:"26,60,52",ring:"rgba(26,60,52,.12)",near:"#17332c",far:"#8da396",outline:"#eef1e8",accent:"#c45532",
+      glow:"196,85,50",trail:"38,150,136",ghost:"23,51,44",prop:"rgba(26,60,52,.4)",propFill:"rgba(26,60,52,.06)",shadow:"20,45,38",com:"#d48806",support:"38,150,136",lighter:false}
+  };
+  const rgb=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)),hex=c=>"rgb("+c.map(Math.round).join(",")+")";
+  const mixRGB=(a,b,t)=>a.map((v,i)=>mix(v,b[i],clamp(t)));
+  // Orthographic camera: yaw 0 looks at the figure's front, 90 at its right side; pitch looks down.
+  function camera(yaw,pitch){
+    const cy=Math.cos(rad(yaw)),sy=Math.sin(rad(yaw)),cp=Math.cos(rad(pitch)),sp=Math.sin(rad(pitch));
+    return v=>{const X=v[0]*cy+v[2]*sy,Z=-v[0]*sy+v[2]*cy;return [X,v[1]*cp-Z*sp,Z*cp+v[1]*sp];};
+  }
+  // The frame fits the whole cycle's bounding box, so the view never zooms while playing.
+  // Fit uses the projected points of the whole cycle (plus props), so rotating never crops or zooms mid-move.
+  function fitView(ex,data,cam,w,h){
+    let x0=1e9,x1=-1e9,y0=1e9,y1=-1e9;const see=v=>{const p=cam(v);x0=Math.min(x0,p[0]);x1=Math.max(x1,p[0]);y0=Math.min(y0,p[1]);y1=Math.max(y1,p[1]);};
+    for(let i=0;i<data.N;i+=6)for(let k=0;k<POINTS.length;k++){const o=i*STRIDE+k*3;see([data.pts[o],data.pts[o+1],data.pts[o+2]]);}
+    for(const pr of ex.props){const z=pr.type==="chair"?[pr.back,pr.front]:pr.type==="wall"?[pr.near,pr.near]:[pr.near,pr.near+25];for(const x of [-pr.half,pr.half])for(const y of [0,pr.top])for(const zz of z)see([x,y,zz]);}
+    see([data.base[0],0,data.base[1]]);y1+=B.head*1.2;
+    const pad=Math.min(w,h)*.08,s=Math.min((w-2*pad)/(x1-x0),(h-2*pad)/(y1-y0));
+    return {s,cx:w/2-(x0+x1)/2*s,cy:h/2+(y0+y1)/2*s};
+  }
+  // Points at a fractional frame, interpolated so slow motion stays smooth.
+  function sampler(data,f){
+    const N=data.N;f=((f%N)+N)%N;const i=Math.floor(f),j=(i+1)%N,a=f-i,P=data.pts;
+    return k=>{const o=INDEX[k]*3,p=i*STRIDE+o,q=j*STRIDE+o;return [P[p]+(P[q]-P[p])*a,P[p+1]+(P[q+1]-P[p+1])*a,P[p+2]+(P[q+2]-P[p+2])*a];};
+  }
+  function polyline(ctx,pts,close){ctx.beginPath();pts.forEach((p,i)=>i?ctx.lineTo(p[0],p[1]):ctx.moveTo(p[0],p[1]));if(close)ctx.closePath();}
+  function drawFloor(ctx,proj,data,pal,pitch){
+    const [bx,bz]=data.base,R=data.floorR,c=proj([bx,0,bz]),r=R*proj.s;
+    ctx.save();ctx.translate(c[0],c[1]);ctx.scale(1,Math.max(.05,Math.sin(rad(pitch))));
+    const g=ctx.createRadialGradient(0,0,0,0,0,r);g.addColorStop(0,"rgba("+pal.floor+",.10)");g.addColorStop(.7,"rgba("+pal.floor+",.05)");g.addColorStop(1,"rgba("+pal.floor+",0)");
+    ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,r,0,2*Math.PI);ctx.fill();ctx.restore();
+    ctx.strokeStyle=pal.ring;ctx.lineWidth=1;
+    for(const f of [.45,.8]){const pts=[];for(let i=0;i<=72;i++){const a=i/72*2*Math.PI;pts.push(proj([bx+Math.cos(a)*R*f,0,bz+Math.sin(a)*R*f]));}polyline(ctx,pts);ctx.stroke();}
+  }
+  function drawProp(ctx,proj,pr,pal){
+    const line=(a,b,w)=>{const p=proj(a),q=proj(b);ctx.lineWidth=w*proj.s;ctx.beginPath();ctx.moveTo(p[0],p[1]);ctx.lineTo(q[0],q[1]);ctx.stroke();};
+    const quad=(pts)=>{polyline(ctx,pts.map(proj),true);ctx.fill();ctx.lineWidth=1.6*proj.s;ctx.stroke();};
+    ctx.strokeStyle=pal.prop;ctx.fillStyle=pal.propFill;ctx.lineCap="round";
+    if(pr.type==="chair"){
+      const {seat:y,front:f,back:b,half:h,top:t}=pr;
+      for(const x of [-h+2,h-2]){line([x,0,f-2],[x,y,f-2],2.2);line([x,0,b+2],[x,t,b+2],2.2);}
+      quad([[-h,y,f],[h,y,f],[h,y,b],[-h,y,b]]);line([-h+2,t,b+2],[h-2,t,b+2],2.6);line([-h+2,y+26,b+2],[h-2,y+26,b+2],1.6);
+    }else if(pr.type==="wall"){
+      const {top:y,near:z,half:h}=pr;quad([[-h,0,z],[h,0,z],[h,y,z],[-h,y,z]]);
+    }else{
+      const {top:y,near:n,far:f,half:h}=pr;
+      for(const x of [-h+3,h-3])for(const z of [n+3,f-3])line([x,0,z],[x,y,z],2.4);
+      quad([[-h,y,n],[h,y,n],[h,y,f],[-h,y,f]]);
+    }
+  }
+  function hull(ps){
+    ps=ps.slice().sort((a,b)=>a[0]-b[0]||a[1]-b[1]);if(ps.length<3)return ps;
+    const cr=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]),lo=[],up=[];
+    for(const p of ps){while(lo.length>1&&cr(lo[lo.length-2],lo[lo.length-1],p)<=0)lo.pop();lo.push(p);}
+    for(const p of ps.reverse()){while(up.length>1&&cr(up[up.length-2],up[up.length-1],p)<=0)up.pop();up.push(p);}
+    return lo.slice(0,-1).concat(up.slice(0,-1));
+  }
+  const inside=(poly,p)=>{let c=false;for(let i=0,j=poly.length-1;i<poly.length;j=i++){const a=poly[i],b=poly[j];if((a[1]>p[1])!==(b[1]>p[1])&&p[0]<(b[0]-a[0])*(p[1]-a[1])/(b[1]-a[1])+a[0])c=!c;}return c;};
+  // Foot shadows darken with the load a foot carries; with `com` on, the support area and the
+  // centre of mass are drawn, the marker turning orange when the COM leaves the support.
+  function drawGround(ctx,proj,ex,data,at,fi,pal,showCom){
+    const i=Math.floor(fi)%data.N;
+    ["L","R"].forEach((k,n)=>{const he=at("HE"+k),to=at("TO"+k);if(Math.min(he[1],to[1],at("BA"+k)[1])>6)return;
+      const a=proj([he[0],0,he[2]]),b=proj([to[0],0,to[2]]),load=data.loads[i*2+n];
+      ctx.strokeStyle="rgba("+pal.shadow+","+(.14+.34*load).toFixed(3)+")";ctx.lineWidth=(6+4*load)*proj.s;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();});
+    if(!showCom)return;
+    const contact=[];
+    for(const k of ["L","R"])for(const f of ["HE","BA","TO"]){const p=at(f+k);if(p[1]<1.2)contact.push([p[0],p[2]]);}
+    if(data.seat[i]>.05){const pr=ex.props[0];for(const x of [-15,15])contact.push([x,pr.front],[x,pr.back+8]);}
+    if(ex.handSupport)for(const k of ["L","R"]){const w=at("W"+k);contact.push([w[0],w[2]]);}
+    const poly=hull(contact),com=at("COM"),inPoly=poly.length>2&&inside(poly,[com[0],com[2]]);
+    if(poly.length>2){polyline(ctx,poly.map(p=>proj([p[0],0,p[1]])),true);ctx.fillStyle="rgba("+pal.support+",.12)";ctx.fill();ctx.setLineDash([4,5]);ctx.strokeStyle="rgba("+pal.support+",.6)";ctx.lineWidth=1.4;ctx.stroke();ctx.setLineDash([]);}
+    const c=proj(com),g=proj([com[0],0,com[2]]),col=inPoly?pal.com:pal.accent;
+    ctx.setLineDash([3,4]);ctx.strokeStyle=col;ctx.lineWidth=1.3;ctx.beginPath();ctx.moveTo(c[0],c[1]);ctx.lineTo(g[0],g[1]);ctx.stroke();ctx.setLineDash([]);
+    ctx.fillStyle=col;ctx.beginPath();ctx.arc(g[0],g[1],3.2,0,2*Math.PI);ctx.fill();
+    ctx.save();ctx.shadowColor=col;ctx.shadowBlur=12;ctx.beginPath();ctx.arc(c[0],c[1],5,0,2*Math.PI);ctx.fill();ctx.restore();
+  }
+  // Limbs in cm of stroke width. Far limbs fade toward the background; every stroke gets a thin
+  // outline in the stage colour so crossing limbs stay readable.
+  const SEGMENTS=[
+    ...["L","R"].flatMap(k=>[
+      {id:"thigh"+k,a:"H"+k,b:"K"+k,w:3.8},{id:"shank"+k,a:"K"+k,b:"A"+k,w:3.4},
+      {id:"heel"+k,part:"shank"+k,a:"A"+k,b:"HE"+k,w:2.8},{id:"foot"+k,part:"shank"+k,a:"A"+k,b:"BA"+k,w:2.8},{id:"toe"+k,part:"shank"+k,a:"BA"+k,b:"TO"+k,w:2.5},
+      {id:"upper"+k,a:"S"+k,b:"E"+k,w:3.2},{id:"fore"+k,a:"E"+k,b:"W"+k,w:2.9},{id:"hand"+k,part:"fore"+k,a:"W"+k,b:"T"+k,w:2.5},
+      {id:"clav"+k,a:"C7",b:"S"+k,w:3.2}]),
+    {id:"pelvis",a:"HL",b:"HR",w:3.8},{id:"sacrum",part:"pelvis",a:"P",b:"SB",w:3.8},{id:"spine",curve:["SB","SM","C7"],w:4.4},{id:"neck",part:"spine",a:"C7",b:"NT",w:3.2}
+  ];
+  function strokeSeg(ctx,pts){
+    ctx.beginPath();ctx.moveTo(pts[0][0],pts[0][1]);
+    if(pts.length===3){const c=[2*pts[1][0]-(pts[0][0]+pts[2][0])/2,2*pts[1][1]-(pts[0][1]+pts[2][1])/2];ctx.quadraticCurveTo(c[0],c[1],pts[2][0],pts[2][1]);}
+    else ctx.lineTo(pts[1][0],pts[1][1]);
+    ctx.stroke();
+  }
+  function drawFigure(ctx,proj,at,pal,parts,effort,{glow=true,ghost=0}={}){
+    const P={};for(const k of POINTS)P[k]=proj(at(k));
+    const center=(P.P[2]+P.C7[2])/2,s=proj.s;
+    const items=SEGMENTS.map(sg=>{const pts=(sg.curve||[sg.a,sg.b]).map(k=>P[k]);return {sg,pts,depth:pts.reduce((a,p)=>a+p[2],0)/pts.length};});
+    items.push({head:true,depth:P.HC[2]+1});items.sort((a,b)=>a.depth-b.depth);
+    ctx.lineCap="round";ctx.lineJoin="round";
+    for(const it of items){
+      const t=clamp((it.depth-center)/20+.5),baseRGB=mixRGB(rgb(pal.far),rgb(pal.near),t),base=hex(baseRGB);
+      if(it.head){
+        const c=P.HC,r=B.head*s;
+        if(ghost){ctx.strokeStyle="rgba("+pal.ghost+","+ghost+")";ctx.lineWidth=2.2*s;ctx.beginPath();ctx.arc(c[0],c[1],r,0,2*Math.PI);ctx.stroke();continue;}
+        const hc0=at("HC"),fw0=unit(sub(at("HF"),hc0)),up0=unit(sub(at("HU"),hc0));
+        if(avatar==="female"){const b=proj(add(hc0,add(mul(fw0,-B.head*.78),mul(up0,B.head*.5)))),br=B.head*.46*s;
+          ctx.fillStyle=pal.outline;ctx.beginPath();ctx.arc(b[0],b[1],br+1.8,0,2*Math.PI);ctx.fill();ctx.fillStyle=base;ctx.beginPath();ctx.arc(b[0],b[1],br,0,2*Math.PI);ctx.fill();}
+        ctx.fillStyle=pal.outline;ctx.beginPath();ctx.arc(c[0],c[1],r+1.8,0,2*Math.PI);ctx.fill();
+        ctx.fillStyle=base;ctx.beginPath();ctx.arc(c[0],c[1],r,0,2*Math.PI);ctx.fill();
+        // A visor band on the face side shows where the head points, from any angle.
+        const hc=at("HC"),fw=unit(sub(at("HF"),hc)),up=unit(sub(at("HU"),hc)),side=cross(up,fw),vis=[];
+        for(let a=-70;a<=70;a+=7){const v=proj(add(hc,add(mul(up,1.4),mul(add(mul(fw,Math.cos(rad(a))),mul(side,Math.sin(rad(a)))),B.head*.93))));if(v[2]>=c[2]-B.head*.1)vis.push(v);}
+        if(vis.length>1){ctx.strokeStyle=pal.accent;ctx.lineWidth=2.4*s;polyline(ctx,vis);ctx.stroke();}
+        continue;
+      }
+      const w=it.sg.w*s;
+      if(ghost){ctx.strokeStyle="rgba("+pal.ghost+","+ghost+")";ctx.lineWidth=w*.8;strokeSeg(ctx,it.pts);continue;}
+      const e=clamp((parts[it.sg.part||it.sg.id]||0)*effort);
+      if(glow&&e>.04){
+        ctx.save();if(pal.lighter){ctx.globalCompositeOperation="lighter";ctx.shadowColor="rgba("+pal.glow+",.9)";ctx.shadowBlur=14*e;}
+        ctx.strokeStyle="rgba("+pal.glow+","+(.16+.4*e).toFixed(3)+")";ctx.lineWidth=w+(5+9*e);strokeSeg(ctx,it.pts);ctx.restore();
+      }
+      ctx.strokeStyle=pal.outline;ctx.lineWidth=w+3;strokeSeg(ctx,it.pts);
+      ctx.strokeStyle=glow&&e>.04?hex(mixRGB(baseRGB,rgb(pal.accent),e*.55)):base;ctx.lineWidth=w;strokeSeg(ctx,it.pts);
+    }
+  }
+  // Fading light-trails of chosen points over the last ~0.5 s of the cycle.
+  function drawTrails(ctx,proj,data,f,keys,pal){
+    ctx.save();if(pal.lighter)ctx.globalCompositeOperation="lighter";ctx.lineCap="round";
+    for(const k of keys){
+      const pts=[];for(let j=0;j<=30;j++)pts.push(proj(sampler(data,f-j*2)(k)));
+      let travel=0;for(let j=1;j<pts.length;j++)travel+=Math.hypot(pts[j][0]-pts[j-1][0],pts[j][1]-pts[j-1][1]);
+      if(travel<3*proj.s)continue;
+      for(let j=1;j<pts.length;j++){const a=1-j/pts.length;ctx.strokeStyle="rgba("+pal.trail+","+(a*a*.9).toFixed(3)+")";ctx.lineWidth=Math.max(1,(2.4*a+.4)*proj.s);ctx.beginPath();ctx.moveTo(pts[j-1][0],pts[j-1][1]);ctx.lineTo(pts[j][0],pts[j][1]);ctx.stroke();}
+    }
+    ctx.restore();
+  }
+  function background(ctx,w,h,pal){
+    const g=ctx.createRadialGradient(w/2,h*.42,0,w/2,h*.42,Math.hypot(w,h)*.62);g.addColorStop(0,pal.bg0);g.addColorStop(1,pal.bg1);
+    ctx.fillStyle=g;ctx.fillRect(0,0,w,h);
+  }
+  // One view of the figure at fractional frame f, inside the box (x0, y0, w, h).
+  function scene(ctx,x0,y0,w,h,ex,data,f,o,pal){
+    const yaw=o.yaw??ex.view.yaw,pitch=o.pitch??ex.view.pitch,cam=camera(yaw,pitch),F=fitView(ex,data,cam,w,h);
+    const proj=v=>{const c=cam(v);return [x0+F.cx+c[0]*F.s,y0+F.cy-c[1]*F.s,c[2]];};proj.s=F.s;
+    const i=Math.floor(f)%data.N,at=sampler(data,f),rep=data.reps[i];
+    drawFloor(ctx,proj,data,pal,pitch);
+    for(const pr of ex.props)drawProp(ctx,proj,pr,pal);
+    drawGround(ctx,proj,ex,data,at,f,pal,o.com);
+    if(o.trail&&!o.small)drawTrails(ctx,proj,data,f,ex.trails,pal);
+    const parts=ex.parts(rep),effort=data.effort[i];
+    if(o.ghost&&!o.small)for(const [lag,a] of [[30,.07],[20,.11],[10,.17]])drawFigure(ctx,proj,sampler(data,f-lag),pal,parts,0,{ghost:a});
+    drawFigure(ctx,proj,at,pal,parts,effort,{glow:o.glow!==false});
+    if(ex.towel){const a=proj(at("WL")),b=proj(at("WR"));ctx.strokeStyle="#c9a36a";ctx.lineCap="round";ctx.lineWidth=2.6*F.s;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.lineTo(b[0],b[1]);ctx.stroke();}
+    return {q:(f/data.N*ex.reps)%1,rep,effort};
+  }
+  const frameAt=(data,t)=>((t/data.duration)%1+1)%1*data.N;
+  // t is seconds into the cycle. o: {yaw, pitch, theme, ghost, trail, com, glow, small}.
+  function render(ctx,w,h,ex,t,o={}){
+    const data=prepare(ex),pal=THEMES[o.theme||"dark"];background(ctx,w,h,pal);
+    return scene(ctx,0,0,w,h,ex,data,frameAt(data,t),o,pal);
+  }
+  // Start pose beside the end pose (the most-worked frame) of the given rep.
+  function renderPair(ctx,w,h,ex,rep,o={}){
+    const data=prepare(ex),pal=THEMES[o.theme||"dark"],per=data.N/ex.reps,a=Math.round((rep%ex.reps)*per);let b=a;
+    for(let i=a;i<a+per;i++)if(data.effort[i]>data.effort[b])b=i;
+    background(ctx,w,h,pal);const top=24;
+    scene(ctx,0,top,w/2,h-top,ex,data,a,{...o,ghost:false,trail:false},pal);scene(ctx,w/2,top,w/2,h-top,ex,data,b,{...o,ghost:false,trail:false},pal);
+    ctx.fillStyle=pal.near;ctx.globalAlpha=.8;ctx.font="600 13px system-ui";ctx.textAlign="center";ctx.fillText("起始姿势",w*.25,20);ctx.fillText("动作终点",w*.75,20);ctx.globalAlpha=1;
+  }
+  let avatar="male";
+  const setAvatar=v=>{avatar=v==="female"?"female":"male";},getAvatar=()=>avatar;
+  const BY_ID=Object.fromEntries(EXERCISES.map(e=>[e.id,e]));
+  const find=id=>BY_ID[id];
+  const viewLabel=id=>BY_ID[id].view.yaw>45?"侧面 · 面向右 →":"正面 · 如照镜子";
+  // Draw into a canvas at the device pixel ratio. Unprepared moves are computed on a queue, one per tick,
+  // unless `sync` asks for them now; until then nothing is drawn and false is returned.
+  const queue=[];let pumping=false;
+  function pump(){const ex=queue.shift();if(!ex){pumping=false;return;}prepare(ex);setTimeout(pump,0);}
+  function draw(canvas,id,t,o={}){
+    const ex=BY_ID[id];if(!ex)return false;
+    if(!ex.data&&!o.sync){if(!queue.includes(ex))queue.push(ex);if(!pumping){pumping=true;setTimeout(pump,0);}return false;}
+    const box=canvas.getBoundingClientRect(),w=box.width,h=box.height;if(!w||!h)return false;
+    const dpr=Math.min((typeof window!=="undefined"&&window.devicePixelRatio)||1,2);
     if(canvas.width!==Math.round(w*dpr)||canvas.height!==Math.round(h*dpr)){canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);}
-    const ctx=canvas.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);ctx.clearRect(0,0,w,h);
-    if(comparison){
-      const shift=sideViews.has(id)?.05:0,scale=Math.min(w/660,(h-36)/355);
-      render(ctx,pose(id,0,side),w*(.25-shift),h*.87,scale,{small:true});
-      render(ctx,pose(id,1,side),w*(.75-shift),h*.87,scale,{small:true,guide:{dir:1,alpha:1}});
-      ctx.fillStyle="#355c4d";ctx.textAlign="center";ctx.font="13px system-ui";ctx.fillText("起始姿势",w*.25,22);ctx.fillText("动作终点",w*.75,22);
-    }else{
-      const p=phase==null?-1:((phase%1)+1)%1,e=p%.5,guide=p<0?null:{dir:p<.5?1:-1,alpha:.35+.65*clamp(Math.min(e,.5-e)/.05)};
-      // Leave room for arrows above the head and on the floor.
-      const s=guide?Math.min(w/(small?310:440),(h-10)/372):Math.min(w/(small?255:440),(h-(small?5:15))/335),y=h*(small?.96:.92);
-      render(ctx,pose(id,t,side),w*.48,guide?Math.min(y,h-27*s):y,s,{small,guide});
-    }
+    const ctx=canvas.getContext("2d");ctx.setTransform(dpr,0,0,dpr,0,0);
+    if(o.pair)renderPair(ctx,w,h,ex,o.rep||0,o);else render(ctx,w,h,ex,t,o);
+    return true;
   }
-  function render(ctx,p,cx,cy,scale,{small=false,guide=null}={}){
-    const {project,depth}=viewOf(p);
-    ctx.save();ctx.translate(cx,cy);ctx.scale(scale,scale);
-    const stroke2=(u,v,color,width)=>{ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineCap="round";ctx.beginPath();ctx.moveTo(...u);ctx.lineTo(...v);ctx.stroke();};
-    const line=(v1,v2,color,width=5)=>stroke2(project(v1),project(v2),color,width);
-    const circle=(v,r,color)=>{const q=project(v);ctx.fillStyle=color;ctx.beginPath();ctx.arc(q[0],q[1],r,0,Math.PI*2);ctx.fill();};
-    const poly=(vs,color)=>{ctx.fillStyle=color;ctx.beginPath();vs.forEach((v,i)=>{const q=project(v);if(i)ctx.lineTo(...q);else ctx.moveTo(...q);});ctx.closePath();ctx.fill();};
-    // Tapered limb with a light rim, shaded as if lit from the upper left.
-    const solid=(A,B,r1,r2,color,rim=true)=>{
-      if(rim){ctx.fillStyle=RIM;ctx.beginPath();capsule(ctx,A,B,r1+1.7,r2+1.7);ctx.fill();}
-      const [ux,uy]=dir2(A,B),k=.8*ux-.6*uy<0?1:-1,n=len2(A,B)>.5?[-uy*k,ux*k]:[-.6,-.8],r=Math.max(r1,r2),m=lerp(A,B,.5);
-      const g=ctx.createLinearGradient(m[0]+n[0]*r,m[1]+n[1]*r,m[0]-n[0]*r,m[1]-n[1]*r);g.addColorStop(0,shade(color,.22));g.addColorStop(.45,color);g.addColorStop(1,shade(color,-.22));
-      ctx.fillStyle=g;ctx.beginPath();capsule(ctx,A,B,r1,r2);ctx.fill();
-    };
-    const arrowHead=(tip,from,size)=>{
-      const [ux,uy]=dir2(from,tip),bx=tip[0]-ux*size,by=tip[1]-uy*size,w=size*.38;
-      ctx.beginPath();ctx.moveTo(...tip);ctx.lineTo(bx-uy*w,by+ux*w);ctx.lineTo(bx+uy*w,by-ux*w);ctx.closePath();
-      ctx.lineJoin="round";ctx.lineWidth=3;ctx.strokeStyle=RIM;ctx.stroke();ctx.fillStyle=ACTIVE;ctx.fill();
-    };
-    // Floor shadow, plus foot shadows that fade as a foot lifts.
-    const blob=(q,rx,ry,alpha)=>{if(alpha<.01)return;ctx.save();ctx.translate(...q);ctx.scale(rx,ry);const g=ctx.createRadialGradient(0,0,0,0,0,1);g.addColorStop(0,"#344e3e");g.addColorStop(1,"rgba(52,78,62,0)");ctx.globalAlpha=alpha;ctx.fillStyle=g;ctx.beginPath();ctx.arc(0,0,1,0,Math.PI*2);ctx.fill();ctx.restore();};
-    blob([15,3],140,16,.22);
-    for(const l of p.legs)blob(project([(l.f[0]+l.toe[0])/2,0,(l.f[2]+l.toe[2])/2]),24,5.5,.34*clamp(1-(Math.min(l.f[1],l.toe[1])-10)/40));
-    const chair=(z,seatY,backY)=>{
-      const c="#7d9180";
-      for(const x of [-42,42]){line([x,0,z-35],[x,backY,z-35],c,6);line([x,0,z+34],[x,seatY,z+34],c,6);}
-      poly([[-45,seatY,z-38],[45,seatY,z-38],[45,seatY,z+38],[-45,seatY,z+38]],"#bac7ad");
-      line([-44,backY,z-35],[44,backY,z-35],c,12);
-      line([-44,seatY,z+36],[44,seatY,z+36],c,7);
-    };
-    if(p.seated||p.id==="stand"||p.id==="squat")chair(-60,76,163);
-    if(supported.has(p.id))chair(115,86,190);
-    const wall=z=>{poly([[-65,0,z],[65,0,z],[65,325,z],[-65,325,z]],"#d5ddca");line([-65,0,z],[-65,325,z],"#9dad97",4);};
-    if(p.id==="wallPush")wall(132);
-    if(p.id==="wallSlide"||p.id==="wallToe")wall(-50);
-    if(p.id==="inclinePush"||p.id==="tableKneeDrive"){
-      const c="#7d9180",T=TABLE_Y,z0=TABLE_HAND[2]-16,z1=z0+60;
-      for(const x of [-52,52]){line([x,0,z0+4],[x,T,z0+4],c,6);line([x,0,z1-4],[x,T,z1-4],c,6);}
-      poly([[-58,T,z0],[58,T,z0],[58,T,z1],[-58,T,z1]],"#bac7ad");line([-58,T,z0],[58,T,z0],c,7);
-    }
-    // Motion paths sit behind the figure; their arrowheads are drawn last, on top.
-    const paths=guide?guides(p.id,p.side):[];
-    ctx.setLineDash([.1,8.5]);ctx.lineCap="round";ctx.lineWidth=3.6;ctx.strokeStyle="rgba(196,85,50,.55)";
-    for(const g of paths){ctx.beginPath();g.forEach((q,i)=>i?ctx.lineTo(q[0],q[1]):ctx.moveTo(q[0],q[1]));ctx.stroke();}
-    ctx.setLineDash([]);
-    // Far-side limbs in side view are darker, so overlapping legs stay readable.
-    const dim=(c,s)=>p.isSide&&s>0?shade(c,-.14):c,items=[];
-    for(const l of p.legs){
-      const c=dim(l.active?ACTIVE:"#344c5b",l.s),knee={v:l.k,n:2,r:4.6,active:l.active};
-      items.push({a:l.h,b:l.k,r1:12.5,r2:9.8,c,glow:l.active,joint:knee},{a:l.k,b:l.f,r1:9.6,r2:6.4,c,glow:l.active,joint:knee},{a:add(l.f,mul(sub(l.toe,l.f),-.22)),b:l.toe,r1:7,r2:6.2,c:dim("#213f36",l.s),shoe:true});
-    }
-    for(const arm of p.arms){
-      const elbow={v:arm.elbow,n:2,r:3.9,active:arm.active};
-      items.push({a:arm.sh,b:arm.elbow,r1:9,r2:7.4,c:dim(arm.active?ACTIVE:"#507768",arm.s),glow:arm.active,joint:elbow},{a:arm.elbow,b:arm.hand,r1:7.2,r2:5.4,c:dim(SKIN,arm.s),glow:arm.active,joint:elbow,hand:true});
-    }
-    // Render far limbs, body, then near limbs for clear front/back occlusion.
-    const mid=it=>depth(add(it.a,it.b)),cut=depth(p.hip)*2;
-    items.sort((x,y)=>mid(x)-mid(y));
-    if(!small){ctx.fillStyle="rgba(196,85,50,"+(.1+.16*p.t).toFixed(3)+")";ctx.beginPath();for(const it of items)if(it.glow)capsule(ctx,project(it.a),project(it.b),it.r1+6,it.r2+6);ctx.fill();}
-    // Joint markers go with the later of their two segments, so far knees stay hidden.
-    const drawItem=it=>{
-      const A=project(it.a),B=project(it.b),[ux,uy]=dir2(A,B);solid(A,B,it.r1,it.r2,it.c);
-      if(it.shoe&&len2(A,B)>4){const o=ux<0?-4.3:4.3;stroke2([A[0]-uy*o,A[1]+ux*o],[B[0]-uy*o,B[1]+ux*o],"#e9e5d6",2.2);}
-      if(it.hand)solid([B[0]-ux,B[1]-uy],[B[0]+ux*6.5,B[1]+uy*6.5],6.4,5.6,it.c);
-      const j=it.joint;if(j&&!--j.n){circle(j.v,j.r,RIM);circle(j.v,j.r/2,j.active?"#a7482c":"#456252");}
-    };
-    items.filter(it=>mid(it)<cut).forEach(drawItem);
-    const hp=project(p.hip),sp=project(p.shoulder),female=avatar==="female",bodyHalf=p.isSide?17:(female?25:29),waist=female?bodyHalf-5:bodyHalf-3;
-    const al=len2(hp,sp),[ux,uy]=dir2(hp,sp),at=(o,along,across)=>[o[0]+ux*along-uy*across,o[1]+uy*along+ux*across];
-    const tg=ctx.createLinearGradient(sp[0],sp[1],hp[0],hp[1]);tg.addColorStop(0,"#367762");tg.addColorStop(1,"#245645");
-    ctx.fillStyle=tg;ctx.beginPath();ctx.moveTo(...at(hp,0,-bodyHalf));ctx.lineTo(...at(hp,0,bodyHalf));ctx.quadraticCurveTo(...at(hp,.42*al,waist),...at(sp,0,bodyHalf+3));ctx.quadraticCurveTo(...at(sp,7,0),...at(sp,0,-bodyHalf-3));ctx.quadraticCurveTo(...at(hp,.42*al,-waist),...at(hp,0,-bodyHalf));ctx.closePath();ctx.fill();
-    ctx.strokeStyle="#63917a";ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(...at(sp,-9,-bodyHalf+6));ctx.lineTo(...at(hp,9,-waist+5));ctx.stroke();
-    line(add(p.hip,[-23,0,0]),add(p.hip,[23,0,0]),"#214d3f",12);
-    solid(sp,project(add(p.head,[0,-14,0])),7.2,6.6,SKIN,false);
-    items.filter(it=>mid(it)>=cut).forEach(drawItem);
-    // The two mature, athletic appearances share the exact same motion rig.
-    // The head follows the trunk, so hinged and inclined moves keep a neutral neck.
-    const head=project(p.head);ctx.save();ctx.translate(...head);ctx.rotate(Math.atan2(sp[0]-hp[0],hp[1]-sp[1]));
-    const path=(color,draw)=>{ctx.fillStyle=color;ctx.beginPath();draw();ctx.closePath();ctx.fill();};
-    const stroke=(color,width,draw)=>{ctx.strokeStyle=color;ctx.lineWidth=width;ctx.lineCap="round";ctx.beginPath();draw();ctx.stroke();};
-    const hair="#26312e",skin="#dba47f",lightSkin="#e9b992";
-    if(female)path(hair,()=>{ctx.moveTo(-15,-18);ctx.bezierCurveTo(-39,-26,-40,-4,-31,10);ctx.quadraticCurveTo(-26,21,-33,31);ctx.bezierCurveTo(-11,22,-21,3,-15,-18);});
-    if(p.isSide){
-      path(skin,()=>{ctx.moveTo(-17,-16);ctx.quadraticCurveTo(1,-30,15,-17);ctx.lineTo(18,-2);ctx.lineTo(24,5);ctx.quadraticCurveTo(26,8,18,10);ctx.lineTo(16,19);ctx.quadraticCurveTo(7,28,-4,21);ctx.lineTo(-16,10);});
-      path(lightSkin,()=>{ctx.moveTo(-7,-15);ctx.quadraticCurveTo(10,-25,15,-14);ctx.lineTo(16,-1);ctx.lineTo(22,5);ctx.lineTo(15,8);ctx.lineTo(13,17);ctx.quadraticCurveTo(5,21,-4,15);});
-      path(hair,()=>{ctx.moveTo(-19,9);ctx.bezierCurveTo(-28,-8,-20,-29,0,-28);ctx.quadraticCurveTo(15,-29,19,-18);ctx.quadraticCurveTo(7,-9,-6,-12);ctx.lineTo(-10,5);ctx.lineTo(-15,8);});
-      stroke("#1e302d",2,()=>{ctx.moveTo(6,-3);ctx.lineTo(13,-2);});
-      stroke("#2a3932",1.7,()=>{ctx.moveTo(8,2);ctx.lineTo(12,3);});
-      stroke("#9f604a",1.3,()=>{ctx.moveTo(11,14);ctx.quadraticCurveTo(15,15,17,13);});
-      ctx.fillStyle=skin;ctx.beginPath();ctx.ellipse(-10,6,4,6,-.1,0,Math.PI*2);ctx.fill();
-      stroke("#b57c5e",1,()=>{ctx.moveTo(-11,4);ctx.quadraticCurveTo(-6,2,-9,9);});
-      if(!female)stroke("#536254",1.3,()=>{ctx.moveTo(-17,-9);ctx.lineTo(-17,-2);});
-    }else{
-      path(skin,()=>{ctx.moveTo(-19,-13);ctx.quadraticCurveTo(0,-28,19,-13);ctx.lineTo(18,10);ctx.quadraticCurveTo(female?14:17,21,0,25);ctx.quadraticCurveTo(female?-14:-17,21,-18,10);});
-      path(lightSkin,()=>{ctx.moveTo(-13,-12);ctx.quadraticCurveTo(2,-23,16,-12);ctx.lineTo(15,10);ctx.quadraticCurveTo(9,20,1,21);ctx.quadraticCurveTo(-11,16,-13,-12);});
-      path(hair,()=>{ctx.moveTo(-20,5);ctx.bezierCurveTo(-28,-21,-11,-31,7,-27);ctx.quadraticCurveTo(24,-27,21,-9);ctx.lineTo(18,3);ctx.lineTo(14,-12);ctx.quadraticCurveTo(5,-13,0,-18);ctx.quadraticCurveTo(-7,-9,-15,-9);ctx.lineTo(-17,5);});
-      stroke("#26382f",1.8,()=>{ctx.moveTo(-12,-2);ctx.quadraticCurveTo(-8,-4,-4,-2);ctx.moveTo(5,-2);ctx.quadraticCurveTo(9,-4,13,-1);});
-      stroke("#25372f",1.6,()=>{ctx.moveTo(-11,3);ctx.quadraticCurveTo(-8,1,-5,3);ctx.moveTo(6,3);ctx.quadraticCurveTo(9,1,12,3);});
-      stroke("#b67c5d",1.2,()=>{ctx.moveTo(1,3);ctx.lineTo(-1,10);ctx.lineTo(3,11);});
-      stroke("#9f604a",1.5,()=>{ctx.moveTo(-5,16);ctx.quadraticCurveTo(1,20,7,15);});
-    }
-    stroke("#4c5b4e",1.3,()=>{ctx.moveTo(-13,-19);ctx.quadraticCurveTo(-3,-25,8,-22);});
-    ctx.restore();
-    if(p.id==="towelPull"||p.id==="towelPulldown")line(p.arms[0].hand,p.arms[1].hand,p.t>.3?ACTIVE:"#bd9857",5);
-    // Isometric moves: arrows show the press or the pull.
-    if(p.id==="palmPress"||p.id==="towelPull"){
-      const e=clamp((p.t-.2)/.5),press=p.id==="palmPress";
-      if(e>0)for(const arm of p.arms){const q=project(arm.hand),s=arm.s,from=[q[0]+s*(press?92:13),q[1]],tip=[q[0]+s*(press?64:40),q[1]];
-        ctx.globalAlpha=e;stroke2(from,[mix(from[0],tip[0],.6),q[1]],ACTIVE,4);arrowHead(tip,from,12);ctx.globalAlpha=1;}
-    }
-    for(const g of paths){const k=g.length-1,back=Math.min(2,k);ctx.globalAlpha=guide.alpha;if(guide.dir>0)arrowHead(g[k],g[k-back],13);else arrowHead(g[0],g[back],13);ctx.globalAlpha=1;}
-    if(!small&&p.isSide){ctx.fillStyle="#4d6a59";ctx.font="13px system-ui";ctx.textAlign="center";ctx.fillText("后", -106,21);ctx.fillText("前 →",113,21);}
-    ctx.restore();
-  }
-  return {draw,pose,view,ik,ease,guides,setAvatar,getAvatar};
+  return {EXERCISES,prepare,POINTS,INDEX,B,RATE,STAND,render,renderPair,draw,find,viewLabel,setAvatar,getAvatar,THEMES};
 })();
 
 </script><script>
@@ -926,19 +1421,19 @@ const DEFAULT_PLANS={
 const LEVEL_BY_KEY=Object.fromEntries(LEVELS.map(l=>[l.key,l]));
 const inLevel=(item,key)=>item.levels.includes(key);
 const storage={get(key){try{return localStorage.getItem(key);}catch{return null;}},set(key,value){try{localStorage.setItem(key,value);}catch{}}};
-Motion.setAvatar(storage.get("cq-avatar-v1"));
+Stickman.setAvatar(storage.get("cq-avatar-v1"));
 function selectAvatar(value){
-  Motion.setAvatar(value);storage.set("cq-avatar-v1",Motion.getAvatar());syncAvatar();observeThumbnails();renderPractice();
+  Stickman.setAvatar(value);storage.set("cq-avatar-v1",Stickman.getAvatar());syncAvatar();observeThumbnails();renderPractice();
 }
 function syncAvatar(){
-  const value=Motion.getAvatar();document.querySelectorAll("[data-avatar]").forEach(button=>button.setAttribute("aria-pressed",String(button.dataset.avatar===value)));
+  const value=Stickman.getAvatar();document.querySelectorAll("[data-avatar]").forEach(button=>button.setAttribute("aria-pressed",String(button.dataset.avatar===value)));
   $("trainer-avatar").value=value;syncHero();
 }
 // The home figure demonstrates a signature move of the chosen level.
 const HERO_MOVES={strong:"reverseLunge",standard:"squat",gentle:"stand"};
 function syncHero(){
   const item=ITEM_BY_ID[HERO_MOVES[level]];$("hero-move").textContent=item.name;
-  $("hero-canvas").setAttribute("aria-label",(Motion.getAvatar()==="female"?"女":"男")+"示范人物，"+item.name+"关节动画");Motion.draw($("hero-canvas"),item.id,.5);
+  $("hero-canvas").setAttribute("aria-label",(Stickman.getAvatar()==="female"?"女":"男")+"示范人物，"+item.name+"动画");Stickman.draw($("hero-canvas"),item.id,PEAK,STAGE);
 }
 // Each level keeps its own plan; the gentle level still reads plans saved before levels existed.
 function loadPlan(key){
@@ -1042,7 +1537,9 @@ function newPlan(){
 }
 function thumbnail(item){return '<canvas data-exercise="'+item.id+'" aria-hidden="true"></canvas>';}
 const observer=typeof IntersectionObserver==="function"?new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)visibleCanvases.add(e.target);else visibleCanvases.delete(e.target);});},{rootMargin:"50px"}):null;
-function observeThumbnails(){visibleCanvases.clear();if(observer)observer.disconnect();document.querySelectorAll("canvas[data-exercise]").forEach(canvas=>{Motion.draw(canvas,canvas.dataset.exercise,.55,1,{small:true});if(observer)observer.observe(canvas);});}
+// Thumbnails show the most-worked pose; moves not yet computed are queued and drawn once ready.
+const PEAK=1.9,STAGE={theme:"dark",sync:true,trail:true,ghost:true},THUMB={theme:"light",small:true};let pendingThumbs=new Set();
+function observeThumbnails(){visibleCanvases.clear();pendingThumbs.clear();if(observer)observer.disconnect();document.querySelectorAll("canvas[data-exercise]").forEach(canvas=>{if(!Stickman.draw(canvas,canvas.dataset.exercise,PEAK,THUMB))pendingThumbs.add(canvas);if(observer)observer.observe(canvas);});}
 function renderPlan(){
   $("plan-list").innerHTML=plan.map(item=>"<li>"+thumbnail(item)+'<div><h3>'+item.name+'</h3><p>'+item.category+" · "+(item.alternating?"每侧 4 次":"共 8 次")+'</p></div><button data-preview="'+item.id+'" aria-label="预览'+item.name+'">预览</button></li>').join("");
   $("plan-level").textContent=levelLabel();$("plan-summary").textContent="7 个动作 · 约 6 分钟";observeThumbnails();
@@ -1068,7 +1565,7 @@ function updateExercise(){
   $("exercise-category").textContent=item.category+(item.alternating?" · 左右交替":"");
   $("exercise-name").textContent=item.name;$("exercise-purpose").textContent=item.purpose;
   $("exercise-steps").innerHTML=item.steps.map(s=>"<li>"+s+"</li>").join("");$("exercise-cue").textContent=item.cue;
-  $("view-label").textContent=Motion.view(item.id);$("trainer-canvas").setAttribute("aria-label",item.name+"，"+Motion.view(item.id)+"，橙色表示动作部位");
+  $("view-label").textContent=Stickman.viewLabel(item.id);$("trainer-canvas").setAttribute("aria-label",item.name+"，"+Stickman.viewLabel(item.id)+"，橙色表示发力部位");
   $("previous-exercise").disabled=state.preview||state.index===0;$("next-exercise").disabled=state.preview;
   $("rep-total").textContent=state.preview?"/ 示范":"/ 8 次";$("transition").hidden=true;setStatus("");renderPractice();
   if(!reducedMotion)$("trainer-canvas").animate?.([{opacity:0},{opacity:1}],{duration:450,easing:"ease-out"});
@@ -1102,7 +1599,7 @@ function restNext(){if(state.mode==="done"){closePractice();return;}if(state.mod
 function holdRest(){state.holdRest=!state.holdRest;if(!state.holdRest)state.restUntil=performance.now()/1000+state.restRemaining;$("transition-pause").textContent=state.holdRest?"恢复倒计时":"多休息一下";}
 function renderPractice(){
   if(!state.open)return;const item=current(),time=elapsedNow(),phase=(time%4)/4,rep=Math.min(8,Math.floor(time/4)+1),beat=Math.floor(time%4)+1;
-  const side=Math.floor(time/4)%2?-1:1;Motion.draw($("trainer-canvas"),item.id,Motion.ease(phase),side,{comparison:state.reference,phase});
+  Stickman.draw($("trainer-canvas"),item.id,time,{...STAGE,pair:state.reference,rep:Math.floor(time/4)%2});
   if(state.beat!==beat){state.beat=beat;$("beat-count").textContent=beat;$("rep-count").textContent=state.preview?"—":rep;[...$("rhythm-bar").querySelectorAll("span")].forEach((e,i)=>e.classList.toggle("active",i===beat-1));
     if(state.mode==="running"&&!reducedMotion)$("beat-count").animate?.([{transform:"scale(1.25)"},{transform:"scale(1)"}],{duration:280,easing:"ease-out"});}
   const cue=state.reference?"对照起点与终点":state.mode==="paused"?"已暂停":PHASES[item.id][phase<.5?0:1];if($("phase-cue").textContent!==cue)$("phase-cue").textContent=cue;
@@ -1116,18 +1613,19 @@ function frame(now){
   animate(now);
 }
 function animate(now){
-  const cycle=reducedMotion?.25:now/4000,loop=Motion.ease(cycle),side=Math.floor(cycle)%2?-1:1;
+  const t=reducedMotion?PEAK:now/1000;
   if(state.open){
     if(state.mode==="rest"){
       if(!state.holdRest)state.restRemaining=Math.max(0,Math.ceil(state.restUntil-now/1000));
       const count=String(state.holdRest?"休息":state.restRemaining);if($("transition-count").textContent!==count)$("transition-count").textContent=count;
       if(!state.holdRest&&state.restRemaining===0){restNext();return;}
-      Motion.draw($("transition-canvas"),state.list[state.index+1].id,loop,side,{small:true,phase:cycle});return;
+      Stickman.draw($("transition-canvas"),state.list[state.index+1].id,t,{theme:"light",sync:true});return;
     }
     if(state.mode==="done")return;if(state.mode==="running"&&!state.preview&&elapsedNow()>=32){startRest();return;}renderPractice();
   }else{
-    if(now-lastThumbs<30)return;lastThumbs=now;if(heroVisible)Motion.draw($("hero-canvas"),HERO_MOVES[level],loop,side);
-    if(!reducedMotion)visibleCanvases.forEach(c=>Motion.draw(c,c.dataset.exercise,loop,side,{small:true}));
+    if(now-lastThumbs<30)return;lastThumbs=now;if(heroVisible)Stickman.draw($("hero-canvas"),HERO_MOVES[level],t,STAGE);
+    pendingThumbs.forEach(c=>{if(Stickman.draw(c,c.dataset.exercise,PEAK,THUMB))pendingThumbs.delete(c);});
+    if(!reducedMotion)visibleCanvases.forEach(c=>Stickman.draw(c,c.dataset.exercise,t,THUMB));
   }
 }
 $("test-sound").addEventListener("click",testSound);$("start-workout").addEventListener("click",()=>openPractice());$("start-workout-2").addEventListener("click",()=>openPractice());$("new-plan").addEventListener("click",newPlan);

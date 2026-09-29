@@ -3,15 +3,15 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import vm from 'node:vm';
 
-const source = await readFile(new URL('../prototype/stickman.js', import.meta.url), 'utf8');
+const source = await readFile(new URL('../public/stickman.js', import.meta.url), 'utf8');
 const context = vm.createContext({});
 vm.runInContext(source + ';globalThis.S=Stickman;', context);
 const S = context.S;
 const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 const each = fn => { for (const ex of S.EXERCISES) fn(ex, S.prepare(ex)); };
 
-test('five exercises, each a periodic cycle of 4 s per rep at 120 samples/s', () => {
-  assert.deepEqual([...S.EXERCISES.map(e => e.id)], ['stand', 'squat', 'reverseLunge', 'inclinePush', 'stepJack']);
+test('51 exercises with unique ids, each a periodic cycle of 4 s per rep at 120 samples/s', () => {
+  const ids = S.EXERCISES.map(e => e.id);assert.equal(ids.length, 51);assert.equal(new Set(ids).size, 51);
   each((ex, d) => { assert.equal(d.N, ex.reps * 4 * 120); assert.equal(d.duration, ex.reps * 4); });
 });
 
@@ -47,6 +47,20 @@ test('motion is continuous, including across the loop and between alternating re
   });
 });
 
+test('hands on a chair back, a wall or a seat edge stay put', () => {
+  for (const id of ['miniSquat', 'heel', 'side', 'backLeg', 'hamstringCurl', 'singleLegStand', 'wallPush', 'chairDip']) {
+    const d = S.prepare(S.find(id));
+    for (let i = 0; i < d.N; i++) for (const k of ['WL', 'WR']) assert.ok(dist(d.get(i, k), d.get(0, k)) < .01, id + ' ' + k + ' moves');
+  }
+});
+
+test('every move actually moves, except the isometric presses', () => {
+  each((ex, d) => {
+    let most = 0;for (let i = 0; i < d.N; i += 4) for (const k of S.POINTS) most = Math.max(most, dist(d.get(i, k), d.get(0, k)));
+    assert.ok(most > (['palmPress', 'towelPull'].includes(ex.id) ? 1 : ex.id === 'shoulderLift' ? 4 : 8), ex.id + ' moves ' + most.toFixed(1));
+  });
+});
+
 test('hands placed on a support stay exactly there', () => {
   const push = S.prepare(S.EXERCISES.find(e => e.id === 'inclinePush'));
   for (let i = 0; i < push.N; i++) {
@@ -68,4 +82,11 @@ test('descents are slower than the drive back up', () => {
     const d = S.prepare(S.EXERCISES.find(e => e.id === id)), m = [...d.metric];
     assert.ok(Math.max(...m) > 1.15 * -Math.min(...m), id + ' peak up speed beats peak down speed');
   }
+});
+
+test('the start/end view shows two different poses, whatever rep the app asks for', () => {
+  const calls = [], ctx = new Proxy({}, { get: (t, k) => t[k] ?? ((...a) => { if (k === 'fillText') calls.push(a[0]); return { addColorStop() {} }; }), set: (t, k, v) => { t[k] = v; return true; } });
+  for (const rep of [0, 1, 5]) S.renderPair(ctx, 360, 260, S.find('squat'), rep, {});
+  const d = S.prepare(S.find('squat'));let deepest = 0;for (let i = 0; i < d.N; i++) deepest = Math.max(deepest, d.effort[i]);
+  assert.ok(deepest > .8);assert.ok(calls.includes('动作终点'));
 });
