@@ -66,7 +66,7 @@ let toastTimer;
 function toast(text){const box=$("toast");box.textContent=text;box.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{box.hidden=true;},6000);}
 const state={open:false,preview:false,index:0,list:plan,mode:"closed",elapsed:0,clockStart:0,clockBase:0,clockAudio:false,voice:true,operation:0,reference:false,restUntil:0,restRemaining:20,holdRest:false,beat:-1,opener:null};
 let visibleCanvases=new Set(),heroVisible=true;
-state.sway=storage.get("cq-sway-v1")!=="0"&&!(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
+state.cam={yaw:0,pitch:0};state.sway=storage.get("cq-sway-v1")!=="0"&&!(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
 const reducedMotion=window.matchMedia?.("(prefers-reduced-motion: reduce)").matches||false;
 class CountAudio {
   constructor(){this.context=null;this.buffer=null;this.node=null;this.gain=null;this.sessionMode="default";}
@@ -168,8 +168,21 @@ function renderLibrary(){
 }
 function current(){return state.list[state.index];}
 // The trainer's camera turns slowly around the move by default, so its shape reads from every side.
-function syncView(){const b=$("view-label");b.textContent=state.sway?"↻ 视角转动中":"固定 · "+Stickman.viewLabel(current().id);b.setAttribute("aria-pressed",String(state.sway));}
-function toggleView(){state.sway=!state.sway;storage.set("cq-sway-v1",state.sway?"1":"0");syncView();}
+function syncView(){const b=$("view-label");b.textContent=state.sway?"↻ 转动中 · 可拖动":"固定 · 可拖动";b.setAttribute("aria-pressed",String(state.sway));}
+function toggleView(){state.sway=!state.sway;state.cam={yaw:0,pitch:0};storage.set("cq-sway-v1",state.sway?"1":"0");syncView();}
+// Dragging (mouse or touch) turns the camera. The automatic turn stops at the angle on screen, so the
+// view does not jump; a double tap, or the view button, goes back to the default.
+const SWAY=36,swayAngle=(amp,clock)=>amp*Math.sin(2*Math.PI*clock/14);
+function trainerCamera(){const v=Stickman.find(current().id).view;return {yaw:v.yaw+state.cam.yaw,pitch:Math.max(0,Math.min(40,v.pitch+state.cam.pitch))};}
+function beginTurn(){if(state.sway){state.cam.yaw+=swayAngle(SWAY,performance.now()/1000);state.sway=false;syncView();}return {...state.cam};}
+function turnView(from,dx,dy){state.cam={yaw:from.yaw+dx*.5,pitch:Math.max(-10,Math.min(30,from.pitch+dy*.25))};}
+function draggable(el,begin,turn,reset){
+  let from=null;
+  el.addEventListener("pointerdown",e=>{from={x:e.clientX,y:e.clientY,moved:false,cam:null};el.setPointerCapture?.(e.pointerId);});
+  el.addEventListener("pointermove",e=>{if(!from)return;const dx=e.clientX-from.x,dy=e.clientY-from.y;
+    if(!from.moved){if(Math.hypot(dx,dy)<4)return;from.moved=true;from.cam=begin();}turn(from.cam,dx,dy);});
+  const end=()=>{from=null;};el.addEventListener("pointerup",end);el.addEventListener("pointercancel",end);el.addEventListener("dblclick",reset);
+}
 function updateExercise(){
   const item=current();state.beat=-1;state.reference=false;$("trainer").classList.remove("reference-mode");$("reference-toggle").setAttribute("aria-pressed","false");$("reference-toggle").textContent="看起止姿势";
   $("progress-label").textContent=state.preview?"动作预览":"动作 "+(state.index+1)+" / "+state.list.length;
@@ -211,7 +224,7 @@ function restNext(){if(state.mode==="done"){closePractice();return;}if(state.mod
 function holdRest(){state.holdRest=!state.holdRest;if(!state.holdRest)state.restUntil=performance.now()/1000+state.restRemaining;$("transition-pause").textContent=state.holdRest?"恢复倒计时":"多休息一下";}
 function renderPractice(){
   if(!state.open)return;const item=current(),time=elapsedNow(),phase=(time%4)/4,rep=Math.min(8,Math.floor(time/4)+1),beat=Math.floor(time%4)+1;
-  Stickman.draw($("trainer-canvas"),item.id,time,{...STAGE,sway:state.sway?36:0,clock:performance.now()/1000,pair:state.reference,rep:Math.floor(time/4)%2});
+  Stickman.draw($("trainer-canvas"),item.id,time,{...STAGE,...trainerCamera(),turnable:!state.sway,sway:state.sway?SWAY:0,clock:performance.now()/1000,pair:state.reference,rep:Math.floor(time/4)%2});
   if(state.beat!==beat){state.beat=beat;$("beat-count").textContent=beat;$("rep-count").textContent=state.preview?"—":rep;[...$("rhythm-bar").querySelectorAll("span")].forEach((e,i)=>e.classList.toggle("active",i===beat-1));
     if(state.mode==="running"&&!reducedMotion)$("beat-count").animate?.([{transform:"scale(1.25)"},{transform:"scale(1)"}],{duration:280,easing:"ease-out"});}
   const cue=state.reference?"对照起点与终点":state.mode==="paused"?"已暂停":PHASES[item.id][phase<.5?0:1];if($("phase-cue").textContent!==cue)$("phase-cue").textContent=cue;
@@ -235,7 +248,7 @@ function animate(now){
     }
     if(state.mode==="done")return;if(state.mode==="running"&&!state.preview&&elapsedNow()>=32){startRest();return;}renderPractice();
   }else{
-    if(now-lastThumbs<30)return;lastThumbs=now;if(heroVisible)Stickman.draw($("hero-canvas"),HERO_MOVES[level],t,{...STAGE,sway:reducedMotion?0:30,clock:t});
+    if(now-lastThumbs<30)return;lastThumbs=now;if(heroVisible)Stickman.draw($("hero-canvas"),HERO_MOVES[level],t,{...STAGE,yaw:Stickman.find(HERO_MOVES[level]).view.yaw+heroCam.yaw,turnable:!heroCam.sway,sway:heroCam.sway?30:0,clock:t});
     pendingThumbs.forEach(c=>{if(Stickman.draw(c,c.dataset.exercise,PEAK,THUMB))pendingThumbs.delete(c);});
     if(!reducedMotion)visibleCanvases.forEach(c=>Stickman.draw(c,c.dataset.exercise,t,THUMB));
   }
@@ -243,6 +256,10 @@ function animate(now){
 $("test-sound").addEventListener("click",testSound);$("start-workout").addEventListener("click",()=>openPractice());$("start-workout-2").addEventListener("click",()=>openPractice());$("new-plan").addEventListener("click",newPlan);
 document.addEventListener("click",event=>{const preview=event.target.closest("[data-preview]");if(preview)openPractice(preview.dataset.preview);const filter=event.target.closest("[data-filter]");if(filter)setLibrary({category:filter.dataset.filter});const scope=event.target.closest("[data-scope]");if(scope)setLibrary({scope:scope.dataset.scope});const avatar=event.target.closest("[data-avatar]");if(avatar)selectAvatar(avatar.dataset.avatar);const lv=event.target.closest("[data-level]");if(lv)selectLevel(lv.dataset.level);});
 $("trainer-avatar").addEventListener("change",event=>selectAvatar(event.target.value));$("view-label").addEventListener("click",toggleView);
+draggable($("trainer-canvas"),beginTurn,turnView,()=>{if(!state.sway)toggleView();});
+// On the home page only sideways drags turn the figure; vertical swipes still scroll the page.
+const heroCam={yaw:0,sway:!reducedMotion};
+draggable($("hero-canvas"),()=>{if(heroCam.sway){heroCam.yaw+=swayAngle(30,performance.now()/1000);heroCam.sway=false;}return {yaw:heroCam.yaw};},(from,dx)=>{heroCam.yaw=from.yaw+dx*.5;},()=>{heroCam.yaw=0;heroCam.sway=!reducedMotion;});
 $("close-trainer").addEventListener("click",closePractice);$("trainer").addEventListener("cancel",e=>{e.preventDefault();closePractice();});$("pause-workout").addEventListener("click",togglePause);$("voice-toggle").addEventListener("click",toggleVoice);
 $("previous-exercise").addEventListener("click",()=>navigateExercise(-1));$("next-exercise").addEventListener("click",()=>state.index===state.list.length-1?startRest():navigateExercise(1));
 $("reference-toggle").addEventListener("click",()=>{state.reference=!state.reference;$("trainer").classList.toggle("reference-mode",state.reference);if(state.reference&&(state.mode==="running"||state.mode==="starting"))pausePractice();$("reference-toggle").setAttribute("aria-pressed",String(state.reference));$("reference-toggle").textContent=state.reference?"返回动画":"看起止姿势";renderPractice();});

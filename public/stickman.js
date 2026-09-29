@@ -805,7 +805,8 @@ const Stickman=(()=>{
   function scene(ctx,x0,y0,w,h,ex,data,f,o,pal){
     // `sway` turns the camera slowly back and forth around the move's home view (o.clock in seconds).
     const base=o.yaw??ex.view.yaw,sway=o.sway||0,yaw=base+sway*Math.sin(2*Math.PI*(o.clock||0)/14),pitch=o.pitch??ex.view.pitch;
-    const cam=camera(yaw,pitch),F=fitView(ex,data,cam,w,h,sway?[base,sway,pitch]:null);
+    // A camera the viewer can turn (`turnable`) is fitted for a full circle, so no angle crops the figure.
+    const cam=camera(yaw,pitch),F=fitView(ex,data,cam,w,h,o.turnable?[ex.view.yaw,180,Math.round(pitch)]:sway?[base,sway,pitch]:null);
     const proj=v=>{const c=cam(v);return [x0+F.cx+c[0]*F.s,y0+F.cy-c[1]*F.s,c[2]];};proj.s=F.s;
     const i=Math.floor(f)%data.N,at=sampler(data,f),rep=data.reps[i];
     drawFloor(ctx,proj,data,pal,pitch);
