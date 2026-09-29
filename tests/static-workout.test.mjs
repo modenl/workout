@@ -22,7 +22,7 @@ function harness({deferred=false,blockedStorage=false,audioSession,outputTimesta
   }
   const document={hidden:false,getElementById:el,querySelectorAll(){return []},addEventListener(){},activeElement:makeElement(),body:makeElement()};
   const context=vm.createContext({document,window:{AudioContext,navigator:{audioSession},crypto:webcrypto,matchMedia:()=>({matches:false}),addEventListener(){}},localStorage:{getItem(key){if(blockedStorage)throw Error('blocked');return store.get(key)??null},setItem(key,value){if(blockedStorage)throw Error('blocked');store.set(key,String(value))}},performance:{now:()=>now*1000},requestAnimationFrame(){},atob:s=>Buffer.from(s,'base64').toString('binary'),setTimeout(fn){const id=++timerId;timers.set(id,fn);return id},clearTimeout:id=>timers.delete(id),console});
-  vm.runInContext(library+'\n'+stickman+'\n'+app+'\n;globalThis.subject={Stickman,ITEMS,LEVELS,CATEGORIES,DEFAULT_PLANS,selectLevel,setLibrary,getLevel:()=>level,state,audio,newPlan,openPractice,closePractice,resumePractice,pausePractice,toggleVoice,navigateExercise,frame,holdRest,restNext,testSound,selectAvatar,getPlan:()=>plan};',context);
+  vm.runInContext(library+'\n'+stickman+'\n'+app+'\n;globalThis.subject={Stickman,ITEMS,LEVELS,CATEGORIES,DEFAULT_PLANS,selectLevel,setLibrary,beginTurn,turnView,toggleView,trainerCamera,getLevel:()=>level,state,audio,newPlan,openPractice,closePractice,resumePractice,pausePractice,toggleVoice,navigateExercise,frame,holdRest,restNext,testSound,selectAvatar,getPlan:()=>plan};',context);
   return {s:context.subject,el,nodes,resumers,timers,events,store,setNow(t){now=t}};
 }
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
@@ -164,4 +164,12 @@ test('workout automatically rests and advances; final move ends the workout',asy
 test('build is a single HTML with no remote runtime dependencies or TTS fallbacks',async()=>{
   const out='/tmp/workout-test-built.html';execFileSync(process.execPath,['build/build-github-page.mjs',out],{cwd:root});const html=await readFile(out,'utf8');
   assert.doesNotMatch(html,/<script\s+src=|<link[^>]+rel="stylesheet"|speechSynthesis|decodeAudioData|new Audio\(/);assert.match(html,/data:audio\/wav;base64,/);assert.ok(Buffer.byteLength(html)<340000);
+});
+
+test('dragging turns the trainer camera, freezing the automatic turn where it was',async()=>{
+  const {s}=harness();s.openPractice('squat');await settle();s.state.sway=true;
+  const base=s.Stickman.find('squat').view,from=s.beginTurn();assert.equal(s.state.sway,false,'a drag stops the automatic turn');
+  s.turnView(from,40,20);const cam=s.trainerCamera();assert.ok(Math.abs(cam.yaw-(base.yaw+from.yaw+20))<1e-9,'40 px turns 20 degrees');assert.equal(cam.pitch,base.pitch+5);
+  s.turnView(from,0,999);assert.equal(s.trainerCamera().pitch,Math.min(40,base.pitch+30),'looking down is limited');
+  s.toggleView();assert.equal(s.state.sway,true);assert.deepEqual({...s.state.cam},{yaw:0,pitch:0},'turning back on resets the view');
 });

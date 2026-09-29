@@ -312,3 +312,6 @@ dialog::backdrop{background:#173e35}
 .hero-art .avatar-picker{background:rgba(255,255,255,.12)}
 .hero-art .avatar-picker button{color:#f5f2e8}
 .hero-art .avatar-picker button[aria-pressed=true]{background:#f5f2e8;color:#153a30}
+.trainer-visual canvas{touch-action:none;cursor:grab}
+.trainer-visual canvas:active{cursor:grabbing}
+#hero-canvas{touch-action:pan-y;cursor:grab}
