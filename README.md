@@ -10,7 +10,9 @@ https://workout.postagi.co.uk/
 
 界面、51 个动作的说明与跟练提示、数拍录音都有中英文两版（`public/i18n.js`、`public/library.js` 中的 `LIBRARY_EN`）。默认语言：用户在页面右上角选过的语言；否则按浏览器语言列表，先出现中文就用中文、先出现英文就用英文；两者都没有时用英文。切换时就地更新文字，计划不变；跟练进行中不切换。
 
-英文数拍录音 `public/audio/count-cycle-en.wav` 由 macOS 自带的 Samantha 语音生成，与中文录音同格式（16 kHz 单声道、4 秒，每拍开头出声）。公开发布前请确认该语音的使用许可，或替换为自录音频（保持同样格式）。
+数拍录音由开源语音模型 [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M)（Apache-2.0 许可，可商用；训练数据为公有领域、宽松许可及 CC BY 音频）在本地合成：中文用 `zf_xiaoxiao`，英文用 `af_heart`。用 `build/make-count-audio.py` 可重新生成（说明见文件开头）。中文录音内置在页面里；英文录音 `audio/count-cycle-en.wav` 是页面旁的单独文件，只在使用英文时下载一次。
+
+不使用 macOS 系统语音：其许可只允许个人非商业使用，禁止在公开场合发布录音。
 
 ## 三档强度
 
@@ -32,7 +34,7 @@ https://workout.postagi.co.uk/
 - 跟练画面为深色舞台：残影和运动轨迹显示这一拍往哪里去，发力部位发光。
 - 休息倒计时期间循环预览下一个动作；换动作时画面淡入。
 - 竖屏跟练，方向和对照按钮置于画面外；文字、动画、控制按钮同屏。
-- 唯一声音方案：Web Audio 播放内置 16 kHz 单声道 PCM 录音。无 TTS、无媒体播放器 fallback、无远程音频请求。
+- 唯一声音方案：Web Audio 播放 16 kHz 单声道 PCM 录音（中文内置，英文按需从同一网站下载）。网页运行时不做语音合成，无媒体播放器 fallback。
 - 在支持 Audio Session API 的浏览器中，创建和恢复音频前设置 `navigator.audioSession.type = "playback"`，避免 iOS 把数拍视为受静音模式影响的环境音。依据 [WebKit 官方问题记录](https://bugs.webkit.org/show_bug.cgi?id=237322)。不支持该 API 的浏览器继续使用同一 Web Audio 引擎；测试声音提示会显示当前模式。这不代表已通过 iPhone Air 真机出声验证。
 - 用户点击后启动声音；动画和语音共用音频时钟。支持 `getOutputTimestamp` 的浏览器按扬声器实际播出的时间对齐动作与数拍，否则使用 `currentTime`。每 4 拍完成一次，8 次后休息 20 秒，自动进入下一项。
 - 跟练动画按屏幕刷新率绘制（首页约 30 帧）；跟练中若持续掉帧，本次跟练改为稳定的约 30 帧。数拍录音在第 8 次结束时准时停止，休息前不会漏出下一轮的“一”。这一降级和音画对齐只在桌面 Chromium（含 CPU 降速模拟）中验证过，未经手机真机测试。

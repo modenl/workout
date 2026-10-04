@@ -101,24 +101,36 @@ class CountAudio {
       this.context=new C();this.gain=this.context.createGain();this.gain.connect(this.context.destination);
       this.context.addEventListener("statechange",()=>{if(this.context.state!=="running"&&state.mode==="running"&&state.clockAudio)pausePractice(t("sysPaused"));});
     }
-    // One recording per language: 一二三四 or one-two-three-four, same format and timing.
-    this.buffers=this.buffers||{};this.buffer=this.buffers[lang];
-    if(!this.buffer){
-      const raw=$(lang==="en"?"count-audio-en":"count-audio-source").dataset.src;
-      if(!raw.startsWith("data:audio/wav;base64,"))throw new Error(t("errNotBundled"));
-      const binary=atob(raw.split(",")[1]), bytes=new Uint8Array(binary.length);
-      for(let i=0;i<binary.length;i++)bytes[i]=binary.charCodeAt(i);
-      const view=new DataView(bytes.buffer);let channels=0,rate=0,bits=0,data=0,length=0;
-      for(let p=12;p+8<=bytes.length;){const tag=String.fromCharCode(...bytes.subarray(p,p+4)),size=view.getUint32(p+4,true);
-        if(p+8+size>bytes.length)throw new Error(t("errIncomplete"));
-        if(tag==="fmt "){if(view.getUint16(p+8,true)!==1)throw new Error(t("errFormat"));channels=view.getUint16(p+10,true);rate=view.getUint32(p+12,true);bits=view.getUint16(p+22,true);}
-        if(tag==="data"){data=p+8;length=size;}p+=8+size+(size%2);
-      }
-      if(channels!==1||bits!==16||rate!==16000||length!==128000)throw new Error(t("errSamples"));
-      this.buffer=this.buffers[lang]=this.context.createBuffer(1,length/2,rate);
-      const samples=this.buffer.getChannelData(0);for(let i=0;i<samples.length;i++)samples[i]=view.getInt16(data+i*2,true)/32768;
-    }
+    // One recording per language (一二三四 or one-two-three-four, same format and timing). A recording
+    // that is not built in is decoded once its download arrives (see unlock).
+    this.buffers=this.buffers||{};const raw=this.bytes(lang);
+    if(!this.buffers[lang]&&raw instanceof Uint8Array)this.buffers[lang]=this.decode(raw);
+    this.buffer=this.buffers[lang]||null;
     return this.context;
+  }
+  // The Chinese count is built into the page; another language's is downloaded the first time it is needed.
+  bytes(code){
+    this.raw=this.raw||{};
+    if(!this.raw[code]){
+      const src=$(code==="en"?"count-audio-en":"count-audio-source").dataset.src;
+      if(src.startsWith("data:")){const b=atob(src.split(",")[1]),u=new Uint8Array(b.length);for(let i=0;i<b.length;i++)u[i]=b.charCodeAt(i);this.raw[code]=u;}
+      else this.raw[code]=fetch(src).then(r=>{if(!r.ok)throw new Error(r.status);return r.arrayBuffer();}).then(a=>this.raw[code]=new Uint8Array(a))
+        .catch(()=>{delete this.raw[code];throw new Error(t("errDownload"));});
+    }
+    return this.raw[code];
+  }
+  prefetch(code){const r=this.bytes(code);if(typeof r.then==="function")r.catch(()=>{});}
+  decode(bytes){
+    const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let channels=0,rate=0,bits=0,data=0,length=0;
+    for(let p=12;p+8<=bytes.length;){const tag=String.fromCharCode(...bytes.subarray(p,p+4)),size=view.getUint32(p+4,true);
+      if(p+8+size>bytes.length)throw new Error(t("errIncomplete"));
+      if(tag==="fmt "){if(view.getUint16(p+8,true)!==1)throw new Error(t("errFormat"));channels=view.getUint16(p+10,true);rate=view.getUint32(p+12,true);bits=view.getUint16(p+22,true);}
+      if(tag==="data"){data=p+8;length=size;}p+=8+size+(size%2);
+    }
+    if(channels!==1||bits!==16||rate!==16000||length!==128000)throw new Error(t("errSamples"));
+    const buffer=this.context.createBuffer(1,length/2,rate);
+    const samples=buffer.getChannelData(0);for(let i=0;i<samples.length;i++)samples[i]=view.getInt16(data+i*2,true)/32768;
+    return buffer;
   }
   async unlock(){
     const c=this.ensure();let timer;const resumed=c.resume();
@@ -126,6 +138,8 @@ class CountAudio {
     try{await Promise.race([resumed,new Promise((_,reject)=>{timer=setTimeout(()=>reject(new Error(t("errNotStarted"))),3500);})]);}
     finally{clearTimeout(timer);}
     if(c.state!=="running")throw new Error(t("errSuspended"));
+    // resume() above ran inside the tap; a recording still downloading is awaited only now.
+    if(!this.buffer){const code=lang,bytes=await this.bytes(code);this.buffers[code]=this.buffers[code]||this.decode(bytes);if(code===lang)this.buffer=this.buffers[code];}
   }
   start(offset=0,loop=true){
     this.stop();const c=this.context;if(!c||c.state!=="running")throw new Error(t("errTapResume"));
@@ -293,8 +307,9 @@ function applyStatic(){
 }
 function setLang(next){
   if(next!=="zh"&&next!=="en"||state.open)return;lang=next;storage.set("cq-lang-v1",next);localizeData();applyStatic();
-  $("library-levels").innerHTML="";$("library-filters").innerHTML="";soundStatus(t("soundIdle"));
+  $("library-levels").innerHTML="";$("library-filters").innerHTML="";soundStatus(t("soundIdle"));audio.stop();audio.buffer=null;audio.prefetch(lang);
   syncAvatar();syncLevel();renderPlan();renderLibrary();
 }
 $("lang-toggle").addEventListener("click",()=>setLang(lang==="en"?"zh":"en"));
 applyStatic();syncAvatar();syncLevel();renderPlan();renderLibrary();requestAnimationFrame(frame);
+if(lang!=="zh")audio.prefetch(lang);

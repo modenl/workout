@@ -39,7 +39,7 @@ const I18N={
     sysPaused:"声音被系统暂停；点「继续」后恢复。",leftPage:"页面已离开，点继续恢复。",startFail:"未能启动声音：{msg}。可重试，或手动关闭声音后继续。",
     soundStarting:"正在启动计数声音…",soundPlaying:"计数播放中（{mode}）：一、二、三、四。",soundEnded:"录音播放结束（{mode}）。若未听到，请检查媒体音量及声音输出设备。",soundFail:"未能播放：{msg}。",
     modeMedia:"媒体播放模式",modeDefault:"浏览器默认音频模式",
-    errNoEngine:"此浏览器未提供音频引擎",errNotBundled:"录音还未打包，请打开正式首页",errIncomplete:"录音文件不完整",errFormat:"录音格式不正确",errSamples:"录音采样不正确",
+    errNoEngine:"此浏览器未提供音频引擎",errDownload:"数拍录音下载失败，请检查网络后重试",errIncomplete:"录音文件不完整",errFormat:"录音格式不正确",errSamples:"录音采样不正确",
     errNotStarted:"音频引擎未启动，请检查浏览器声音权限",errSuspended:"音频引擎被系统暂停",errTapResume:"请点继续，重新启动声音",
     startPose:"起始姿势",endPose:"动作终点",viewSide:"侧面 · 面向右 →",viewFront:"正面 · 如照镜子"
   },
@@ -81,7 +81,7 @@ const I18N={
     sysPaused:"The system paused the sound; tap Resume to continue.",leftPage:"You left the page; tap Resume to continue.",startFail:"Couldn't start the sound: {msg}. Try again, or turn the sound off and continue.",
     soundStarting:"Starting the count…",soundPlaying:"Counting ({mode}): one, two, three, four.",soundEnded:"Finished ({mode}). If you heard nothing, check the media volume and the output device.",soundFail:"Couldn't play: {msg}.",
     modeMedia:"media playback mode",modeDefault:"default browser audio",
-    errNoEngine:"this browser has no audio engine",errNotBundled:"the recording isn't bundled; open the published page",errIncomplete:"the recording is incomplete",errFormat:"the recording format is wrong",errSamples:"the recording sample format is wrong",
+    errNoEngine:"this browser has no audio engine",errDownload:"couldn't download the count recording; check your connection and try again",errIncomplete:"the recording is incomplete",errFormat:"the recording format is wrong",errSamples:"the recording sample format is wrong",
     errNotStarted:"the audio engine didn't start; check the browser's sound permission",errSuspended:"the system suspended the audio engine",errTapResume:"tap Resume to restart the sound",
     startPose:"Start",endPose:"End",viewSide:"Side view · facing right →",viewFront:"Front view · mirrored"
   }
