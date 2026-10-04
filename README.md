@@ -6,6 +6,12 @@ https://workout.postagi.co.uk/
 
 由 Cloudflare Workers 托管（Worker 名 `workout`，配置见 `wrangler.jsonc`）。`main` 分支同时由 GitHub Pages 发布在 https://modenl.github.io/workout/ 。
 
+## 中文 / English
+
+界面、51 个动作的说明与跟练提示、数拍录音都有中英文两版（`public/i18n.js`、`public/library.js` 中的 `LIBRARY_EN`）。默认语言：用户在页面右上角选过的语言；否则按浏览器语言列表，先出现中文就用中文、先出现英文就用英文；两者都没有时用英文。切换时就地更新文字，计划不变；跟练进行中不切换。
+
+英文数拍录音 `public/audio/count-cycle-en.wav` 由 macOS 自带的 Samantha 语音生成，与中文录音同格式（16 kHz 单声道、4 秒，每拍开头出声）。公开发布前请确认该语音的使用许可，或替换为自录音频（保持同样格式）。
+
 ## 三档强度
 
 首页或动作库顶部选择练习强度（动作库的强度栏浏览时吸附在屏幕上方），今日计划、换一组和动作库都只从该档里选；切换后底部提示新的一组。选择和每档各自的计划都会本地记忆。首页示范图显示该档的代表动作。

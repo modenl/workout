@@ -242,7 +242,7 @@ dialog::backdrop{background:#173e35}
 .purpose{font-size:16px;line-height:1.5;margin:0 0 8px;font-weight:600}
 .trainer-copy ol{padding-left:1.3em;font-size:16px;line-height:1.5;margin:0}
 .cue{margin:9px 0 0;padding:7px 10px;border-left:3px solid var(--orange);background:#fffcf5;font-size:14px;line-height:1.5}
-.cue::before{content:'注意 · ';color:var(--orange);font-weight:650}
+.cue::before{content:attr(data-label);color:var(--orange);font-weight:650}
 .trainer-controls{display:grid;grid-template-columns:1fr 1.4fr 1fr;gap:9px;padding:9px 12px max(10px,env(safe-area-inset-bottom));border-top:1px solid var(--line);background:var(--paper)}
 .trainer-controls button{min-height:49px;font-size:16px;padding:8px 3px}
 .trainer-status{font-size:13px;padding:8px 18px;background:#f9e2d6;color:#793117;margin:0}
@@ -315,3 +315,5 @@ dialog::backdrop{background:#173e35}
 .trainer-visual canvas{touch-action:none;cursor:grab}
 .trainer-visual canvas:active{cursor:grabbing}
 #hero-canvas{touch-action:pan-y;cursor:grab}
+.lang-toggle{min-height:40px;margin-left:6px;padding:6px 14px;border-radius:999px;font-size:14px;background:var(--surface)}
+@media(max-width:480px){.topbar nav a{display:none}}

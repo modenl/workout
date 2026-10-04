@@ -831,7 +831,7 @@ const Stickman=(()=>{
     for(let i=a;i<a+per;i++)if(data.effort[i]>data.effort[b])b=i;
     background(ctx,w,h,pal);const top=24;
     scene(ctx,0,top,w/2,h-top,ex,data,a,{...o,ghost:false,trail:false},pal);scene(ctx,w/2,top,w/2,h-top,ex,data,b,{...o,ghost:false,trail:false},pal);
-    ctx.fillStyle=pal.near;ctx.globalAlpha=.8;ctx.font="600 13px system-ui";ctx.textAlign="center";ctx.fillText("起始姿势",w*.25,20);ctx.fillText("动作终点",w*.75,20);ctx.globalAlpha=1;
+    ctx.fillStyle=pal.near;ctx.globalAlpha=.8;ctx.font="600 13px system-ui";ctx.textAlign="center";const [l0,l1]=o.labels||["起始姿势","动作终点"];ctx.fillText(l0,w*.25,20);ctx.fillText(l1,w*.75,20);ctx.globalAlpha=1;
   }
   const BY_ID=Object.fromEntries(EXERCISES.map(e=>[e.id,e]));
   const find=id=>BY_ID[id];

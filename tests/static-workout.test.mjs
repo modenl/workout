@@ -6,12 +6,12 @@ import { webcrypto } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
 
 const root = new URL('../', import.meta.url);
-const [library, stickman, app, wav] = await Promise.all(['public/library.js','public/stickman.js','public/app.js','public/audio/count-cycle.wav'].map((p,i)=>readFile(new URL(p,root),i===3?undefined:'utf8')));
-function harness({deferred=false,blockedStorage=false,audioSession,outputTimestamp,storage={}}={}) {
+const [library, i18n, stickman, app, wav, wavEn] = await Promise.all(['public/library.js','public/i18n.js','public/stickman.js','public/app.js','public/audio/count-cycle.wav','public/audio/count-cycle-en.wav'].map(p=>readFile(new URL(p,root),p.endsWith('.wav')?undefined:'utf8')));
+function harness({deferred=false,blockedStorage=false,audioSession,outputTimestamp,storage={},languages}={}) {
   let now=0;const store=new Map(Object.entries(storage));const nodes=[],resumers=[],events=[],elements=new Map(),timers=new Map();let timerId=0;
   const makeElement=()=>({textContent:'',innerHTML:'',hidden:false,dataset:{},style:{},disabled:false,tagName:'BUTTON',classList:{add(){},remove(){},toggle(){}},setAttribute(){},addEventListener(){},focus(){},showModal(){this.open=true},close(){this.open=false},querySelectorAll(){return Array.from({length:4},makeElement)},querySelector(){return null},getBoundingClientRect(){return {width:0,height:0}}});
   const el=id=>{if(!elements.has(id))elements.set(id,makeElement());return elements.get(id)};
-  el('count-audio-source').dataset.src='data:audio/wav;base64,'+wav.toString('base64');
+  el('count-audio-source').dataset.src='data:audio/wav;base64,'+wav.toString('base64');el('count-audio-en').dataset.src='data:audio/wav;base64,'+wavEn.toString('base64');
   class AudioContext {
     constructor(){events.push({event:'create',sessionType:audioSession?.type});this.state=deferred?'suspended':'running';this.currentTime=0;this.sampleRate=48000;this.destination={};if(outputTimestamp)this.getOutputTimestamp=outputTimestamp;}
     createGain(){return {connect(){},gain:{setValueAtTime(){}}}}
@@ -22,7 +22,8 @@ function harness({deferred=false,blockedStorage=false,audioSession,outputTimesta
   }
   const document={hidden:false,getElementById:el,querySelectorAll(){return []},addEventListener(){},activeElement:makeElement(),body:makeElement()};
   const context=vm.createContext({document,window:{AudioContext,navigator:{audioSession},crypto:webcrypto,matchMedia:()=>({matches:false}),addEventListener(){}},localStorage:{getItem(key){if(blockedStorage)throw Error('blocked');return store.get(key)??null},setItem(key,value){if(blockedStorage)throw Error('blocked');store.set(key,String(value))}},performance:{now:()=>now*1000},requestAnimationFrame(){},atob:s=>Buffer.from(s,'base64').toString('binary'),setTimeout(fn){const id=++timerId;timers.set(id,fn);return id},clearTimeout:id=>timers.delete(id),console});
-  vm.runInContext(library+'\n'+stickman+'\n'+app+'\n;globalThis.subject={Stickman,ITEMS,LEVELS,CATEGORIES,DEFAULT_PLANS,selectLevel,setLibrary,beginTurn,turnView,toggleView,trainerCamera,getLevel:()=>level,state,audio,newPlan,openPractice,closePractice,resumePractice,pausePractice,toggleVoice,navigateExercise,frame,holdRest,restNext,testSound,selectAvatar,getPlan:()=>plan};',context);
+  if(languages)context.navigator={languages};
+  vm.runInContext(library+'\n'+i18n+'\n'+stickman+'\n'+app+'\n;globalThis.subject={Stickman,setLang,getLang:()=>lang,t,ITEMS,LEVELS,CATEGORIES,DEFAULT_PLANS,selectLevel,setLibrary,beginTurn,turnView,toggleView,trainerCamera,getLevel:()=>level,state,audio,newPlan,openPractice,closePractice,resumePractice,pausePractice,toggleVoice,navigateExercise,frame,holdRest,restNext,testSound,selectAvatar,getPlan:()=>plan};',context);
   return {s:context.subject,el,nodes,resumers,timers,events,store,setNow(t){now=t}};
 }
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
@@ -42,7 +43,7 @@ test('sound reminder is conditional advice, respects webpage mute, and yields to
   s.toggleVoice();assert.match(el('trainer-status').textContent,/听不到数拍？/);
   s.closePractice();await s.testSound();
   const html=await readFile(new URL('public/legacy.html',root),'utf8');
-  assert.match(html,/<p id="sound-help">听不到数拍？请关闭手机静音模式，并调高媒体音量。<\/p>/);
+  assert.match(html,/<p[^>]* id="sound-help"[^>]*>听不到数拍？请关闭手机静音模式，并调高媒体音量。<\/p>/);
   assert.match(html,/id="test-sound" aria-describedby="sound-help"/);
 });
 
@@ -163,7 +164,7 @@ test('workout automatically rests and advances; final move ends the workout',asy
 });
 test('build is a single HTML with no remote runtime dependencies or TTS fallbacks',async()=>{
   const out='/tmp/workout-test-built.html';execFileSync(process.execPath,['build/build-github-page.mjs',out],{cwd:root});const html=await readFile(out,'utf8');
-  assert.doesNotMatch(html,/<script\s+src=|<link[^>]+rel="stylesheet"|speechSynthesis|decodeAudioData|new Audio\(/);assert.match(html,/data:audio\/wav;base64,/);assert.ok(Buffer.byteLength(html)<340000);
+  assert.doesNotMatch(html,/<script\s+src=|<link[^>]+rel="stylesheet"|speechSynthesis|decodeAudioData|new Audio\(/);assert.match(html,/data:audio\/wav;base64,/);assert.ok(Buffer.byteLength(html)<560000);
 });
 
 test('dragging turns the trainer camera, freezing the automatic turn where it was',async()=>{
@@ -172,4 +173,28 @@ test('dragging turns the trainer camera, freezing the automatic turn where it wa
   s.turnView(from,40,20);const cam=s.trainerCamera();assert.ok(Math.abs(cam.yaw-(base.yaw+from.yaw+20))<1e-9,'40 px turns 20 degrees');assert.equal(cam.pitch,base.pitch+5);
   s.turnView(from,0,999);assert.equal(s.trainerCamera().pitch,Math.min(40,base.pitch+30),'looking down is limited');
   s.toggleView();assert.equal(s.state.sway,true);assert.deepEqual({...s.state.cam},{yaw:0,pitch:0},'turning back on resets the view');
+});
+
+test('the language follows a saved choice, else the browser, and every move has English text',()=>{
+  assert.equal(harness().s.getLang(),'zh','no browser languages: Chinese');
+  assert.equal(harness({languages:['en-GB','zh-CN']}).s.getLang(),'en','first of Chinese or English wins');
+  assert.equal(harness({languages:['fr-FR','zh-TW']}).s.getLang(),'zh');
+  assert.equal(harness({languages:['de-DE']}).s.getLang(),'en','neither listed: English');
+  assert.equal(harness({languages:['en-US'],storage:{'cq-lang-v1':'zh'}}).s.getLang(),'zh','a saved choice wins');
+  const {s,el}=harness({languages:['en-US']});
+  for(const item of s.ITEMS){assert.doesNotMatch(item.name+item.purpose+item.steps.join('')+item.cue+item.category,/[\u4e00-\u9fff]/,item.id);assert.ok(s.t('title'));}
+  assert.match(el('plan-summary').textContent,/7 moves/);assert.doesNotMatch(el('library-list').innerHTML,/[\u4e00-\u9fff]/,'library cards are English');
+});
+test('switching language relabels the page in place and is remembered, but not during a workout',async()=>{
+  const {s,el,store}=harness();const plan=s.getPlan().map(i=>i.id);
+  s.setLang('en');assert.equal(s.getLang(),'en');assert.equal(store.get('cq-lang-v1'),'en');assert.deepEqual(s.getPlan().map(i=>i.id),plan,'same plan, new labels');
+  assert.match(s.getPlan()[0].name,/^[A-Za-z]/);s.selectLevel('strong');assert.match(el('toast').textContent,/^Switched to Ages 40–55/);
+  s.openPractice();await settle();assert.match(el('progress-label').textContent,/^Move 1 of 7/);assert.equal(el('rep-total').textContent,'/ 8 reps');
+  s.setLang('zh');assert.equal(s.getLang(),'en','no switching mid-workout');s.closePractice();
+  s.setLang('zh');assert.match(s.getPlan()[0].name,/[\u4e00-\u9fff]/);
+});
+test('each language counts with its own recording',async()=>{
+  const {s}=harness({languages:['en-US']});await s.audio.unlock();const en=s.audio.buffer;
+  s.setLang('zh');await s.audio.unlock();const zh=s.audio.buffer;assert.notEqual(en,zh);
+  for(const b of [en,zh]){assert.equal(b.duration,4);const d=b.getChannelData(0);for(let beat=0;beat<4;beat++){let sum=0;for(const x of d.slice(beat*16000,(beat+1)*16000))sum+=x*x;assert.ok(Math.sqrt(sum/16000)>.005,'beat '+(beat+1));}}
 });

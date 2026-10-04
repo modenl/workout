@@ -9,21 +9,21 @@
 <link rel="stylesheet" href="styles.css" />
 </head>
 <body>
-<a class="skip-link" href="#today">跳到今日跟练</a>
+<a data-i18n="skip" class="skip-link" href="#today">跳到今日跟练</a>
 <header class="topbar">
   <div class="wrap topbar-inner">
-    <a class="brand" href="#top"><span class="brand-mark">常</span>常青动一动</a>
-    <nav aria-label="页面导航"><a href="#today">今日跟练</a><a href="#library">动作库</a><a class="nav-safe" href="#safe">安全须知</a></nav>
+    <a class="brand" href="#top"><span class="brand-mark">常</span><span data-i18n="brand">常青动一动</span></a>
+    <nav aria-label="页面导航"><a data-i18n="navToday" href="#today">今日跟练</a><a data-i18n="navLibrary" href="#library">动作库</a><a data-i18n="navSafe" class="nav-safe" href="#safe">安全须知</a><button class="lang-toggle" id="lang-toggle" data-i18n="langSwitch" data-i18n-aria="langSwitchLabel" aria-label="Switch to English">EN</button></nav>
   </div>
 </header>
 <main id="top">
   <section class="hero wrap">
     <div class="hero-copy">
-      <p class="eyebrow">40 岁以后 · 在家练力量</p>
-      <h1>把日常的力气，<br><em>慢慢练回来。</em></h1>
-      <p class="lead">不用器械和场地，跟着数拍，一组约 6 分钟练遍全身。</p>
-      <div class="level-picker" role="group" aria-label="选择练习强度">
-        <p class="picker-label">选择强度</p>
+      <p data-i18n="heroEyebrow" class="eyebrow">40 岁以后 · 在家练力量</p>
+      <h1 data-i18n-html="heroTitle">把日常的力气，<br><em>慢慢练回来。</em></h1>
+      <p data-i18n="heroLead" class="lead">不用器械和场地，跟着数拍，一组约 6 分钟练遍全身。</p>
+      <div class="level-picker" role="group" aria-label="选择练习强度" data-i18n-aria="pickLevelLabel">
+        <p data-i18n="pickLevel" class="picker-label">选择强度</p>
         <div class="level-options">
           <button data-level="strong" aria-pressed="false"><b>40–55 岁</b><span>进阶</span></button>
           <button data-level="standard" aria-pressed="false"><b>55–70 岁</b><span>标准</span></button>
@@ -32,15 +32,15 @@
         <p id="level-hint"></p>
       </div>
       <div class="hero-actions">
-        <button class="primary" id="start-workout">开始今天的跟练 →</button>
-        <a href="#today">看今天的 7 个动作 ↓</a>
+        <button data-i18n="startToday" class="primary" id="start-workout">开始今天的跟练 →</button>
+        <a data-i18n="seeToday" href="#today">看今天的 7 个动作 ↓</a>
       </div>
     </div>
     <figure class="hero-art">
       <canvas id="hero-canvas" role="img" aria-label="坐站起身关节动画"></canvas>
       <figcaption>
-        <span><small>示范</small><b id="hero-move">坐站起身</b></span>
-        <span class="avatar-picker" role="group" aria-label="选择示范人物"><button data-avatar="male" aria-pressed="false">男示范</button><button data-avatar="female" aria-pressed="false">女示范</button></span>
+        <span><small data-i18n="demo">示范</small><b id="hero-move">坐站起身</b></span>
+        <span class="avatar-picker" role="group" aria-label="选择示范人物" data-i18n-aria="pickAvatar"><button data-i18n="male" data-avatar="male" aria-pressed="false">男示范</button><button data-i18n="female" data-avatar="female" aria-pressed="false">女示范</button></span>
       </figcaption>
     </figure>
   </section>
@@ -49,12 +49,13 @@
   <section class="sound-panel" aria-labelledby="sound-title">
     <span class="sound-icon" aria-hidden="true">♪</span>
     <div>
-      <h2 id="sound-title">先试一下数拍声音</h2>
-      <p id="sound-status" role="status">点按钮播放「一、二、三、四」。</p>
-      <p id="sound-help">听不到数拍？请关闭手机静音模式，并调高媒体音量。</p>
+      <h2 data-i18n="soundTitle" id="sound-title">先试一下数拍声音</h2>
+      <p data-i18n="soundIdle" id="sound-status" role="status">点按钮播放「一、二、三、四」。</p>
+      <p data-i18n="soundHelp" id="sound-help">听不到数拍？请关闭手机静音模式，并调高媒体音量。</p>
     </div>
-    <button class="secondary" id="test-sound" aria-describedby="sound-help">▶ 测试声音</button>
+    <button data-i18n="testSound" class="secondary" id="test-sound" aria-describedby="sound-help">▶ 测试声音</button>
     <span id="count-audio-source" data-src="audio/count-cycle.wav" hidden></span>
+    <span id="count-audio-en" data-src="audio/count-cycle-en.wav" hidden></span>
   </section>
   </div>
 
@@ -62,22 +63,22 @@
     <div class="wrap today-grid">
       <div>
         <header class="section-title">
-          <p class="eyebrow">今日跟练</p>
-          <h2>顺序安排好，<br>一项一项来。</h2>
-          <p class="section-lead">热身、腿臀、推、拉、核心、脚踝和平衡各一个。</p>
+          <p data-i18n="todayEyebrow" class="eyebrow">今日跟练</p>
+          <h2 data-i18n-html="todayTitle">顺序安排好，<br>一项一项来。</h2>
+          <p data-i18n="todayLead" class="section-lead">热身、腿臀、推、拉、核心、脚踝和平衡各一个。</p>
         </header>
         <ol class="plan-list" id="plan-list"></ol>
       </div>
-      <aside class="plan-card" aria-label="这一组的安排">
+      <aside class="plan-card" aria-label="这一组的安排" data-i18n-aria="planLabel">
         <p class="plan-level" id="plan-level"></p>
         <p class="plan-summary" id="plan-summary" role="status"></p>
         <ul class="plan-facts">
-          <li>每个动作 8 次，左右交替的每侧 4 次</li>
-          <li>动作之间休息 20 秒，可以延长</li>
+          <li data-i18n="planFact1">每个动作 8 次，左右交替的每侧 4 次</li>
+          <li data-i18n="planFact2">动作之间休息 20 秒，可以延长</li>
         </ul>
-        <button class="primary" id="start-workout-2">开始这组 →</button>
-        <button class="secondary" id="new-plan">↻ 换一组动作</button>
-        <p class="note">一组动作不等于全天或整周的运动量。</p>
+        <button data-i18n="startSet" class="primary" id="start-workout-2">开始这组 →</button>
+        <button data-i18n="newSet" class="secondary" id="new-plan">↻ 换一组动作</button>
+        <p data-i18n="planNote" class="note">一组动作不等于全天或整周的运动量。</p>
       </aside>
     </div>
   </section>
@@ -85,14 +86,14 @@
   <section class="section why">
     <div class="wrap">
       <header class="section-title">
-        <p class="eyebrow">为什么要练力量</p>
-        <h2>肌肉，<br>是独立生活的底气。</h2>
-        <p class="section-lead">肌肉会随年龄慢慢减少。规律的抗阻练习，帮你留住起身、拿取和走路需要的力气。</p>
+        <p data-i18n="whyEyebrow" class="eyebrow">为什么要练力量</p>
+        <h2 data-i18n-html="whyTitle">肌肉，<br>是独立生活的底气。</h2>
+        <p data-i18n="whyLead" class="section-lead">肌肉会随年龄慢慢减少。规律的抗阻练习，帮你留住起身、拿取和走路需要的力气。</p>
       </header>
       <div class="why-columns">
-        <article><span>01 · 起身</span><h3>从椅子上站起来</h3><p>腿和臀部的力量，用在起床、如厕、上下车和上楼梯。</p></article>
-        <article><span>02 · 拿取</span><h3>把东西拿稳、放高</h3><p>胸、背、肩和手臂的力量，用在推门、提东西和举手取物。</p></article>
-        <article><span>03 · 行走</span><h3>脚步更稳</h3><p>小腿、脚踝和髋部的力量与平衡，帮助迈步、转身和站稳。</p></article>
+        <article><span data-i18n="why1Tag">01 · 起身</span><h3 data-i18n="why1Title">从椅子上站起来</h3><p data-i18n="why1">腿和臀部的力量，用在起床、如厕、上下车和上楼梯。</p></article>
+        <article><span data-i18n="why2Tag">02 · 拿取</span><h3 data-i18n="why2Title">把东西拿稳、放高</h3><p data-i18n="why2">胸、背、肩和手臂的力量，用在推门、提东西和举手取物。</p></article>
+        <article><span data-i18n="why3Tag">03 · 行走</span><h3 data-i18n="why3Title">脚步更稳</h3><p data-i18n="why3">小腿、脚踝和髋部的力量与平衡，帮助迈步、转身和站稳。</p></article>
       </div>
     </div>
   </section>
@@ -100,11 +101,11 @@
   <section class="section library" id="library">
     <div class="wrap">
       <header class="section-title">
-        <p class="eyebrow">动作库</p>
-        <h2>先看懂，再跟练。</h2>
+        <p data-i18n="libEyebrow" class="eyebrow">动作库</p>
+        <h2 data-i18n="libTitle">先看懂，再跟练。</h2>
       </header>
-      <div class="library-levels" id="library-levels" role="group" aria-label="按强度查看"></div>
-      <div class="filters" id="library-filters" role="group" aria-label="按部位筛选"></div>
+      <div class="library-levels" id="library-levels" role="group" aria-label="按强度查看" data-i18n-aria="libLevels"></div>
+      <div class="filters" id="library-filters" role="group" aria-label="按部位筛选" data-i18n-aria="libFilters"></div>
       <div class="library-list" id="library-list"></div>
     </div>
   </section>
@@ -112,50 +113,50 @@
   <section class="section weekly">
     <div class="wrap">
       <header class="section-title">
-        <p class="eyebrow">长期坚持</p>
-        <h2>每天动一动，<br>力量练习隔天做。</h2>
+        <p data-i18n="weekEyebrow" class="eyebrow">长期坚持</p>
+        <h2 data-i18n-html="weekTitle">每天动一动，<br>力量练习隔天做。</h2>
       </header>
       <div class="weekly-grid">
-        <article><h3>每天 · 少坐多动</h3><p>按能力做轻柔活动、分段走动。今天疲劳或酸痛，就减量或休息。</p></article>
-        <article><h3>每周 · 至少 2 天力量练习</h3><p>练到肌肉有用力感才有效果，轻轻摆动通常不足以增肌。增加阻力前，可请专业人员评估。</p></article>
-        <article><h3>循序渐进</h3><p>能轻松、稳定地做完 8 次时，放慢下降速度，或换高一档强度。跟不上就暂停，先站稳或坐稳。</p></article>
+        <article><h3 data-i18n="week1Title">每天 · 少坐多动</h3><p data-i18n="week1">按能力做轻柔活动、分段走动。今天疲劳或酸痛，就减量或休息。</p></article>
+        <article><h3 data-i18n="week2Title">每周 · 至少 2 天力量练习</h3><p data-i18n="week2">练到肌肉有用力感才有效果，轻轻摆动通常不足以增肌。增加阻力前，可请专业人员评估。</p></article>
+        <article><h3 data-i18n="week3Title">循序渐进</h3><p data-i18n="week3">能轻松、稳定地做完 8 次时，放慢下降速度，或换高一档强度。跟不上就暂停，先站稳或坐稳。</p></article>
       </div>
-      <p class="note">一般指南还建议每周累计 150 分钟中等强度有氧活动；达不到时，根据健康状况量力而行。本网站不能替代个体化运动处方。</p>
+      <p data-i18n="weekNote" class="note">一般指南还建议每周累计 150 分钟中等强度有氧活动；达不到时，根据健康状况量力而行。本网站不能替代个体化运动处方。</p>
     </div>
   </section>
 
   <section class="section safety" id="safe">
     <div class="wrap safety-grid">
       <header class="section-title">
-        <p class="eyebrow">安全须知</p>
-        <h2>先准备好，再开始。</h2>
+        <p data-i18n="safeEyebrow" class="eyebrow">安全须知</p>
+        <h2 data-i18n="safeTitle">先准备好，再开始。</h2>
       </header>
       <div>
-        <details open><summary>需要准备什么？</summary><p>不带轮的牢固椅子，椅子靠墙。标准和进阶强度还会用到一面空墙、一条毛巾和一张不会滑动的牢固桌子。穿防滑鞋，清空周围杂物；平衡较差时，请家人在旁照看。</p></details>
-        <details><summary>什么时候应暂停或就医？</summary><p>胸痛、晕厥、明显气短等症状应立即停止，必要时紧急就医。新出现或加重的关节疼痛也不要硬撑。</p></details>
-        <details><summary>站立不稳、近期手术，可以练吗？</summary><p>近期跌倒、骨折、手术，或疾病控制不稳时，先请医生或物理治疗师评估。坐姿动作也不一定适合每个人。</p></details>
-        <details><summary>为什么数拍速度是固定的？</summary><p>四拍完成一次：前两拍去，后两拍回，不追求最大幅度。这个节奏不适合你时，请暂停，按自己的速度练。</p></details>
+        <details open><summary data-i18n="safe1Q">需要准备什么？</summary><p data-i18n="safe1">不带轮的牢固椅子，椅子靠墙。标准和进阶强度还会用到一面空墙、一条毛巾和一张不会滑动的牢固桌子。穿防滑鞋，清空周围杂物；平衡较差时，请家人在旁照看。</p></details>
+        <details><summary data-i18n="safe2Q">什么时候应暂停或就医？</summary><p data-i18n="safe2">胸痛、晕厥、明显气短等症状应立即停止，必要时紧急就医。新出现或加重的关节疼痛也不要硬撑。</p></details>
+        <details><summary data-i18n="safe3Q">站立不稳、近期手术，可以练吗？</summary><p data-i18n="safe3">近期跌倒、骨折、手术，或疾病控制不稳时，先请医生或物理治疗师评估。坐姿动作也不一定适合每个人。</p></details>
+        <details><summary data-i18n="safe4Q">为什么数拍速度是固定的？</summary><p data-i18n="safe4">四拍完成一次：前两拍去，后两拍回，不追求最大幅度。这个节奏不适合你时，请暂停，按自己的速度练。</p></details>
       </div>
     </div>
   </section>
 </main>
 <footer class="site-footer">
   <div class="wrap footer-inner">
-    <a class="brand" href="#top"><span class="brand-mark">常</span>常青动一动</a>
-    <p>每一次稳稳完成，都算数。</p>
-    <p class="sources">参考：<a href="https://www.cdc.gov/physical-activity-basics/guidelines/older-adults.html">CDC 老年活动指南</a> · <a href="https://www.nhs.uk/live-well/exercise/strength-exercises/">NHS 力量练习</a> · <a href="https://www.nhs.uk/live-well/exercise/sitting-exercises/">NHS 坐姿活动</a><br>一般健康教育，不是个体化运动处方 · 2026.09 更新</p>
+    <a class="brand" href="#top"><span class="brand-mark">常</span><span data-i18n="brand">常青动一动</span></a>
+    <p data-i18n="footerLine">每一次稳稳完成，都算数。</p>
+    <p data-i18n-html="footerSources" class="sources">参考：<a href="https://www.cdc.gov/physical-activity-basics/guidelines/older-adults.html">CDC 老年活动指南</a> · <a href="https://www.nhs.uk/live-well/exercise/strength-exercises/">NHS 力量练习</a> · <a href="https://www.nhs.uk/live-well/exercise/sitting-exercises/">NHS 坐姿活动</a><br>一般健康教育，不是个体化运动处方 · 2026.09 更新</p>
   </div>
 </footer>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <dialog id="trainer" aria-labelledby="exercise-name"><div class="trainer-shell">
-<header class="trainer-header"><button id="close-trainer" aria-label="退出跟练">× 退出</button><div><span id="progress-label">动作 1 / 7</span><div class="progress-track"><i id="progress-fill"></i></div></div><button id="voice-toggle" aria-pressed="true">声音开</button></header>
-<div class="viewbar"><div class="view-description"><button id="view-label" class="view-toggle" aria-pressed="true">↻ 视角转动中</button><span><i class="orange-dot"></i>橙色为发力部位</span></div><select id="trainer-avatar" aria-label="选择示范人物"><option value="male">男示范</option><option value="female">女示范</option></select><button id="reference-toggle" class="reference-toggle" aria-pressed="false">看起止姿势</button></div>
-<div class="trainer-visual"><canvas id="trainer-canvas" role="img" aria-label="关节动作演示"></canvas><div class="counter"><strong id="beat-count">1</strong><span>拍</span></div><div class="reps"><strong id="rep-count">1</strong><span id="rep-total">/ 8 次</span></div></div>
+<header class="trainer-header"><button data-i18n="exit" id="close-trainer" aria-label="退出跟练" data-i18n-aria="exitLabel">× 退出</button><div><span id="progress-label">动作 1 / 7</span><div class="progress-track"><i id="progress-fill"></i></div></div><button data-i18n="soundOn" id="voice-toggle" aria-pressed="true">声音开</button></header>
+<div class="viewbar"><div class="view-description"><button id="view-label" class="view-toggle" aria-pressed="true">↻ 视角转动中</button><span><i class="orange-dot"></i><span data-i18n="orange">橙色为发力部位</span></span></div><select id="trainer-avatar" aria-label="选择示范人物" data-i18n-aria="pickAvatar"><option data-i18n="male" value="male">男示范</option><option data-i18n="female" value="female">女示范</option></select><button data-i18n="startEnd" id="reference-toggle" class="reference-toggle" aria-pressed="false">看起止姿势</button></div>
+<div class="trainer-visual"><canvas id="trainer-canvas" role="img" aria-label="关节动作演示"></canvas><div class="counter"><strong id="beat-count">1</strong><span data-i18n="beat">拍</span></div><div class="reps"><strong id="rep-count">1</strong><span id="rep-total">/ 8 次</span></div></div>
 <div class="rhythm-bar" id="rhythm-bar"><span>1</span><span>2</span><span>3</span><span>4</span><b id="phase-cue">准备</b></div>
-<div class="trainer-copy"><p class="category" id="exercise-category"></p><h2 id="exercise-name"></h2><p class="purpose" id="exercise-purpose"></p><ol id="exercise-steps"></ol><p class="cue" id="exercise-cue"></p></div>
+<div class="trainer-copy"><p class="category" id="exercise-category"></p><h2 id="exercise-name"></h2><p class="purpose" id="exercise-purpose"></p><ol id="exercise-steps"></ol><p class="cue" id="exercise-cue" data-label="注意 · "></p></div>
 <p id="trainer-status" class="trainer-status" role="status" hidden></p>
-<div class="trainer-controls"><button id="previous-exercise">上一个</button><button id="pause-workout" class="primary">暂停</button><button id="next-exercise">下一个</button></div>
-<div id="transition" class="transition" hidden><p id="transition-kicker"></p><h2 id="transition-title"></h2><canvas id="transition-canvas" aria-hidden="true"></canvas><strong id="transition-count"></strong><p id="transition-description"></p><button id="transition-pause">多休息一下</button><button id="transition-next" class="primary">准备好了，继续 →</button></div>
+<div class="trainer-controls"><button data-i18n="prev" id="previous-exercise">上一个</button><button data-i18n="pause" id="pause-workout" class="primary">暂停</button><button data-i18n="next" id="next-exercise">下一个</button></div>
+<div id="transition" class="transition" hidden><p id="transition-kicker"></p><h2 id="transition-title"></h2><canvas id="transition-canvas" aria-hidden="true"></canvas><strong id="transition-count"></strong><p id="transition-description"></p><button data-i18n="restLonger" id="transition-pause">多休息一下</button><button data-i18n="restReady" id="transition-next" class="primary">准备好了，继续 →</button></div>
 </div></dialog>
-<script src="library.js"></script><script src="stickman.js"></script><script src="app.js"></script>
+<script src="library.js"></script><script src="i18n.js"></script><script src="stickman.js"></script><script src="app.js"></script>
 </body></html>
