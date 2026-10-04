@@ -1722,18 +1722,16 @@ class CountAudio {
   }
   prefetch(code){const r=this.bytes(code);if(typeof r.then==="function")r.catch(()=>{});}
   decode(bytes){
-    {
-      const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let channels=0,rate=0,bits=0,data=0,length=0;
-      for(let p=12;p+8<=bytes.length;){const tag=String.fromCharCode(...bytes.subarray(p,p+4)),size=view.getUint32(p+4,true);
-        if(p+8+size>bytes.length)throw new Error(t("errIncomplete"));
-        if(tag==="fmt "){if(view.getUint16(p+8,true)!==1)throw new Error(t("errFormat"));channels=view.getUint16(p+10,true);rate=view.getUint32(p+12,true);bits=view.getUint16(p+22,true);}
-        if(tag==="data"){data=p+8;length=size;}p+=8+size+(size%2);
-      }
-      if(channels!==1||bits!==16||rate!==16000||length!==128000)throw new Error(t("errSamples"));
-      const buffer=this.context.createBuffer(1,length/2,rate);
-      const samples=buffer.getChannelData(0);for(let i=0;i<samples.length;i++)samples[i]=view.getInt16(data+i*2,true)/32768;
-      return buffer;
+    const view=new DataView(bytes.buffer,bytes.byteOffset,bytes.byteLength);let channels=0,rate=0,bits=0,data=0,length=0;
+    for(let p=12;p+8<=bytes.length;){const tag=String.fromCharCode(...bytes.subarray(p,p+4)),size=view.getUint32(p+4,true);
+      if(p+8+size>bytes.length)throw new Error(t("errIncomplete"));
+      if(tag==="fmt "){if(view.getUint16(p+8,true)!==1)throw new Error(t("errFormat"));channels=view.getUint16(p+10,true);rate=view.getUint32(p+12,true);bits=view.getUint16(p+22,true);}
+      if(tag==="data"){data=p+8;length=size;}p+=8+size+(size%2);
     }
+    if(channels!==1||bits!==16||rate!==16000||length!==128000)throw new Error(t("errSamples"));
+    const buffer=this.context.createBuffer(1,length/2,rate);
+    const samples=buffer.getChannelData(0);for(let i=0;i<samples.length;i++)samples[i]=view.getInt16(data+i*2,true)/32768;
+    return buffer;
   }
   async unlock(){
     const c=this.ensure();let timer;const resumed=c.resume();
