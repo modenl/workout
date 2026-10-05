@@ -10,7 +10,7 @@ https://workout.postagi.co.uk/
 
 界面、51 个动作的说明与跟练提示、数拍录音都有中英文两版（`public/i18n.js`、`public/library.js` 中的 `LIBRARY_EN`）。默认语言：用户在页面右上角选过的语言；否则按浏览器语言列表，先出现中文就用中文、先出现英文就用英文；两者都没有时用英文。切换时就地更新文字，计划不变；跟练进行中不切换。
 
-数拍录音由开源语音模型 [Kokoro-82M](https://huggingface.co/hexgrad/Kokoro-82M)（Apache-2.0 许可，可商用；训练数据为公有领域、宽松许可及 CC BY 音频）在本地合成：中文用 `zf_xiaoxiao`，英文用 `af_heart`。用 `build/make-count-audio.py` 可重新生成（说明见文件开头）。中文录音内置在页面里；英文录音 `audio/count-cycle-en.wav` 是页面旁的单独文件，只在使用英文时下载一次。
+数拍录音由开源语音模型 Fun-CosyVoice3-0.5B（Apache-2.0 许可，可商用）在本地服务器合成，音色为 CosyVoice 随附的示范音色 `demo_female`。每个数字单独合成多遍，中文用拼音标注声调，按音高曲线挑选语气平稳、不上扬的一遍。用 `build/make-count-audio.py` 可重新生成（说明见文件开头）。中文录音内置在页面里；英文录音 `audio/count-cycle-en.wav` 是页面旁的单独文件，只在使用英文时下载一次。
 
 不使用 macOS 系统语音：其许可只允许个人非商业使用，禁止在公开场合发布录音。
 
