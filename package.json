@@ -8,8 +8,9 @@
   },
   "scripts": {
     "build": "node build/build-github-page.mjs index.html",
-    "test": "node --test tests/static-workout.test.mjs",
+    "test": "node --test tests/static-workout.test.mjs tests/stickman.test.mjs tests/analytics.test.mjs",
     "build:cloudflare": "node build/build-github-page.mjs dist/cloudflare/index.html",
-    "deploy": "npm run build:cloudflare && npx -y wrangler@4 deploy"
+    "deploy": "npm run build:cloudflare && npx -y wrangler@4 d1 migrations apply workout-stats --remote && npx -y wrangler@4 deploy",
+    "stats": "sh -c '. ./.dev.vars && open \"https://workout.postagi.co.uk/stats#key=$STATS_KEY\"'"
   }
 }

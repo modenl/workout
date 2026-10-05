@@ -1,0 +1,424 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex">
+<title>常青动一动 · 访问统计</title>
+<style>
+:root{
+  color-scheme:light;
+  --page:#f6f7f4;--surface:#fcfcfb;--ink:#0b0b0b;--ink-2:#52514e;--muted:#6f6d68;
+  --grid:#e1e0d9;--axis:#c3c2b7;--border:rgba(11,11,11,.10);--wash:rgba(11,11,11,.04);
+  --s1:#2a78d6;--s2:#eb6834;--empty:#efeee9;--accent:#0f7a52;
+  --q1:#cde2fb;--q2:#9ec5f4;--q3:#6da7ec;--q4:#3987e5;--q5:#256abf;--q6:#104281;
+  --danger:#c03535;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  color-scheme:dark;
+  --page:#0d0d0d;--surface:#1a1a19;--ink:#fff;--ink-2:#c3c2b7;--muted:#9a988f;
+  --grid:#2c2c2a;--axis:#383835;--border:rgba(255,255,255,.10);--wash:rgba(255,255,255,.05);
+  --s1:#3987e5;--s2:#d95926;--empty:#252523;--accent:#3fbf8a;
+  --q1:#184f95;--q2:#1c5cab;--q3:#256abf;--q4:#3987e5;--q5:#6da7ec;--q6:#9ec5f4;
+  --danger:#e66767;
+}}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --page:#0d0d0d;--surface:#1a1a19;--ink:#fff;--ink-2:#c3c2b7;--muted:#9a988f;
+  --grid:#2c2c2a;--axis:#383835;--border:rgba(255,255,255,.10);--wash:rgba(255,255,255,.05);
+  --s1:#3987e5;--s2:#d95926;--empty:#252523;--accent:#3fbf8a;
+  --q1:#184f95;--q2:#1c5cab;--q3:#256abf;--q4:#3987e5;--q5:#6da7ec;--q6:#9ec5f4;
+  --danger:#e66767;
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--page);color:var(--ink);font:15px/1.5 system-ui,-apple-system,"Segoe UI","PingFang SC","Microsoft YaHei",sans-serif;-webkit-text-size-adjust:100%}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px}
+header.top{padding:28px 0 8px;display:flex;flex-wrap:wrap;gap:12px 24px;align-items:flex-end;justify-content:space-between}
+h1{font-size:22px;margin:0;font-weight:650;letter-spacing:.01em}
+h1 small{display:block;font-size:13px;font-weight:500;color:var(--accent);letter-spacing:.04em;margin-bottom:2px}
+.privacy{margin:0;color:var(--ink-2);font-size:13px;max-width:560px}
+.privacy b{color:var(--ink);font-weight:600}
+button,input{font:inherit;color:inherit}
+.ghost{background:none;border:1px solid var(--border);border-radius:8px;padding:6px 12px;cursor:pointer;color:var(--ink-2)}
+.ghost:hover{background:var(--wash);color:var(--ink)}
+:focus-visible{outline:2px solid var(--s1);outline-offset:2px}
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:18px 20px}
+.card h2{font-size:15px;margin:0 0 2px;font-weight:620}
+.card .sub{margin:0 0 14px;color:var(--muted);font-size:13px}
+
+/* Headline tiles: fixed calendar periods, not scoped by the range filter. */
+.tiles{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin:18px 0 22px}
+.tile{padding:16px 18px}
+.tile .label{margin:0;color:var(--ink-2);font-size:13px}
+.tile .value{margin:2px 0 0;font-size:30px;font-weight:620;line-height:1.15}
+.tile .meta{margin:4px 0 0;color:var(--muted);font-size:13px}
+.tile.hero .value{font-size:48px}
+
+.filters{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px;margin:0 0 14px}
+.seg{display:inline-flex;background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:3px}
+.seg button{border:0;background:none;padding:6px 12px;border-radius:7px;cursor:pointer;color:var(--ink-2);white-space:nowrap}
+.seg button:hover{background:var(--wash);color:var(--ink)}
+.seg button[aria-pressed="true"]{background:var(--ink);color:var(--surface);font-weight:600}
+.check{display:inline-flex;gap:6px;align-items:center;color:var(--ink-2);font-size:14px;cursor:pointer}
+.updated{margin-left:auto;color:var(--muted);font-size:13px;display:flex;gap:10px;align-items:center}
+.summary{margin:0 0 14px;color:var(--ink-2)}
+.summary b{color:var(--ink);font-weight:620}
+
+main{transition:opacity .2s}
+main.loading .scoped{opacity:.55}
+.grid{display:grid;gap:14px}
+.two{grid-template-columns:1.6fr 1fr}
+.panels{grid-template-columns:repeat(12,minmax(0,1fr))}
+.panels>*{grid-column:span 3}
+.panels>:nth-child(-n+3){grid-column:span 4}
+section.card{min-width:0}
+
+/* Trend */
+.legend{display:flex;gap:16px;margin:-6px 0 8px;color:var(--ink-2);font-size:13px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.legend i{display:inline-block;width:14px;height:2px;border-radius:1px}
+.chart{position:relative}
+.chart svg{display:block;width:100%;overflow:visible}
+.chart svg:focus-visible{outline:2px solid var(--s1);outline-offset:4px;border-radius:4px}
+.tick{fill:var(--muted);font-size:11px;font-variant-numeric:tabular-nums}
+.endlabel{fill:var(--ink-2);font-size:12px;font-weight:600}
+details.table{margin-top:10px;font-size:13px;color:var(--ink-2)}
+details.table summary{cursor:pointer;width:max-content}
+.scroll{overflow-x:auto;max-width:100%}
+table{border-collapse:collapse;width:100%;font-size:13px}
+th,td{text-align:left;padding:7px 10px 7px 0;border-bottom:1px solid var(--grid);white-space:nowrap}
+th{color:var(--muted);font-weight:500}
+td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
+
+/* Heatmap */
+.heat{display:grid;grid-template-columns:28px repeat(24,minmax(0,1fr));gap:2px;font-size:11px;color:var(--muted)}
+.heat .cell{aspect-ratio:1;border-radius:3px;background:var(--empty);min-height:8px}
+.heat .cell:hover{outline:2px solid var(--ink);outline-offset:-1px}
+.heat .rl{align-self:center}
+.heat .hl{text-align:left;white-space:nowrap;overflow:visible}
+.scale{display:flex;align-items:center;gap:3px;margin-top:10px;color:var(--muted);font-size:12px}
+.scale i{width:14px;height:10px;border-radius:2px;display:inline-block}
+.peak{margin:10px 0 0;color:var(--ink-2);font-size:13px}
+
+/* Bars */
+.bars{list-style:none;margin:0;padding:0;display:grid;gap:9px}
+.bars li{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;align-items:center;font-size:13.5px;padding:2px 4px;margin:0 -4px;border-radius:6px}
+.bars li:hover{background:var(--wash)}
+.bars .name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+.bars .n{color:var(--ink-2);font-variant-numeric:tabular-nums}
+.bars .track{grid-column:1/-1;height:8px}
+.bars .bar{height:8px;background:var(--s1);border-radius:0 4px 4px 0;min-width:2px}
+.empty{color:var(--muted);font-size:13px;margin:6px 0}
+.tag{display:inline-block;font-size:11px;padding:0 6px;border-radius:4px;border:1px solid var(--border);color:var(--muted);margin-left:6px}
+
+.tip{position:fixed;z-index:10;pointer-events:none;background:var(--surface);color:var(--ink);border:1px solid var(--border);border-radius:10px;padding:8px 11px;font-size:13px;box-shadow:0 6px 20px rgba(0,0,0,.14);min-width:120px}
+.tip .t{color:var(--muted);font-size:12px;margin-bottom:3px}
+.tip .row{display:flex;align-items:center;gap:8px}
+.tip .row i{width:12px;height:2px;border-radius:1px;display:inline-block}
+.tip .row b{font-weight:650;font-variant-numeric:tabular-nums}
+.tip .row span{color:var(--ink-2)}
+
+/* Sign-in */
+.login{max-width:380px;margin:12vh auto 0}
+.login form{display:flex;gap:8px;margin-top:14px}
+.login input{flex:1;min-width:0;padding:9px 12px;border:1px solid var(--axis);border-radius:9px;background:var(--surface)}
+.login button.go{padding:9px 16px;border:0;border-radius:9px;background:var(--ink);color:var(--surface);font-weight:600;cursor:pointer}
+.err{color:var(--danger);font-size:13px;min-height:1.5em;margin:8px 0 0}
+footer{color:var(--muted);font-size:12px;padding:26px 0 36px}
+
+@media (max-width:1000px){.panels>*,.panels>:nth-child(-n+3){grid-column:span 6}.panels>:first-child{grid-column:1/-1}}
+@media (max-width:900px){.two{grid-template-columns:1fr}.tiles{grid-template-columns:repeat(2,1fr)}.tile.hero .value{font-size:40px}}
+@media (max-width:620px){.panels>*,.panels>:nth-child(-n+3){grid-column:1/-1}}
+@media (max-width:520px){
+  header.top{padding-top:20px}
+  .tile{padding:14px}.tile .value{font-size:24px}.tile.hero .value{font-size:32px}
+  .seg button{padding:6px 9px}
+  .updated{margin-left:0;width:100%}
+  .card{padding:16px}
+  .heat{grid-template-columns:22px repeat(24,minmax(0,1fr));gap:1px}
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div><h1><small>常青动一动</small>访问统计</h1></div>
+    <p class="privacy">不用 Cookie，网页里没有统计脚本。<b>IP 只保存前三段</b>，访客用每天更换、次日销毁的随机盐匿名计数，无法跨天追踪。</p>
+  </header>
+
+  <div class="login" id="login" hidden>
+    <div class="card">
+      <h2>输入访问密钥</h2>
+      <p class="sub" style="margin:0">密钥保存在部署时设置的 STATS_KEY 里，只记在这台设备上。</p>
+      <form id="login-form"><input id="key" type="password" aria-label="密钥" autocomplete="current-password" placeholder="密钥" required><button class="go">查看</button></form>
+      <p class="err" id="login-err" role="alert"></p>
+    </div>
+  </div>
+
+  <main id="dash" hidden>
+    <div class="tiles" id="tiles"></div>
+
+    <div class="filters" role="group" aria-label="筛选">
+      <div class="seg" id="range" role="group" aria-label="时间范围">
+        <button data-days="1">24 小时</button><button data-days="7">7 天</button><button data-days="30">30 天</button><button data-days="90">90 天</button><button data-days="0">全部</button>
+      </div>
+      <label class="check"><input type="checkbox" id="bots"> 包含机器人</label>
+      <span class="updated"><span id="updated"></span><button class="ghost" id="refresh">刷新</button><button class="ghost" id="logout">退出</button></span>
+    </div>
+    <p class="summary scoped" id="summary" role="status"></p>
+
+    <div class="grid two scoped">
+      <section class="card">
+        <h2>访问趋势</h2><p class="sub" id="trend-sub"></p>
+        <div class="legend"><span><i style="background:var(--s1)"></i>访问次数</span><span><i style="background:var(--s2)"></i>访客</span></div>
+        <div class="chart" id="trend"></div>
+        <details class="table"><summary>查看数据表</summary><div class="scroll"><table id="trend-table"></table></div></details>
+      </section>
+      <section class="card">
+        <h2>访问时段</h2><p class="sub">按星期和小时（本机时区）</p>
+        <div class="heat" id="heat" role="img"></div>
+        <div class="scale" aria-hidden="true">少 <i style="background:var(--empty)"></i><i style="background:var(--q1)"></i><i style="background:var(--q2)"></i><i style="background:var(--q3)"></i><i style="background:var(--q4)"></i><i style="background:var(--q5)"></i><i style="background:var(--q6)"></i> 多</div>
+        <p class="peak" id="peak"></p>
+      </section>
+    </div>
+
+    <div class="grid panels scoped" style="margin-top:14px" id="breakdowns"></div>
+
+    <section class="card scoped" style="margin-top:14px">
+      <h2>最近访问</h2><p class="sub">最近 100 次，IP 已截断</p>
+      <div class="scroll"><table id="recent"></table></div>
+    </section>
+  </main>
+  <footer>数据保存在 Cloudflare D1，超过 400 天的记录自动删除。访客数按 UTC 日去重，周、月为每日访客之和。</footer>
+</div>
+<div class="tip" id="tip" hidden></div>
+
+<script>
+const $ = s => document.querySelector(s);
+const tz = -new Date().getTimezoneOffset();
+const nf = new Intl.NumberFormat('zh-CN');
+const compact = n => n >= 1e4 ? (n / 1e4).toFixed(n >= 1e5 ? 0 : 1) + ' 万' : nf.format(n);
+const regionName = (() => { try { const d = new Intl.DisplayNames(['zh-CN'], { type: 'region' }); return c => { try { return d.of(c); } catch { return c; } }; } catch { return c => c; } })();
+const langName = (() => { try { const d = new Intl.DisplayNames(['zh-CN'], { type: 'language' }); return c => { try { return d.of(c); } catch { return c; } }; } catch { return c => c; } })();
+const DEVICE = { mobile: '手机', tablet: '平板', desktop: '电脑' };
+const WEEK = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
+
+function h(tag, props = {}, ...kids) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(props)) {
+    if (k === 'style') el.style.cssText = v; else if (k in el && k !== 'role') el[k] = v; else el.setAttribute(k, v);
+  }
+  for (const c of kids.flat()) if (c != null) el.append(c.nodeType ? c : document.createTextNode(c));
+  return el;
+}
+const svg = (tag, attrs = {}) => { const el = document.createElementNS('http://www.w3.org/2000/svg', tag); for (const [k, v] of Object.entries(attrs)) el.setAttribute(k, v); return el; };
+
+// --- key handling: #key=… (never sent to the server), else this device's saved key
+const store = { get() { try { return localStorage.getItem('stats-key'); } catch { return null; } },
+  set(v) { try { v ? localStorage.setItem('stats-key', v) : localStorage.removeItem('stats-key'); } catch {} } };
+let key = null;
+{ const m = location.hash.match(/key=([^&]+)/); if (m) { key = decodeURIComponent(m[1]); store.set(key); history.replaceState(null, '', location.pathname); } else key = store.get(); }
+let days = 30;
+try { days = Number(localStorage.getItem('stats-days') ?? 30); } catch {}
+let data = null;
+
+// --- tooltip
+const tip = $('#tip');
+function showTip(x, y, title, rows) {
+  tip.replaceChildren(h('div', { className: 't' }, title), ...rows.map(([color, value, label]) =>
+    h('div', { className: 'row' }, color ? h('i', { style: 'background:' + color }) : null, h('b', {}, value), h('span', {}, label))));
+  tip.hidden = false;
+  const r = tip.getBoundingClientRect();
+  let left = x + 14, top = y + 14;
+  if (left + r.width > innerWidth - 8) left = x - r.width - 14;
+  if (top + r.height > innerHeight - 8) top = y - r.height - 14;
+  tip.style.left = Math.max(8, left) + 'px'; tip.style.top = Math.max(8, top) + 'px';
+}
+const hideTip = () => { tip.hidden = true; };
+
+// --- time buckets, in the same local-time arithmetic the server uses
+const L = ms => new Date(ms + tz * 60000);
+const pad = n => String(n).padStart(2, '0');
+const ymd = d => d.getUTCFullYear() + '-' + pad(d.getUTCMonth() + 1) + '-' + pad(d.getUTCDate());
+function buckets(d) {
+  const now = d.now, keys = [];
+  if (d.days === 1) {
+    for (let i = 23; i >= 0; i--) { const t = L(now - i * 36e5); keys.push(ymd(t) + ' ' + pad(t.getUTCHours()) + ':00'); }
+    return { keys, unit: 'hour', label: k => k.slice(11, 13) + ' 时', long: k => k.slice(5, 10).replace('-', '/') + ' ' + k.slice(11, 13) + ':00' };
+  }
+  if (!d.days || d.days > 120) {
+    const first = L(d.first || now), last = L(now);
+    for (let y = first.getUTCFullYear(), m = first.getUTCMonth(); y < last.getUTCFullYear() || (y === last.getUTCFullYear() && m <= last.getUTCMonth()); m === 11 ? (y++, m = 0) : m++) keys.push(y + '-' + pad(m + 1));
+    return { keys, unit: 'month', label: k => +k.slice(5) + ' 月', long: k => k.slice(0, 4) + ' 年 ' + +k.slice(5) + ' 月' };
+  }
+  if (d.days > 31) {
+    const t = L(now); const monday = Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate()) - ((t.getUTCDay() + 6) % 7) * 864e5;
+    for (let i = Math.ceil(d.days / 7); i >= 0; i--) keys.push(ymd(new Date(monday - i * 7 * 864e5)));
+    return { keys, unit: 'week', label: k => +k.slice(5, 7) + '/' + +k.slice(8), long: k => k.slice(5).replace('-', '/') + ' 起的一周' };
+  }
+  for (let i = d.days - 1; i >= 0; i--) keys.push(ymd(L(now - i * 864e5)));
+  return { keys, unit: 'day', label: k => +k.slice(5, 7) + '/' + +k.slice(8), long: k => k.slice(0, 4) + '/' + k.slice(5).replace('-', '/') + ' ' + WEEK[(new Date(k + 'T00:00Z').getUTCDay() + 6) % 7] };
+}
+const niceMax = v => { if (v <= 4) return 4; const p = 10 ** Math.floor(Math.log10(v)); for (const m of [1, 2, 2.5, 4, 5, 10]) if (m * p >= v) return m * p; };
+
+// --- tiles
+function tiles(d) {
+  const t = (label, p, cls, meta) => h('div', { className: 'card tile' + (cls ? ' ' + cls : '') },
+    h('p', { className: 'label' }, label), h('p', { className: 'value' }, compact(p.views)), h('p', { className: 'meta' }, meta ?? ('访客 ' + compact(p.visitors))));
+  const since = d.first ? '自 ' + new Date(d.first).toLocaleDateString('zh-CN') : '尚无记录';
+  $('#tiles').replaceChildren(t('今天访问', d.today, 'hero'), t('本周（周一起）', d.week), t('本月', d.month), t('累计', d.all, '', since + ' · 访客 ' + compact(d.all.visitors)));
+}
+
+// --- trend line chart
+function trend(d) {
+  const b = buckets(d), by = new Map(d.trend.map(r => [r.k, r]));
+  const rows = b.keys.map(k => ({ k, views: by.get(k)?.views || 0, visitors: by.get(k)?.visitors || 0 }));
+  const box = $('#trend'), W = Math.max(280, box.clientWidth), H = 230, m = { l: 36, r: 46, t: 12, b: 26 };
+  const iw = W - m.l - m.r, ih = H - m.t - m.b, n = rows.length;
+  const max = niceMax(Math.max(1, ...rows.map(r => r.views)));
+  const x = i => m.l + (n === 1 ? iw / 2 : (i / (n - 1)) * iw), y = v => m.t + ih - (v / max) * ih;
+  const root = svg('svg', { viewBox: `0 0 ${W} ${H}`, height: H, tabindex: 0, role: 'img', 'aria-label': '访问趋势图，可用左右方向键逐点查看' });
+  for (let i = 0; i <= 4; i++) {
+    const v = (max / 4) * i, yy = y(v);
+    root.append(svg('line', { x1: m.l, x2: W - m.r, y1: yy, y2: yy, stroke: i ? 'var(--grid)' : 'var(--axis)', 'stroke-width': 1 }));
+    const t = svg('text', { x: m.l - 8, y: yy + 4, 'text-anchor': 'end', class: 'tick' }); t.textContent = compact(v); root.append(t);
+  }
+  const every = Math.max(1, Math.ceil(n / Math.max(2, Math.floor(iw / 64))));
+  rows.forEach((r, i) => { if ((n - 1 - i) % every) return; const t = svg('text', { x: x(i), y: H - 6, 'text-anchor': 'middle', class: 'tick' }); t.textContent = b.label(r.k); root.append(t); });
+  const path = key => rows.map((r, i) => (i ? 'L' : 'M') + x(i).toFixed(1) + ' ' + y(r[key]).toFixed(1)).join('');
+  root.append(svg('path', { d: path('views') + `L${x(n - 1)} ${y(0)}L${x(0)} ${y(0)}Z`, fill: 'var(--s1)', 'fill-opacity': .1 }));
+  for (const [k, c] of [['visitors', 'var(--s2)'], ['views', 'var(--s1)']]) root.append(svg('path', { d: path(k), fill: 'none', stroke: c, 'stroke-width': 2, 'stroke-linejoin': 'round', 'stroke-linecap': 'round' }));
+  // end markers and labels; labels only when they don't collide
+  const last = rows[n - 1], ya = y(last.views), yb = y(last.visitors);
+  for (const [v, c] of [[last.visitors, 'var(--s2)'], [last.views, 'var(--s1)']]) root.append(svg('circle', { cx: x(n - 1), cy: y(v), r: 4, fill: c, stroke: 'var(--surface)', 'stroke-width': 2 }));
+  if (Math.abs(ya - yb) >= 14) for (const [v, yy] of [[last.views, ya], [last.visitors, yb]]) { const t = svg('text', { x: x(n - 1) + 9, y: yy + 4, class: 'endlabel' }); t.textContent = compact(v); root.append(t); }
+  // crosshair
+  const cross = svg('g', { visibility: 'hidden' });
+  const vline = svg('line', { y1: m.t, y2: m.t + ih, stroke: 'var(--axis)', 'stroke-width': 1 });
+  const da = svg('circle', { r: 4, fill: 'var(--s1)', stroke: 'var(--surface)', 'stroke-width': 2 }), db = svg('circle', { r: 4, fill: 'var(--s2)', stroke: 'var(--surface)', 'stroke-width': 2 });
+  cross.append(vline, db, da); root.append(cross);
+  let at = -1;
+  const show = (i, cx, cy) => {
+    at = i; const r = rows[i]; cross.setAttribute('visibility', 'visible');
+    for (const el of [vline]) { el.setAttribute('x1', x(i)); el.setAttribute('x2', x(i)); }
+    da.setAttribute('cx', x(i)); da.setAttribute('cy', y(r.views)); db.setAttribute('cx', x(i)); db.setAttribute('cy', y(r.visitors));
+    const rect = root.getBoundingClientRect(), sx = rect.width / W;
+    showTip(cx ?? rect.left + x(i) * sx, cy ?? rect.top + y(r.views) * sx, b.long(r.k), [['var(--s1)', nf.format(r.views), '访问次数'], ['var(--s2)', nf.format(r.visitors), '访客']]);
+  };
+  const hide = () => { cross.setAttribute('visibility', 'hidden'); hideTip(); at = -1; };
+  const hit = svg('rect', { x: m.l - 10, y: 0, width: iw + 20, height: H, fill: 'transparent' });
+  hit.addEventListener('pointermove', e => { const rect = root.getBoundingClientRect(), px = (e.clientX - rect.left) * W / rect.width; show(Math.max(0, Math.min(n - 1, Math.round(n === 1 ? 0 : (px - m.l) / iw * (n - 1)))), e.clientX, e.clientY); });
+  hit.addEventListener('pointerleave', hide);
+  root.append(hit);
+  root.addEventListener('keydown', e => { if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { e.preventDefault(); show(Math.max(0, Math.min(n - 1, (at < 0 ? n - 1 : at + (e.key === 'ArrowRight' ? 1 : -1))))); } else if (e.key === 'Escape') hide(); });
+  root.addEventListener('blur', hide);
+  box.replaceChildren(root);
+  $('#trend-sub').textContent = { hour: '最近 24 小时，每小时', day: '每天', week: '每周（周一起）', month: '每月' }[b.unit];
+  $('#trend-table').replaceChildren(h('thead', {}, h('tr', {}, h('th', {}, '时间'), h('th', { className: 'num' }, '访问次数'), h('th', { className: 'num' }, '访客'))),
+    h('tbody', {}, rows.slice().reverse().map(r => h('tr', {}, h('td', {}, b.long(r.k)), h('td', { className: 'num' }, nf.format(r.views)), h('td', { className: 'num' }, nf.format(r.visitors))))));
+}
+
+// --- weekday x hour heatmap
+function heat(d) {
+  const grid = Array.from({ length: 7 }, () => Array(24).fill(0));
+  for (const r of d.hours) grid[(r.wd + 6) % 7][r.h] += r.views;
+  const max = Math.max(0, ...grid.flat());
+  const level = v => !v ? 'var(--empty)' : 'var(--q' + Math.min(6, 1 + Math.floor((v / max) * 5.999)) + ')';
+  const el = $('#heat'), kids = [h('span')];
+  for (let hr = 0; hr < 24; hr++) kids.push(h('span', { className: 'hl' }, hr % 6 ? '' : String(hr)));
+  grid.forEach((row, w) => {
+    kids.push(h('span', { className: 'rl' }, WEEK[w].slice(1)));
+    row.forEach((v, hr) => { const c = h('span', { className: 'cell', style: 'background:' + level(v) }); c.dataset.tip = WEEK[w] + ' ' + pad(hr) + ':00–' + pad(hr) + ':59|' + v; kids.push(c); });
+  });
+  el.replaceChildren(...kids);
+  let best = null; grid.forEach((row, w) => row.forEach((v, hr) => { if (v && (!best || v > best.v)) best = { v, w, hr }; }));
+  const byHour = Array(24).fill(0); grid.forEach(row => row.forEach((v, hr) => byHour[hr] += v));
+  const topHour = byHour.indexOf(Math.max(...byHour));
+  el.setAttribute('aria-label', best ? `访问最多的时段是${WEEK[best.w]} ${best.hr} 时` : '暂无数据');
+  $('#peak').textContent = best ? `最忙：${WEEK[best.w]} ${best.hr} 时（${nf.format(best.v)} 次）；一天中 ${topHour}–${topHour + 1} 时最多。` : '所选范围内还没有访问。';
+}
+$('#heat').addEventListener('pointermove', e => { const c = e.target.closest('.cell'); if (!c) return hideTip(); const [t, v] = c.dataset.tip.split('|'); showTip(e.clientX, e.clientY, t, [['', nf.format(+v), '次访问']]); });
+$('#heat').addEventListener('pointerleave', hideTip);
+
+// --- breakdown bar lists
+const PANELS = [
+  ['country', '国家 / 地区', k => k ? regionName(k) : '未知'],
+  ['city', '城市', k => { const [c, cc] = (k || '|').split('|'); return c ? c + (cc ? ' · ' + regionName(cc) : '') : '未知'; }],
+  ['ref', '来源', k => k || '直接访问 / 书签'],
+  ['device', '设备', k => DEVICE[k] || k || '未知'],
+  ['browser', '浏览器', k => ({ WeChat: '微信', Other: '其他' })[k] || k || '未知'],
+  ['os', '系统', k => k === 'Other' ? '其他' : k || '未知'],
+  ['lang', '浏览器语言', k => k ? langName(k) + ' (' + k + ')' : '未知'],
+];
+function breakdowns(d) {
+  const total = d.range.views || 1;
+  $('#breakdowns').replaceChildren(...PANELS.map(([id, title, name]) => {
+    const rows = d[id], max = Math.max(1, ...rows.map(r => r.views));
+    return h('section', { className: 'card' }, h('h2', {}, title), h('p', { className: 'sub' }, '按访问次数'),
+      rows.length ? h('ul', { className: 'bars' }, rows.map(r => {
+        const li = h('li', { tabIndex: 0 }, h('span', { className: 'name' }, name(r.k)), h('span', { className: 'n' }, nf.format(r.views)),
+          h('span', { className: 'track' }, h('span', { className: 'bar', style: `display:block;width:${(r.views / max * 100).toFixed(1)}%` })));
+        li.dataset.tip = [name(r.k), r.views, r.visitors, Math.round(r.views / total * 100)].join('|');
+        return li;
+      })) : h('p', { className: 'empty' }, '暂无数据'));
+  }));
+}
+const barTip = (li, x, y) => { const [n, v, u, p] = li.dataset.tip.split('|'); showTip(x, y, n, [['var(--s1)', nf.format(+v), '次访问 · 占 ' + p + '%'], ['var(--s2)', nf.format(+u), '访客']]); };
+$('#breakdowns').addEventListener('pointermove', e => { const li = e.target.closest('li'); li ? barTip(li, e.clientX, e.clientY) : hideTip(); });
+$('#breakdowns').addEventListener('pointerleave', hideTip);
+$('#breakdowns').addEventListener('focusin', e => { const li = e.target.closest('li'); if (li) { const r = li.getBoundingClientRect(); barTip(li, r.right - 120, r.bottom); } });
+$('#breakdowns').addEventListener('focusout', hideTip);
+
+// --- recent visits
+function recent(d) {
+  const fmt = new Intl.DateTimeFormat('zh-CN', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });
+  $('#recent').replaceChildren(
+    h('thead', {}, h('tr', {}, ['时间', 'IP（截断）', '位置', '设备', '来源', '语言'].map(t => h('th', {}, t)))),
+    h('tbody', {}, d.recent.length ? d.recent.map(r => h('tr', {},
+      h('td', {}, fmt.format(r.ts)),
+      h('td', {}, r.ip || '—'),
+      h('td', {}, [r.city, r.region, r.country && regionName(r.country)].filter(Boolean).join(' · ') || '未知'),
+      h('td', {}, [DEVICE[r.device] || r.device, r.os, ({ WeChat: '微信' })[r.browser] || r.browser].filter(Boolean).join(' · '), r.bot ? h('span', { className: 'tag' }, '机器人') : null),
+      h('td', {}, r.ref || '直接访问'),
+      h('td', {}, r.lang || '—'))) : h('tr', {}, h('td', { colSpan: 6, className: 'empty' }, '所选范围内还没有访问。'))));
+}
+
+function render(d) {
+  tiles(d); trend(d); heat(d); breakdowns(d); recent(d);
+  const label = { 1: '最近 24 小时', 7: '最近 7 天', 30: '最近 30 天', 90: '最近 90 天', 0: '全部时间' }[d.days];
+  $('#summary').replaceChildren(label + '：', h('b', {}, nf.format(d.range.views)), ' 次访问 · ', h('b', {}, nf.format(d.range.visitors)), ' 位访客',
+    ' · ', d.withBots ? `含 ${nf.format(d.botViews)} 次机器人访问` : `已排除 ${nf.format(d.botViews)} 次机器人访问`);
+  $('#updated').textContent = '更新于 ' + new Date(d.now).toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' });
+}
+
+async function load() {
+  $('#dash').classList.add('loading');
+  const bots = $('#bots').checked;
+  try {
+    const res = await fetch(`/stats/api?days=${days}&tz=${tz}&bots=${bots ? 1 : 0}`, { headers: { authorization: 'Bearer ' + key }, cache: 'no-store' });
+    if (res.status === 401) return signOut('密钥不对，请重新输入。');
+    if (!res.ok) throw new Error(res.status);
+    data = await res.json(); data.withBots = bots;
+    render(data);
+    $('#login').hidden = true; $('#dash').hidden = false;
+  } catch (e) {
+    $('#updated').textContent = '加载失败，稍后重试';
+  } finally { $('#dash').classList.remove('loading'); }
+}
+
+function signOut(msg = '') { key = null; store.set(null); $('#dash').hidden = true; $('#login').hidden = false; $('#login-err').textContent = msg; $('#key').focus(); }
+
+for (const b of document.querySelectorAll('#range button')) {
+  b.setAttribute('aria-pressed', String(+b.dataset.days === days));
+  b.addEventListener('click', () => { days = +b.dataset.days; try { localStorage.setItem('stats-days', days); } catch {} for (const o of document.querySelectorAll('#range button')) o.setAttribute('aria-pressed', String(o === b)); load(); });
+}
+$('#bots').addEventListener('change', load);
+$('#refresh').addEventListener('click', load);
+$('#logout').addEventListener('click', () => signOut());
+$('#login-form').addEventListener('submit', e => { e.preventDefault(); key = $('#key').value.trim(); store.set(key); $('#key').value = ''; load(); });
+new ResizeObserver(() => data && trend(data)).observe($('#trend'));
+setInterval(() => { if (key && !document.hidden) load(); }, 60000);
+key ? load() : signOut();
+</script>
+</body>
+</html>

@@ -41,14 +41,32 @@ https://workout.postagi.co.uk/
 - 可暂停、静音、延长休息；离开页面时暂停，结束后不会继续播放。
 - 网站明确区分温和活动与足够负荷的力量训练，不宣称短短一组就满足全天/整周运动需求。
 
+## 访问统计（只在 Cloudflare 版）
+
+`workout.postagi.co.uk` 由 Worker（`worker/site.js`）提供页面，并在服务器端记下每次打开首页；网页里没有统计脚本，不用 Cookie。记录保存在 Cloudflare D1 数据库 `workout-stats`（表结构见 `worker/migrations/`），超过 400 天自动删除。
+
+- 记下的内容：时间、截断的 IP（IPv4 只留前三段，如 `203.0.113.0`；IPv6 只留前 48 位）、Cloudflare 提供的国家/地区和城市、来源网站（只取域名，或 `?ref=`、`utm_source` 标记）、浏览器、系统、设备类型、浏览器首选语言，以及是否像机器人。
+- 访客数：用「IP + 浏览器标识 + 当天随机盐」的哈希去重。盐每个 UTC 日更换，次日由定时任务删除，之后这些哈希无法再算出，也无法跨天关联同一个人。所以周、月访客数是每日访客之和。
+- 不记录：完整 IP、Cookie 或设备指纹、页面里的任何操作。GitHub Pages 版没有统计。
+
+统计面板在 `/stats`，所有数据接口需要密钥 `STATS_KEY`（Worker 机密，本机副本在不入库的 `.dev.vars` 里）。打开面板并自动带上密钥：
+
+```sh
+npm run stats
+```
+
+面板显示今天 / 本周 / 本月 / 累计访问，可选 24 小时、7 天、30 天、90 天或全部时间的趋势（按小时、天、周或月）、星期 × 小时的访问时段、国家和城市、来源、设备、浏览器、系统、语言和最近 100 次访问。时间按打开面板的设备所在时区显示。
+
+本地预览：`npx wrangler d1 migrations apply workout-stats --local`，然后 `npx wrangler dev`，打开 `http://localhost:8787/stats`。更换密钥：`npx wrangler secret put STATS_KEY`，并同步改 `.dev.vars`。
+
 ## 维护与验证
 
-正式入口 `index.html` 是构建产物，包含全部样式、脚本和录音；无需服务器程序、数据库或 Sites。修改 `public/` 下的源文件，然后重新构建。仓库根目录的旧 `app.js`、`styles.css` 与 `audio/` 不被新版首页加载，保留以免破坏旧缓存。
+正式入口 `index.html` 是构建产物，包含全部样式、脚本和录音；页面本身无需服务器程序或数据库（Cloudflare 版的 Worker 只用于访问统计）。修改 `public/` 下的源文件，然后重新构建。仓库根目录的旧 `app.js`、`styles.css` 与 `audio/` 不被新版首页加载，保留以免破坏旧缓存。
 
 使用 Node.js 22.13 或更新版本，不需要为静态构建安装依赖：
 
 ```sh
-node --test tests/static-workout.test.mjs
+npm test
 node build/build-github-page.mjs index.html
 ```
 

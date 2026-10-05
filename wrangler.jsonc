@@ -1,9 +1,22 @@
 {
-  // Cloudflare Workers static-assets deploy of the single-file page.
-  // Build first: npm run build:cloudflare
+  // Cloudflare Worker: the single-file page as static assets, plus anonymous visit counts and the
+  // /stats dashboard (worker/). Build first: npm run build:cloudflare
   "name": "workout",
+  "main": "worker/site.js",
   "compatibility_date": "2026-09-24",
-  "assets": { "directory": "./dist/cloudflare" },
+  "assets": {
+    "directory": "./dist/cloudflare",
+    "binding": "ASSETS",
+    // Only the page itself passes through the Worker (to be counted); audio is served directly.
+    "run_worker_first": ["/", "/index.html"]
+  },
+  "rules": [{ "type": "Text", "globs": ["**/*.html"], "fallthrough": true }],
+  "d1_databases": [
+    { "binding": "DB", "database_name": "workout-stats", "database_id": "5bf3f5e8-5970-4771-874b-b3691ce762ee", "migrations_dir": "worker/migrations" }
+  ],
+  // Daily: drop yesterday's visitor salt and visits older than 400 days.
+  "triggers": { "crons": ["7 0 * * *"] },
+  "observability": { "enabled": true },
   "workers_dev": false,
   "routes": [{ "pattern": "workout.postagi.co.uk", "custom_domain": true }]
 }
