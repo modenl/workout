@@ -54,7 +54,7 @@ function syncAvatar(){
 const HERO_MOVES={strong:"reverseLunge",standard:"squat",gentle:"stand"};
 function syncHero(){
   const item=ITEM_BY_ID[HERO_MOVES[level]];$("hero-move").textContent=item.name;
-  $("hero-canvas").setAttribute("aria-label",t("heroAria",{who:t(Stickman.getAvatar()==="female"?"whoFemale":"whoMale"),name:item.name}));Stickman.draw($("hero-canvas"),item.id,PEAK,STAGE);
+  $("hero-canvas").setAttribute("aria-label",t("heroAria",{who:t(Stickman.getAvatar()==="female"?"whoFemale":"whoMale"),name:item.name}));Stickman.draw($("hero-canvas"),item.id,PEAK,HERO);
 }
 // Each level keeps its own plan; the gentle level still reads plans saved before levels existed.
 function loadPlan(key){
@@ -176,7 +176,7 @@ function newPlan(){
 function thumbnail(item){return '<canvas data-exercise="'+item.id+'" aria-hidden="true"></canvas>';}
 const observer=typeof IntersectionObserver==="function"?new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)visibleCanvases.add(e.target);else visibleCanvases.delete(e.target);});},{rootMargin:"50px"}):null;
 // Thumbnails show the most-worked pose; moves not yet computed are queued and drawn once ready.
-const PEAK=1.9,STAGE={theme:"dark",sync:true,trail:true,ghost:true},THUMB={theme:"light",small:true};let pendingThumbs=new Set();
+const PEAK=1.9,STAGE={theme:"dark",sync:true,trail:true,ghost:true},HERO={...STAGE,theme:"light"},THUMB={theme:"light",small:true};let pendingThumbs=new Set();
 function observeThumbnails(){visibleCanvases.clear();pendingThumbs.clear();if(observer)observer.disconnect();document.querySelectorAll("canvas[data-exercise]").forEach(canvas=>{if(!Stickman.draw(canvas,canvas.dataset.exercise,PEAK,THUMB))pendingThumbs.add(canvas);if(observer)observer.observe(canvas);});}
 function renderPlan(){
   $("plan-list").innerHTML=plan.map(item=>"<li>"+thumbnail(item)+'<div><h3>'+item.name+'</h3><p>'+item.category+" · "+t(item.alternating?"perSide":"total8")+'</p></div><button data-preview="'+item.id+'" aria-label="'+t("previewLabel",{name:item.name})+'">'+t("previewBtn")+'</button></li>').join("");
@@ -277,7 +277,7 @@ function animate(now){
     }
     if(state.mode==="done")return;if(state.mode==="running"&&!state.preview&&elapsedNow()>=32){startRest();return;}renderPractice();
   }else{
-    if(now-lastThumbs<30)return;lastThumbs=now;if(heroVisible)Stickman.draw($("hero-canvas"),HERO_MOVES[level],t,{...STAGE,yaw:Stickman.find(HERO_MOVES[level]).view.yaw+heroCam.yaw,turnable:!heroCam.sway,sway:heroCam.sway?30:0,clock:t});
+    if(now-lastThumbs<30)return;lastThumbs=now;if(heroVisible)Stickman.draw($("hero-canvas"),HERO_MOVES[level],t,{...HERO,yaw:Stickman.find(HERO_MOVES[level]).view.yaw+heroCam.yaw,turnable:!heroCam.sway,sway:heroCam.sway?30:0,clock:t});
     pendingThumbs.forEach(c=>{if(Stickman.draw(c,c.dataset.exercise,PEAK,THUMB))pendingThumbs.delete(c);});
     if(!reducedMotion)visibleCanvases.forEach(c=>Stickman.draw(c,c.dataset.exercise,t,THUMB));
   }
@@ -304,6 +304,7 @@ function applyStatic(){
   document.querySelectorAll("[data-i18n]").forEach(el=>{el.textContent=t(el.dataset.i18n);});
   document.querySelectorAll("[data-i18n-html]").forEach(el=>{el.innerHTML=t(el.dataset.i18nHtml);});
   document.querySelectorAll("[data-i18n-aria]").forEach(el=>{el.setAttribute("aria-label",t(el.dataset.i18nAria));});
+  document.querySelectorAll("[data-i18n-title]").forEach(el=>{el.setAttribute("title",t(el.dataset.i18nTitle));});
 }
 function setLang(next){
   if(next!=="zh"&&next!=="en"||state.open)return;lang=next;storage.set("cq-lang-v1",next);localizeData();applyStatic();
@@ -311,5 +312,17 @@ function setLang(next){
   syncAvatar();syncLevel();renderPlan();renderLibrary();
 }
 $("lang-toggle").addEventListener("click",()=>setLang(lang==="en"?"zh":"en"));
-applyStatic();syncAvatar();syncLevel();renderPlan();renderLibrary();requestAnimationFrame(frame);
+// Privacy and terms open as dialogs from #privacy / #terms, so the links can be shared.
+const LEGAL=["privacy","terms"];
+function syncLegal(){
+  if(typeof location!=="object"||state.open)return;const want=location.hash.slice(1);
+  for(const id of LEGAL){const box=$(id);if(id===want&&!box.open)box.showModal();else if(id!==want&&box.open)box.close();}
+}
+for(const id of LEGAL){
+  const box=$(id);
+  box.addEventListener("close",()=>{if(typeof location==="object"&&location.hash==="#"+id)history.replaceState(null,"",location.pathname+location.search);});
+  box.addEventListener("click",e=>{if(e.target===box||e.target.closest?.("[data-close]"))box.close();});
+}
+window.addEventListener("hashchange",syncLegal);
+applyStatic();syncAvatar();syncLevel();renderPlan();renderLibrary();requestAnimationFrame(frame);syncLegal();
 if(lang!=="zh")audio.prefetch(lang);

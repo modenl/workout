@@ -643,8 +643,8 @@ const Stickman=(()=>{
   const THEMES={
     dark:{hair:"#a8734f",bg0:"#1f3d35",bg1:"#0a1411",floor:"255,255,255",ring:"rgba(255,255,255,.09)",near:"#f5f2e8",far:"#86a194",outline:"#0e1b17",accent:"#ff7a45",
       glow:"255,122,69",trail:"111,227,193",ghost:"245,242,232",prop:"rgba(205,225,214,.38)",propFill:"rgba(205,225,214,.07)",shadow:"0,0,0",com:"#ffd166",support:"111,227,193",lighter:true},
-    light:{hair:"#8a5a3b",bg0:"#f3f5ee",bg1:"#dce4d3",floor:"26,60,52",ring:"rgba(26,60,52,.12)",near:"#17332c",far:"#8da396",outline:"#eef1e8",accent:"#c45532",
-      glow:"196,85,50",trail:"38,150,136",ghost:"23,51,44",prop:"rgba(26,60,52,.4)",propFill:"rgba(26,60,52,.06)",shadow:"20,45,38",com:"#d48806",support:"38,150,136",lighter:false}
+    light:{hair:"#8a5a3b",bg0:"#f4fbf7",bg1:"#d6ede1",floor:"15,46,39",ring:"rgba(15,46,39,.10)",near:"#12352d",far:"#93b5a6",outline:"#eef8f3",accent:"#d9562b",
+      glow:"217,86,43",trail:"13,150,104",ghost:"18,53,45",prop:"rgba(15,46,39,.38)",propFill:"rgba(15,46,39,.05)",shadow:"15,46,39",com:"#d48806",support:"13,150,104",lighter:false}
   };
   const rgb=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)),hex=c=>"rgb("+c.map(Math.round).join(",")+")";
   const mixRGB=(a,b,t)=>a.map((v,i)=>mix(v,b[i],clamp(t)));
