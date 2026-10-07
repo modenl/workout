@@ -77,7 +77,9 @@ function syncLevel(){
 }
 let toastTimer;
 function toast(text){const box=$("toast");box.textContent=text;box.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{box.hidden=true;},6000);}
-const state={open:false,preview:false,index:0,list:plan,mode:"closed",elapsed:0,clockStart:0,clockBase:0,clockAudio:false,voice:true,operation:0,reference:false,restUntil:0,restRemaining:20,holdRest:false,beat:-1,opener:null};
+// Seconds of rest between moves.
+const REST=15;
+const state={open:false,preview:false,index:0,list:plan,mode:"closed",elapsed:0,clockStart:0,clockBase:0,clockAudio:false,voice:true,operation:0,reference:false,restUntil:0,restRemaining:REST,holdRest:false,beat:-1,opener:null};
 let visibleCanvases=new Set(),heroVisible=true;
 state.cam={yaw:0,pitch:0};state.sway=storage.get("cq-sway-v1")!=="0"&&!(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
 const reducedMotion=window.matchMedia?.("(prefers-reduced-motion: reduce)").matches||false;
@@ -237,14 +239,14 @@ async function resumePractice(){
 function pausePractice(message=""){if(!state.open)return;state.elapsed=elapsedNow();state.operation++;audio.stop();state.mode="paused";$("pause-workout").textContent=t("resume");setStatus(message);renderPractice();}
 function openPractice(id){
   testToken++;clearTimeout(testTimer);audio.stop();state.opener=document.activeElement;state.open=true;state.preview=typeof id==="string";state.list=state.preview?[ITEM_BY_ID[id]]:plan.slice();state.index=0;state.elapsed=0;state.mode="paused";
-  $("trainer").showModal();document.body.classList.add("training");updateExercise();resumePractice();$("close-trainer").focus();
+  $("trainer").showModal();document.body.classList.add("training");updateExercise();resumePractice();$("pause-workout").focus();
 }
 function closePractice(){late=0;slow=false;state.operation++;testToken++;audio.stop();state.open=false;state.mode="closed";$("trainer").close();document.body.classList.remove("training");state.opener?.focus();}
 function togglePause(){if(state.mode==="running"||state.mode==="starting"){pausePractice();return;}if(state.mode==="paused")resumePractice();}
 function toggleVoice(){const running=state.mode==="running";if(running||state.mode==="starting")pausePractice();state.voice=!state.voice;$("voice-toggle").textContent=t(state.voice?"soundOn":"soundOff");$("voice-toggle").setAttribute("aria-pressed",String(state.voice));setStatus("");if(running)resumePractice();}
 function navigateExercise(delta){state.operation++;audio.stop();state.mode="paused";state.index=Math.max(0,Math.min(state.list.length-1,state.index+delta));state.elapsed=0;updateExercise();resumePractice();}
 function startRest(){
-  state.elapsed=32;audio.stop();state.operation++;state.mode="rest";state.holdRest=false;state.restRemaining=20;state.restUntil=performance.now()/1000+20;
+  state.elapsed=32;audio.stop();state.operation++;state.mode="rest";state.holdRest=false;state.restRemaining=REST;state.restUntil=performance.now()/1000+REST;
   $("transition").hidden=false;$("transition-pause").hidden=false;$("transition-canvas").hidden=state.index===state.list.length-1;$("transition-next").hidden=false;$("transition-pause").textContent=t("restLonger");$("progress-fill").style.width=((state.index+1)/state.list.length*100)+"%";
   if(state.index===state.list.length-1){state.mode="done";$("transition-kicker").textContent=t("doneKicker");$("transition-title").textContent=t("doneTitle");$("transition-count").textContent="✓";$("transition-description").textContent=t("doneText");$("transition-pause").hidden=true;$("transition-next").textContent=t("restDone");return;}
   $("transition-kicker").textContent=t("restKicker");$("transition-title").textContent=t("restNext",{name:state.list[state.index+1].name});$("transition-description").textContent=state.list[state.index+1].steps[0];$("transition-next").textContent=t("restReady");$("transition-count").textContent="20";
@@ -294,7 +296,16 @@ $("previous-exercise").addEventListener("click",()=>navigateExercise(-1));$("nex
 $("reference-toggle").addEventListener("click",()=>{state.reference=!state.reference;$("trainer").classList.toggle("reference-mode",state.reference);if(state.reference&&(state.mode==="running"||state.mode==="starting"))pausePractice();$("reference-toggle").setAttribute("aria-pressed",String(state.reference));$("reference-toggle").textContent=t(state.reference?"backToAnim":"startEnd");renderPractice();});
 $("transition-next").addEventListener("click",restNext);$("transition-pause").addEventListener("click",holdRest);
 document.addEventListener("visibilitychange",()=>{if(document.hidden){testToken++;clearTimeout(testTimer);if(state.open){if(state.mode==="running"||state.mode==="starting")pausePractice(t("leftPage"));if(state.mode==="rest"&&!state.holdRest)holdRest();}else audio.stop();}});
-document.addEventListener("keydown",e=>{if(e.code==="Space"&&state.open&&e.target.tagName!=="BUTTON"){e.preventDefault();togglePause();}});
+// Keys in the trainer, whatever has focus: Space or → next move (or end the rest), ← previous, P pause.
+function nextMove(){if(state.mode==="rest"||state.mode==="done")restNext();else if(!state.preview)state.index===state.list.length-1?startRest():navigateExercise(1);}
+document.addEventListener("keydown",e=>{
+  if(!state.open||e.altKey||e.ctrlKey||e.metaKey||e.target.tagName==="SELECT")return;
+  const key=e.code==="Space"||e.key==="ArrowRight"?"next":e.key==="ArrowLeft"?"prev":e.key==="p"||e.key==="P"?"pause":null;
+  if(!key)return;e.preventDefault();if(e.repeat)return;
+  if(key==="next")nextMove();
+  else if(key==="prev"){if(state.mode!=="rest"&&state.mode!=="done"&&!state.preview&&state.index>0)navigateExercise(-1);}
+  else if(state.mode==="rest")holdRest();else if(state.mode!=="done")togglePause();
+},true);
 window.addEventListener("resize",()=>{observeThumbnails();renderPractice();});
 if(typeof IntersectionObserver==="function")new IntersectionObserver(e=>{heroVisible=e[0].isIntersecting;}).observe($("hero-canvas"));
 // Static page text, then a language switch that relabels everything in place (not during a workout).

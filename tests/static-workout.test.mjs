@@ -20,12 +20,13 @@ function harness({deferred=false,blockedStorage=false,audioSession,outputTimesta
     addEventListener(){}
     resume(){events.push({event:'resume',sessionType:audioSession?.type});if(deferred)return new Promise(resolve=>resumers.push(()=>{this.state='running';resolve()}));this.state='running';return Promise.resolve()}
   }
-  const document={hidden:false,getElementById:el,querySelectorAll(){return []},addEventListener(){},activeElement:makeElement(),body:makeElement()};
+  const docListeners={};const document={hidden:false,getElementById:el,querySelectorAll(){return []},addEventListener(type,fn){(docListeners[type]??=[]).push(fn)},activeElement:makeElement(),body:makeElement()};
   const context=vm.createContext({document,window:{AudioContext,navigator:{audioSession},crypto:webcrypto,matchMedia:()=>({matches:false}),addEventListener(){}},localStorage:{getItem(key){if(blockedStorage)throw Error('blocked');return store.get(key)??null},setItem(key,value){if(blockedStorage)throw Error('blocked');store.set(key,String(value))}},performance:{now:()=>now*1000},requestAnimationFrame(){},atob:s=>Buffer.from(s,'base64').toString('binary'),setTimeout(fn){const id=++timerId;timers.set(id,fn);return id},clearTimeout:id=>timers.delete(id),console});
   if(languages)context.navigator={languages};
   context.fetch=async url=>{fetches.push(url);return {ok:true,arrayBuffer:async()=>wavEn.buffer.slice(wavEn.byteOffset,wavEn.byteOffset+wavEn.byteLength)};};
   vm.runInContext(library+'\n'+i18n+'\n'+stickman+'\n'+app+'\n;globalThis.subject={Stickman,setLang,getLang:()=>lang,t,ITEMS,LEVELS,CATEGORIES,DEFAULT_PLANS,selectLevel,setLibrary,beginTurn,turnView,toggleView,trainerCamera,getLevel:()=>level,state,audio,newPlan,openPractice,closePractice,resumePractice,pausePractice,toggleVoice,navigateExercise,frame,holdRest,restNext,testSound,selectAvatar,getPlan:()=>plan};',context);
-  return {s:context.subject,el,nodes,resumers,timers,events,store,fetches,setNow(t){now=t}};
+  const key=(code,k=code,target=el('close-trainer'))=>{const e={code,key:k,target:{tagName:target.tagName},repeat:false,prevented:false,preventDefault(){this.prevented=true}};for(const fn of docListeners.keydown||[])fn(e);return e;};
+  return {s:context.subject,el,nodes,resumers,timers,events,store,fetches,key,setNow(t){now=t}};
 }
 const settle=()=>new Promise(resolve=>setImmediate(resolve));
 // A sized canvas whose 2D context rejects non-finite numbers, in calls and in property writes.
@@ -202,4 +203,26 @@ test('each language counts with its own recording; only the built-in Chinese one
   await s.audio.unlock();const en=s.audio.buffer;assert.equal(fetches.length,1,'and is downloaded once');
   s.setLang('zh');await s.audio.unlock();const zh=s.audio.buffer;assert.notEqual(en,zh);
   for(const b of [en,zh]){assert.equal(b.duration,4);const d=b.getChannelData(0);for(let beat=0;beat<4;beat++){let sum=0;for(const x of d.slice(beat*16000,(beat+1)*16000))sum+=x*x;assert.ok(Math.sqrt(sum/16000)>.005,'beat '+(beat+1));}}
+});
+
+test('on a keyboard, Space moves on to the next move (never exits), arrow keys step, P pauses', async () => {
+  const h = harness(); h.s.openPractice(); await settle();
+  assert.equal(h.s.state.index, 0);
+  const e = h.key('Space', ' ');
+  assert.ok(e.prevented, 'Space does not reach the focused button');
+  assert.equal(h.s.state.open, true, 'still in the workout');
+  assert.equal(h.s.state.index, 1);
+  h.key('ArrowRight'); assert.equal(h.s.state.index, 2);
+  h.key('ArrowLeft'); assert.equal(h.s.state.index, 1);
+  await settle(); h.key('KeyP', 'p'); assert.equal(h.s.state.mode, 'paused');
+  while (h.s.state.index < h.s.state.list.length - 1) h.key('Space', ' ');
+  h.key('Space', ' '); assert.equal(h.s.state.mode, 'done', 'Space on the last move finishes the set');
+  h.s.closePractice(); assert.equal(h.key('Space', ' ').prevented, false, 'outside the workout Space scrolls the page as usual');
+});
+
+test('the rest between moves is 15 seconds, in the code and in what the page says', async () => {
+  const app = await readFile(new URL('public/app.js', root), 'utf8'), h = harness();
+  assert.match(app, /const REST=15;/);
+  assert.equal(h.s.state.restRemaining, 15);
+  assert.equal(h.s.t('planFact2'), '动作之间休息 15 秒，可以延长');
 });

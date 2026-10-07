@@ -369,7 +369,7 @@ html{scroll-behavior:auto}}
   <section class="hero wrap">
     <div class="hero-intro">
       <ul class="badges" aria-label="项目说明" data-i18n-aria="badgesLabel"><li data-i18n="badgeFree">免费</li><li data-i18n="badgeNoAccount">无需账号</li><li data-i18n="badgeGlobal">全球公益</li></ul>
-      <h1 data-i18n-html="heroTitle">每天 6 分钟，<br><em>把力气练回来。</em></h1>
+      <h1 data-i18n-html="heroTitle">每天 5 分钟，<br><em>把力气练回来。</em></h1>
       <p data-i18n="heroLead" class="lead">为 40 岁以上的人设计的居家力量跟练。不用器械，跟着 3D 示范和数拍做。</p>
     </div>
     <figure class="hero-art">
@@ -427,7 +427,7 @@ html{scroll-behavior:auto}}
         <p class="plan-summary" id="plan-summary" role="status"></p>
         <ul class="plan-facts">
           <li data-i18n="planFact1">每个动作 8 次，左右交替的每侧 4 次</li>
-          <li data-i18n="planFact2">动作之间休息 20 秒，可以延长</li>
+          <li data-i18n="planFact2">动作之间休息 15 秒，可以延长</li>
         </ul>
         <button data-i18n="startSet" class="primary" id="start-workout-2">开始这组 →</button>
         <button data-i18n="newSet" class="secondary" id="new-plan">↻ 换一组动作</button>
@@ -505,8 +505,8 @@ html{scroll-behavior:auto}}
 <div class="rhythm-bar" id="rhythm-bar"><span>1</span><span>2</span><span>3</span><span>4</span><b id="phase-cue">准备</b></div>
 <div class="trainer-copy"><p class="category" id="exercise-category"></p><h2 id="exercise-name"></h2><p class="purpose" id="exercise-purpose"></p><ol id="exercise-steps"></ol><p class="cue" id="exercise-cue" data-label="注意 · "></p></div>
 <p id="trainer-status" class="trainer-status" role="status" hidden></p>
-<div class="trainer-controls"><button data-i18n="prev" id="previous-exercise">上一个</button><button data-i18n="pause" id="pause-workout" class="primary">暂停</button><button data-i18n="next" id="next-exercise">下一个</button></div>
-<div id="transition" class="transition" hidden><p id="transition-kicker"></p><h2 id="transition-title"></h2><canvas id="transition-canvas" aria-hidden="true"></canvas><strong id="transition-count"></strong><p id="transition-description"></p><button data-i18n="restLonger" id="transition-pause">多休息一下</button><button data-i18n="restReady" id="transition-next" class="primary">准备好了，继续 →</button></div>
+<div class="trainer-controls"><button data-i18n="prev" data-i18n-title="prevKey" title="上一个（←）" id="previous-exercise">上一个</button><button data-i18n="pause" data-i18n-title="pauseKey" title="暂停 / 继续（P）" id="pause-workout" class="primary">暂停</button><button data-i18n="next" data-i18n-title="nextKey" title="下一个（空格或 →）" id="next-exercise">下一个</button></div>
+<div id="transition" class="transition" hidden><p id="transition-kicker"></p><h2 id="transition-title"></h2><canvas id="transition-canvas" aria-hidden="true"></canvas><strong id="transition-count"></strong><p id="transition-description"></p><button data-i18n="restLonger" id="transition-pause">多休息一下</button><button data-i18n="restReady" data-i18n-title="nextKey" title="下一个（空格或 →）" id="transition-next" class="primary">准备好了，继续 →</button></div>
 </div></dialog>
 <script>
 const CATEGORIES = [
@@ -663,12 +663,12 @@ const I18N={
     title:"常青动一动 · 免费的 40+ 居家力量跟练",description:"免费公益、无需账号的中老年居家力量跟练：三档强度，3D 动作示范，数拍跟练。",
     brand:"常青动一动",langSwitchLabel:"Switch to English",
     skip:"跳到今日跟练",navToday:"今日跟练",navLibrary:"动作库",navSafe:"安全须知",
-    heroTitle:"每天 6 分钟，<br><em>把力气练回来。</em>",heroLead:"为 40 岁以上的人设计的居家力量跟练。不用器械，跟着 3D 示范和数拍做。",
+    heroTitle:"每天 5 分钟，<br><em>把力气练回来。</em>",heroLead:"为 40 岁以上的人设计的居家力量跟练。不用器械，跟着 3D 示范和数拍做。",
     pickLevel:"选择强度",pickLevelLabel:"选择练习强度",startToday:"开始今天的跟练 →",seeToday:"看今天的 7 个动作 ↓",demo:"示范",
     male:"男示范",female:"女示范",pickAvatar:"选择示范人物",
     soundTitle:"先试一下数拍声音",soundIdle:"点按钮播放「一、二、三、四」。",soundHelp:"听不到数拍？请关闭手机静音模式，并调高媒体音量。",testSound:"▶ 测试声音",
     todayEyebrow:"今日跟练",todayTitle:"顺序安排好，<br>一项一项来。",todayLead:"热身、腿臀、推、拉、核心、脚踝和平衡各一个。",
-    planLabel:"这一组的安排",planFact1:"每个动作 8 次，左右交替的每侧 4 次",planFact2:"动作之间休息 20 秒，可以延长",startSet:"开始这组 →",newSet:"↻ 换一组动作",planNote:"一组动作不等于全天或整周的运动量。",
+    planLabel:"这一组的安排",planFact1:"每个动作 8 次，左右交替的每侧 4 次",planFact2:"动作之间休息 15 秒，可以延长",startSet:"开始这组 →",newSet:"↻ 换一组动作",planNote:"一组动作不等于全天或整周的运动量。",
     
     
     
@@ -686,12 +686,12 @@ const I18N={
     safe4Q:"为什么数拍速度是固定的？",safe4:"四拍完成一次：前两拍去，后两拍回，不追求最大幅度。这个节奏不适合你时，请暂停，按自己的速度练。",
     footerSources:"参考：<a href=\"https://www.cdc.gov/physical-activity-basics/guidelines/older-adults.html\">CDC 老年活动指南</a> · <a href=\"https://www.nhs.uk/live-well/exercise/strength-exercises/\">NHS 力量练习</a> · <a href=\"https://www.nhs.uk/live-well/exercise/sitting-exercises/\">NHS 坐姿活动</a><br>一般健康教育，不是个体化运动处方 · 2026.10 更新",
     exit:"× 退出",exitLabel:"退出跟练",soundOn:"声音开",soundOff:"声音关",orange:"橙色为发力部位",viewTurning:"↻ 转动中 · 可拖动",viewFixed:"固定 · 可拖动",cueLabel:"注意 · ",
-    startEnd:"看起止姿势",backToAnim:"返回动画",beat:"拍",reps:"/ 8 次",repsDemo:"/ 示范",prev:"上一个",next:"下一个",pause:"暂停",resume:"继续",starting:"准备中…",retry:"重试声音",
+    startEnd:"看起止姿势",backToAnim:"返回动画",beat:"拍",reps:"/ 8 次",repsDemo:"/ 示范",prev:"上一个",next:"下一个",pause:"暂停",prevKey:"上一个（←）",nextKey:"下一个（空格或 →）",pauseKey:"暂停 / 继续（P）",resume:"继续",starting:"准备中…",retry:"重试声音",
     restLonger:"多休息一下",restResume:"恢复倒计时",restReady:"准备好了，继续 →",restDone:"完成，回到首页",restKicker:"先休息，再继续",restNext:"下一个：{name}",restWord:"休息",
     doneKicker:"这一组，完成了",doneTitle:"今天又多动了一点",doneText:"坐稳，放松，按需补水。稍后再分段走动，不必一次练完所有运动量。",
     moveOf:"动作 {n} / {total}",preview:"动作预览",compare:"对照起点与终点",paused:"已暂停",alternating:" · 左右交替",
     perSide:"每侧 4 次",total8:"共 8 次",previewBtn:"预览",previewLabel:"预览{name}",all:"全部",allCount:"{n} 个",howTo:"看动作要点 →",howToLabel:"查看{name}的动作要点",
-    planSummary:"7 个动作 · 约 6 分钟",planNew:"已换好一组：7 个动作都和上一组不同。",switched:"已切换到 {level}。今日跟练：{plan}。",listSep:"、",
+    planSummary:"7 个动作 · 约 5 分钟",planNew:"已换好一组：7 个动作都和上一组不同。",switched:"已切换到 {level}。今日跟练：{plan}。",listSep:"、",
     heroAria:"{who}示范人物，{name}动画",whoMale:"男",whoFemale:"女",trainerAria:"{name}，{view}，橙色表示发力部位",
     hintVoice:"听不到数拍？请关闭手机静音模式，并调高媒体音量。",hintMuted:"网页数拍声音已关闭；点右上角「声音关」可重新开启。",
     sysPaused:"声音被系统暂停；点「继续」后恢复。",leftPage:"页面已离开，点继续恢复。",startFail:"未能启动声音：{msg}。可重试，或手动关闭声音后继续。",
@@ -727,12 +727,12 @@ const I18N={
     title:"Evergreen Moves · free home strength workouts for 40+",description:"Free, non-profit home strength workouts for people over 40, with no account needed: three levels, 3D demos and a spoken count.",
     brand:"Evergreen Moves",langSwitchLabel:"切换到中文",
     skip:"Skip to today's workout",navToday:"Today",navLibrary:"Exercises",navSafe:"Safety",
-    heroTitle:"Six minutes a day<br><em>to win back your strength.</em>",heroLead:"Home strength workouts designed for people over 40. No equipment: just follow the 3D demo and the count.",
+    heroTitle:"Five minutes a day<br><em>to win back your strength.</em>",heroLead:"Home strength workouts designed for people over 40. No equipment: just follow the 3D demo and the count.",
     pickLevel:"Choose your level",pickLevelLabel:"Choose an exercise level",startToday:"Start today's workout →",seeToday:"See today's 7 moves ↓",demo:"Demo",
     male:"Male",female:"Female",pickAvatar:"Choose who demonstrates",
     soundTitle:"Check the count first",soundIdle:"Tap to play “one, two, three, four.”",soundHelp:"Can't hear the count? Turn off silent mode and turn up the media volume.",testSound:"▶ Test sound",
     todayEyebrow:"Today's workout",todayTitle:"Set in order,<br>one move at a time.",todayLead:"One each: warm-up, legs, push, pull, core, ankles and balance.",
-    planLabel:"About this set",planFact1:"8 reps per move; 4 per side when alternating",planFact2:"20 s rest between moves, which you can extend",startSet:"Start this set →",newSet:"↻ New set of moves",planNote:"One set isn't a full day's or week's activity.",
+    planLabel:"About this set",planFact1:"8 reps per move; 4 per side when alternating",planFact2:"15 s rest between moves, which you can extend",startSet:"Start this set →",newSet:"↻ New set of moves",planNote:"One set isn't a full day's or week's activity.",
     
     
     
@@ -750,12 +750,12 @@ const I18N={
     safe4Q:"Why is the count speed fixed?",safe4:"Each rep takes four beats: two out, two back, without chasing the biggest range. If the pace doesn't suit you, pause and go at your own speed.",
     footerSources:"Sources: <a href=\"https://www.cdc.gov/physical-activity-basics/guidelines/older-adults.html\">CDC guidelines for older adults</a> · <a href=\"https://www.nhs.uk/live-well/exercise/strength-exercises/\">NHS strength exercises</a> · <a href=\"https://www.nhs.uk/live-well/exercise/sitting-exercises/\">NHS sitting exercises</a><br>General health education, not a personal exercise prescription · Updated Oct 2026",
     exit:"× Exit",exitLabel:"Exit the workout",soundOn:"Sound",soundOff:"Muted",orange:"Orange = working muscles",viewTurning:"↻ Turning · drag",viewFixed:"Fixed · drag",cueLabel:"Note · ",
-    startEnd:"Start & end",backToAnim:"Back to animation",beat:"beat",reps:"/ 8 reps",repsDemo:"/ demo",prev:"Previous",next:"Next",pause:"Pause",resume:"Resume",starting:"Starting…",retry:"Retry sound",
+    startEnd:"Start & end",backToAnim:"Back to animation",beat:"beat",reps:"/ 8 reps",repsDemo:"/ demo",prev:"Previous",next:"Next",pause:"Pause",prevKey:"Previous (←)",nextKey:"Next (Space or →)",pauseKey:"Pause / resume (P)",resume:"Resume",starting:"Starting…",retry:"Retry sound",
     restLonger:"Rest longer",restResume:"Resume countdown",restReady:"Ready, continue →",restDone:"Done, back to home",restKicker:"Rest, then continue",restNext:"Next: {name}",restWord:"Rest",
     doneKicker:"Set complete",doneTitle:"You moved a bit more today",doneText:"Sit down, relax and have a drink if you need one. Walk in short bouts later; you don't need to do it all at once.",
     moveOf:"Move {n} of {total}",preview:"Preview",compare:"Compare start and end",paused:"Paused",alternating:" · alternating sides",
     perSide:"4 per side",total8:"8 reps",previewBtn:"Preview",previewLabel:"Preview {name}",all:"All",allCount:"{n} moves",howTo:"How to do it →",howToLabel:"How to do {name}",
-    planSummary:"7 moves · about 6 min",planNew:"New set ready: all 7 moves are different.",switched:"Switched to {level}. Today: {plan}.",listSep:", ",
+    planSummary:"7 moves · about 5 min",planNew:"New set ready: all 7 moves are different.",switched:"Switched to {level}. Today: {plan}.",listSep:", ",
     heroAria:"{who} demonstrator, {name} animation",whoMale:"Male",whoFemale:"Female",trainerAria:"{name}, {view}, orange shows the working muscles",
     hintVoice:"Can't hear the count? Turn off silent mode and turn up the media volume.",hintMuted:"The count is muted; tap “Muted” at the top right to turn it back on.",
     sysPaused:"The system paused the sound; tap Resume to continue.",leftPage:"You left the page; tap Resume to continue.",startFail:"Couldn't start the sound: {msg}. Try again, or turn the sound off and continue.",
@@ -1751,7 +1751,9 @@ function syncLevel(){
 }
 let toastTimer;
 function toast(text){const box=$("toast");box.textContent=text;box.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{box.hidden=true;},6000);}
-const state={open:false,preview:false,index:0,list:plan,mode:"closed",elapsed:0,clockStart:0,clockBase:0,clockAudio:false,voice:true,operation:0,reference:false,restUntil:0,restRemaining:20,holdRest:false,beat:-1,opener:null};
+// Seconds of rest between moves.
+const REST=15;
+const state={open:false,preview:false,index:0,list:plan,mode:"closed",elapsed:0,clockStart:0,clockBase:0,clockAudio:false,voice:true,operation:0,reference:false,restUntil:0,restRemaining:REST,holdRest:false,beat:-1,opener:null};
 let visibleCanvases=new Set(),heroVisible=true;
 state.cam={yaw:0,pitch:0};state.sway=storage.get("cq-sway-v1")!=="0"&&!(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
 const reducedMotion=window.matchMedia?.("(prefers-reduced-motion: reduce)").matches||false;
@@ -1911,14 +1913,14 @@ async function resumePractice(){
 function pausePractice(message=""){if(!state.open)return;state.elapsed=elapsedNow();state.operation++;audio.stop();state.mode="paused";$("pause-workout").textContent=t("resume");setStatus(message);renderPractice();}
 function openPractice(id){
   testToken++;clearTimeout(testTimer);audio.stop();state.opener=document.activeElement;state.open=true;state.preview=typeof id==="string";state.list=state.preview?[ITEM_BY_ID[id]]:plan.slice();state.index=0;state.elapsed=0;state.mode="paused";
-  $("trainer").showModal();document.body.classList.add("training");updateExercise();resumePractice();$("close-trainer").focus();
+  $("trainer").showModal();document.body.classList.add("training");updateExercise();resumePractice();$("pause-workout").focus();
 }
 function closePractice(){late=0;slow=false;state.operation++;testToken++;audio.stop();state.open=false;state.mode="closed";$("trainer").close();document.body.classList.remove("training");state.opener?.focus();}
 function togglePause(){if(state.mode==="running"||state.mode==="starting"){pausePractice();return;}if(state.mode==="paused")resumePractice();}
 function toggleVoice(){const running=state.mode==="running";if(running||state.mode==="starting")pausePractice();state.voice=!state.voice;$("voice-toggle").textContent=t(state.voice?"soundOn":"soundOff");$("voice-toggle").setAttribute("aria-pressed",String(state.voice));setStatus("");if(running)resumePractice();}
 function navigateExercise(delta){state.operation++;audio.stop();state.mode="paused";state.index=Math.max(0,Math.min(state.list.length-1,state.index+delta));state.elapsed=0;updateExercise();resumePractice();}
 function startRest(){
-  state.elapsed=32;audio.stop();state.operation++;state.mode="rest";state.holdRest=false;state.restRemaining=20;state.restUntil=performance.now()/1000+20;
+  state.elapsed=32;audio.stop();state.operation++;state.mode="rest";state.holdRest=false;state.restRemaining=REST;state.restUntil=performance.now()/1000+REST;
   $("transition").hidden=false;$("transition-pause").hidden=false;$("transition-canvas").hidden=state.index===state.list.length-1;$("transition-next").hidden=false;$("transition-pause").textContent=t("restLonger");$("progress-fill").style.width=((state.index+1)/state.list.length*100)+"%";
   if(state.index===state.list.length-1){state.mode="done";$("transition-kicker").textContent=t("doneKicker");$("transition-title").textContent=t("doneTitle");$("transition-count").textContent="✓";$("transition-description").textContent=t("doneText");$("transition-pause").hidden=true;$("transition-next").textContent=t("restDone");return;}
   $("transition-kicker").textContent=t("restKicker");$("transition-title").textContent=t("restNext",{name:state.list[state.index+1].name});$("transition-description").textContent=state.list[state.index+1].steps[0];$("transition-next").textContent=t("restReady");$("transition-count").textContent="20";
@@ -1968,7 +1970,16 @@ $("previous-exercise").addEventListener("click",()=>navigateExercise(-1));$("nex
 $("reference-toggle").addEventListener("click",()=>{state.reference=!state.reference;$("trainer").classList.toggle("reference-mode",state.reference);if(state.reference&&(state.mode==="running"||state.mode==="starting"))pausePractice();$("reference-toggle").setAttribute("aria-pressed",String(state.reference));$("reference-toggle").textContent=t(state.reference?"backToAnim":"startEnd");renderPractice();});
 $("transition-next").addEventListener("click",restNext);$("transition-pause").addEventListener("click",holdRest);
 document.addEventListener("visibilitychange",()=>{if(document.hidden){testToken++;clearTimeout(testTimer);if(state.open){if(state.mode==="running"||state.mode==="starting")pausePractice(t("leftPage"));if(state.mode==="rest"&&!state.holdRest)holdRest();}else audio.stop();}});
-document.addEventListener("keydown",e=>{if(e.code==="Space"&&state.open&&e.target.tagName!=="BUTTON"){e.preventDefault();togglePause();}});
+// Keys in the trainer, whatever has focus: Space or → next move (or end the rest), ← previous, P pause.
+function nextMove(){if(state.mode==="rest"||state.mode==="done")restNext();else if(!state.preview)state.index===state.list.length-1?startRest():navigateExercise(1);}
+document.addEventListener("keydown",e=>{
+  if(!state.open||e.altKey||e.ctrlKey||e.metaKey||e.target.tagName==="SELECT")return;
+  const key=e.code==="Space"||e.key==="ArrowRight"?"next":e.key==="ArrowLeft"?"prev":e.key==="p"||e.key==="P"?"pause":null;
+  if(!key)return;e.preventDefault();if(e.repeat)return;
+  if(key==="next")nextMove();
+  else if(key==="prev"){if(state.mode!=="rest"&&state.mode!=="done"&&!state.preview&&state.index>0)navigateExercise(-1);}
+  else if(state.mode==="rest")holdRest();else if(state.mode!=="done")togglePause();
+},true);
 window.addEventListener("resize",()=>{observeThumbnails();renderPractice();});
 if(typeof IntersectionObserver==="function")new IntersectionObserver(e=>{heroVisible=e[0].isIntersecting;}).observe($("hero-canvas"));
 // Static page text, then a language switch that relabels everything in place (not during a workout).
