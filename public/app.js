@@ -81,6 +81,9 @@ let toastTimer;
 function toast(text){const box=$("toast");box.textContent=text;box.hidden=false;clearTimeout(toastTimer);toastTimer=setTimeout(()=>{box.hidden=true;},6000);}
 // Seconds of rest between moves.
 const REST=15;
+// The advanced level goes through its seven moves twice, with a longer rest between rounds.
+const ROUNDS={strong:2,standard:1,gentle:1},ROUND_REST=60;
+const roundsOf=key=>ROUNDS[key]||1;
 const state={open:false,preview:false,index:0,list:plan,mode:"closed",elapsed:0,clockStart:0,clockBase:0,clockAudio:false,voice:true,operation:0,reference:false,restUntil:0,restRemaining:REST,holdRest:false,beat:-1,opener:null};
 let visibleCanvases=new Set(),heroVisible=true;
 state.cam={yaw:0,pitch:0};state.sway=storage.get("cq-sway-v1")!=="0"&&!(window.matchMedia?.("(prefers-reduced-motion: reduce)").matches);
@@ -184,7 +187,7 @@ const PEAK=1.9,STAGE={theme:"dark",sync:true,trail:true,ghost:true},HERO={...STA
 function observeThumbnails(){visibleCanvases.clear();pendingThumbs.clear();if(observer)observer.disconnect();document.querySelectorAll("canvas[data-exercise]").forEach(canvas=>{if(!Stickman.draw(canvas,canvas.dataset.exercise,PEAK,THUMB))pendingThumbs.add(canvas);if(observer)observer.observe(canvas);});}
 function renderPlan(){
   $("plan-list").innerHTML=plan.map(item=>"<li>"+thumbnail(item)+'<div><h3>'+item.name+'</h3><p>'+item.category+" · "+t(item.alternating?"perSide":"total8")+'</p></div><button data-preview="'+item.id+'" aria-label="'+t("previewLabel",{name:item.name})+'">'+t("previewBtn")+'</button></li>').join("");
-  $("plan-level").textContent=levelLabel();$("plan-summary").textContent=t("planSummary");observeThumbnails();
+  $("plan-level").textContent=levelLabel();$("plan-summary").textContent=roundsOf(level)>1?t("planSummaryRounds",{rounds:roundsOf(level)}):t("planSummary");observeThumbnails();
 }
 function levelTags(item){return '<span class="level-tags">'+LEVELS.filter(l=>inLevel(item,l.key)).map(l=>"<span"+(l.key===level?' class="current"':"")+">"+l.short+"</span>").join("")+"</span>";}
 // The library shows the current level ("level") or all three ("every"), narrowed by category.
@@ -218,7 +221,7 @@ function draggable(el,begin,turn,reset){
 }
 function updateExercise(){
   const item=current();state.beat=-1;state.reference=false;$("trainer").classList.remove("reference-mode");$("reference-toggle").setAttribute("aria-pressed","false");$("reference-toggle").textContent=t("startEnd");
-  $("progress-label").textContent=state.preview?t("preview"):t("moveOf",{n:state.index+1,total:state.list.length});
+  $("progress-label").textContent=state.preview?t("preview"):state.rounds>1?t("moveOfRound",{round:Math.floor(state.index/plan.length)+1,rounds:state.rounds,n:state.index%plan.length+1,total:plan.length}):t("moveOf",{n:state.index+1,total:state.list.length});
   $("progress-fill").style.width=(state.preview?100:state.index/state.list.length*100)+"%";
   $("exercise-category").textContent=item.category+(item.alternating?t("alternating"):"");
   $("exercise-name").textContent=item.name;$("exercise-purpose").textContent=item.purpose;
@@ -240,7 +243,7 @@ async function resumePractice(){
 }
 function pausePractice(message=""){if(!state.open)return;state.elapsed=elapsedNow();state.operation++;audio.stop();state.mode="paused";$("pause-workout").textContent=t("resume");setStatus(message);renderPractice();}
 function openPractice(id){
-  testToken++;clearTimeout(testTimer);audio.stop();state.opener=document.activeElement;state.open=true;state.preview=typeof id==="string";state.list=state.preview?[ITEM_BY_ID[id]]:plan.slice();state.index=0;state.elapsed=0;state.mode="paused";
+  testToken++;clearTimeout(testTimer);audio.stop();state.opener=document.activeElement;state.open=true;state.preview=typeof id==="string";state.rounds=state.preview?1:roundsOf(level);state.list=state.preview?[ITEM_BY_ID[id]]:Array.from({length:state.rounds},()=>plan).flat();state.index=0;state.elapsed=0;state.mode="paused";
   $("trainer").showModal();document.body.classList.add("training");updateExercise();resumePractice();$("pause-workout").focus();
 }
 function closePractice(){late=0;slow=false;state.operation++;testToken++;audio.stop();state.open=false;state.mode="closed";$("trainer").close();document.body.classList.remove("training");state.opener?.focus();}
@@ -248,10 +251,10 @@ function togglePause(){if(state.mode==="running"||state.mode==="starting"){pause
 function toggleVoice(){const running=state.mode==="running";if(running||state.mode==="starting")pausePractice();state.voice=!state.voice;$("voice-toggle").textContent=t(state.voice?"soundOn":"soundOff");$("voice-toggle").setAttribute("aria-pressed",String(state.voice));setStatus("");if(running)resumePractice();}
 function navigateExercise(delta){state.operation++;audio.stop();state.mode="paused";state.index=Math.max(0,Math.min(state.list.length-1,state.index+delta));state.elapsed=0;updateExercise();resumePractice();}
 function startRest(){
-  state.elapsed=32;audio.stop();state.operation++;state.mode="rest";state.holdRest=false;state.restRemaining=REST;state.restUntil=performance.now()/1000+REST;
+  state.elapsed=32;audio.stop();state.operation++;state.mode="rest";state.holdRest=false;const roundEnd=state.rounds>1&&(state.index+1)%plan.length===0,rest=roundEnd?ROUND_REST:REST;state.restRemaining=rest;state.restUntil=performance.now()/1000+rest;
   $("transition").hidden=false;$("transition-pause").hidden=false;$("transition-canvas").hidden=state.index===state.list.length-1;$("transition-next").hidden=false;$("transition-pause").textContent=t("restLonger");$("progress-fill").style.width=((state.index+1)/state.list.length*100)+"%";
   if(state.index===state.list.length-1){state.mode="done";$("transition-kicker").textContent=t("doneKicker");$("transition-title").textContent=t("doneTitle");$("transition-count").textContent="✓";$("transition-description").textContent=t("doneText");$("transition-pause").hidden=true;$("transition-next").textContent=t("restDone");return;}
-  $("transition-kicker").textContent=t("restKicker");$("transition-title").textContent=t("restNext",{name:state.list[state.index+1].name});$("transition-description").textContent=state.list[state.index+1].steps[0];$("transition-next").textContent=t("restReady");$("transition-count").textContent="20";
+  $("transition-kicker").textContent=roundEnd?t("roundKicker",{round:(state.index+1)/plan.length,rounds:state.rounds}):t("restKicker");$("transition-title").textContent=t("restNext",{name:state.list[state.index+1].name});$("transition-description").textContent=state.list[state.index+1].steps[0];$("transition-next").textContent=t("restReady");$("transition-count").textContent=String(rest);
 }
 function restNext(){if(state.mode==="done"){closePractice();return;}if(state.mode==="rest")navigateExercise(1);}
 function holdRest(){state.holdRest=!state.holdRest;if(!state.holdRest)state.restUntil=performance.now()/1000+state.restRemaining;$("transition-pause").textContent=t(state.holdRest?"restResume":"restLonger");}

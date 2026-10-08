@@ -193,7 +193,7 @@ test('switching language relabels the page in place and is remembered, but not d
   const {s,el,store}=harness();const plan=s.getPlan().map(i=>i.id);
   s.setLang('en');assert.equal(s.getLang(),'en');assert.equal(store.get('cq-lang-v1'),'en');assert.deepEqual(s.getPlan().map(i=>i.id),plan,'same plan, new labels');
   assert.match(s.getPlan()[0].name,/^[A-Za-z]/);s.selectLevel('strong');assert.match(el('toast').textContent,/^Switched to Ages 40–55/);
-  s.openPractice();await settle();assert.match(el('progress-label').textContent,/^Move 1 of 7/);assert.equal(el('rep-total').textContent,'/ 8 reps');
+  s.openPractice();await settle();assert.match(el('progress-label').textContent,/^Round 1 of 2 · move 1 of 7/);assert.equal(el('rep-total').textContent,'/ 8 reps');
   s.setLang('zh');assert.equal(s.getLang(),'en','no switching mid-workout');s.closePractice();
   s.setLang('zh');assert.match(s.getPlan()[0].name,/[\u4e00-\u9fff]/);
 });
@@ -225,4 +225,19 @@ test('the rest between moves is 15 seconds, in the code and in what the page say
   assert.match(app, /const REST=15;/);
   assert.equal(h.s.state.restRemaining, 15);
   assert.equal(h.s.t('planFact2'), '动作之间休息 15 秒，可以延长');
+});
+
+test('the advanced level runs its seven moves twice, with a minute of rest between rounds', async () => {
+  const h = harness(); h.s.selectLevel('strong'); h.s.openPractice(); await settle();
+  assert.equal(h.s.state.list.length, 14);
+  assert.deepEqual(h.s.state.list.slice(7).map(i => i.id), h.s.getPlan().map(i => i.id), 'round two repeats the plan');
+  assert.equal(h.el('progress-label').textContent, '第 1/2 轮 · 动作 1 / 7');
+  assert.equal(h.el('plan-summary').textContent, '7 个动作 × 2 轮 · 约 12 分钟');
+  for (let i = 0; i < 6; i++) h.key('Space', ' ');
+  assert.equal(h.el('progress-label').textContent, '第 1/2 轮 · 动作 7 / 7');
+  h.key('Space', ' ');
+  assert.equal(h.el('progress-label').textContent, '第 2/2 轮 · 动作 1 / 7');
+  h.s.closePractice();
+  const g = harness(); g.s.openPractice(); await settle();
+  assert.equal(g.s.state.list.length, 7, 'the other levels stay at one round');
 });
