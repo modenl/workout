@@ -22,7 +22,7 @@ const I18N={
     week3Title:"循序渐进",week3:"能轻松、稳定地做完 8 次时，放慢下降速度，或换高一档强度。跟不上就暂停，先站稳或坐稳。",
     weekNote:"一般指南还建议每周累计 150 分钟中等强度有氧活动；达不到时，根据健康状况量力而行。本网站不能替代个体化运动处方。",
     safeEyebrow:"安全须知",safeTitle:"先准备好，再开始。",
-    safe1Q:"需要准备什么？",safe1:"不带轮的牢固椅子，椅子靠墙。标准和进阶强度还会用到一面空墙、一条毛巾和一张不会滑动的牢固桌子。穿防滑鞋，清空周围杂物；平衡较差时，请家人在旁照看。",
+    safe1Q:"需要准备什么？",safe1:"不带轮的牢固椅子，椅子靠墙。标准和进阶强度还会用到一面空墙、一条毛巾和一张不会滑动的牢固桌子；进阶强度有几个动作在地上做，再准备一张瑜伽垫或厚毯子。穿防滑鞋，清空周围杂物；平衡较差时，请家人在旁照看。",
     safe2Q:"什么时候应暂停或就医？",safe2:"胸痛、晕厥、明显气短等症状应立即停止，必要时紧急就医。新出现或加重的关节疼痛也不要硬撑。",
     safe3Q:"站立不稳、近期手术，可以练吗？",safe3:"近期跌倒、骨折、手术，或疾病控制不稳时，先请医生或物理治疗师评估。坐姿动作也不一定适合每个人。",
     safe4Q:"为什么数拍速度是固定的？",safe4:"四拍完成一次：前两拍去，后两拍回，不追求最大幅度。这个节奏不适合你时，请暂停，按自己的速度练。",
@@ -86,7 +86,7 @@ const I18N={
     week3Title:"Progress gradually",week3:"When 8 reps feel easy and steady, lower more slowly or move up a level. If you can't keep up, pause and get steady first.",
     weekNote:"General guidelines also recommend 150 minutes of moderate aerobic activity a week; if that's out of reach, do what your health allows. This site is not a personal exercise prescription.",
     safeEyebrow:"Safety",safeTitle:"Get ready, then begin.",
-    safe1Q:"What do I need?",safe1:"A sturdy chair without wheels, placed against a wall. The standard and advanced levels also use a clear wall, a towel and a solid table that won't slide. Wear non-slip shoes and clear the space around you; if your balance is poor, have someone nearby.",
+    safe1Q:"What do I need?",safe1:"A sturdy chair without wheels, placed against a wall. The standard and advanced levels also use a clear wall, a towel and a solid table that won't slide; a few advanced moves are done on the floor, so have a yoga mat or thick blanket too. Wear non-slip shoes and clear the space around you; if your balance is poor, have someone nearby.",
     safe2Q:"When should I stop or get help?",safe2:"Stop at once for chest pain, fainting or marked breathlessness, and get urgent care if needed. Don't push through new or worsening joint pain.",
     safe3Q:"Unsteady, or had surgery recently?",safe3:"After a recent fall, fracture or surgery, or if a condition isn't well controlled, check with a doctor or physiotherapist first. Seated moves aren't right for everyone either.",
     safe4Q:"Why is the count speed fixed?",safe4:"Each rep takes four beats: two out, two back, without chasing the biggest range. If the pace doesn't suit you, pause and go at your own speed.",
@@ -132,6 +132,8 @@ const I18N={
 };
 // The two cues shown while a rep goes out and comes back.
 const PHASES_EN={
+ wallSit:["Sink a little · hold","Steady · keep breathing"],gluteBridge:["Heels down · lift the hips","Lower slowly"],singleBridge:["One leg up · lift the hips","Lower · switch"],
+ pushUp:["Bend · chest toward the floor","Push away · body straight"],plank:["Brace your abs and glutes","Hold · breathe naturally"],proneY:["Shoulder blades back · lift","Lower slowly"],
  armSwing:["Small swings","Back to centre · switch"],shoulderLift:["Lift the shoulders","Relax them down"],kneeOpen:["Open the knees","Back with control"],hamstringCurl:["Bend the knee · heel back","Lower · switch"],
  armRaise:["Raise the arms forward","Lower with control"],bicepsCurl:["Bend the elbows","Upper arms still · lower"],chestOpen:["Open out gently","Relax · bring back"],shoulderRotate:["Elbows still · turn out","Bring back gently"],
  hipHinge:["Lean from the hips","Back long · sit tall"],diagonalReach:["Reach to the far knee","Return · switch"],anklePump:["Pull the toes up","Relax · switch"],heelToe:["Toes down · heels up","Heels down · toes up"],

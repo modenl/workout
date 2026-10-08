@@ -17,6 +17,8 @@ function localizeData(){
 localizeData();
 const phaseCue=(id,i)=>(lang==="en"?PHASES_EN:PHASES)[id][i];
 const PHASES={
+ wallSit:["再沉一点 · 保持","稳住 · 不憋气"],gluteBridge:["脚跟踩地 · 抬臀","慢慢放下"],singleBridge:["一腿伸直 · 抬臀","放下 · 换边"],
+ pushUp:["屈肘 · 胸口靠近地面","推地 · 身体成直线"],plank:["收紧腹部和臀部","保持 · 自然呼吸"],proneY:["肩胛后收 · 抬臂","慢慢放下"],
  armSwing:["小幅摆臂","回正 · 换边"],shoulderLift:["轻轻提肩","放松肩膀"],kneeOpen:["双膝向外打开","有控制地收回"],hamstringCurl:["弯膝 · 脚跟向后","放回 · 换边"],
  armRaise:["向前抬臂","有控制地放下"],bicepsCurl:["弯肘抬手","上臂不动 · 放下"],chestOpen:["轻轻向外打开","放松 · 收回"],shoulderRotate:["手肘不动 · 外转","轻轻收回"],
  hipHinge:["从髋部稍前倾","背部长直 · 坐正"],diagonalReach:["向对侧膝前伸手","收回 · 换边"],anklePump:["脚尖向上勾","放松下压 · 换边"],heelToe:["脚尖落下 · 提脚跟","脚跟落下 · 抬脚尖"],
@@ -36,7 +38,7 @@ const PHASES={
 };
 // Default plans share no moves, so switching level visibly changes all seven.
 const DEFAULT_PLANS={
- strong:["stepJack","reverseLunge","chairDip","hingeRow","goodMorning","singleCalf","singleLegHinge"],
+ strong:["stepJack","reverseLunge","pushUp","proneY","plank","singleCalf","singleBridge"],
  standard:["standMarch","squat","inclinePush","towelPulldown","standCross","heel","singleLegStand"],
  gentle:["march","stand","wallPush","elbowPull","kneePress","seatedHeel","weightShift"]
 };
@@ -58,7 +60,7 @@ function syncHero(){
 }
 // Each level keeps its own plan; the gentle level still reads plans saved before levels existed.
 function loadPlan(key){
-  try{const saved=JSON.parse(storage.get("cq-plan-v3-"+key)||(key==="gentle"?storage.get("cq-plan-v2"):null));
+  try{const saved=JSON.parse(storage.get("cq-plan-v4-"+key)||(key==="gentle"?storage.get("cq-plan-v2"):null));
     if(Array.isArray(saved)&&saved.length===7&&saved.every((id,i)=>ITEM_BY_ID[id]?.key===CATEGORIES[i].key&&inLevel(ITEM_BY_ID[id],key)))return saved.map(id=>ITEM_BY_ID[id]);}catch{}
   return DEFAULT_PLANS[key].map(id=>ITEM_BY_ID[id]);
 }
@@ -173,7 +175,7 @@ async function testSound(){
 function randomIndex(n){const v=new Uint32Array(1);if(window.crypto?.getRandomValues){window.crypto.getRandomValues(v);return v[0]%n;}return Math.floor(Math.random()*n);}
 function newPlan(){
   plan=CATEGORIES.map((c,i)=>{const options=ITEMS.filter(x=>x.key===c.key&&inLevel(x,level)&&x.id!==plan[i].id);return options[randomIndex(options.length)];});
-  storage.set("cq-plan-v3-"+level,JSON.stringify(plan.map(i=>i.id)));renderPlan();$("plan-summary").textContent=t("planNew");
+  storage.set("cq-plan-v4-"+level,JSON.stringify(plan.map(i=>i.id)));renderPlan();$("plan-summary").textContent=t("planNew");
 }
 function thumbnail(item){return '<canvas data-exercise="'+item.id+'" aria-hidden="true"></canvas>';}
 const observer=typeof IntersectionObserver==="function"?new IntersectionObserver(entries=>{entries.forEach(e=>{if(e.isIntersecting)visibleCanvases.add(e.target);else visibleCanvases.delete(e.target);});},{rootMargin:"50px"}):null;

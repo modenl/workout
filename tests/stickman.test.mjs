@@ -11,8 +11,8 @@ const dist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
 // Both builds (different shoulder and hip widths) must keep every contact.
 const each = fn => { for (const build of ['male', 'female']) { S.setAvatar(build); for (const ex of S.EXERCISES) fn(ex, S.prepare(ex)); } S.setAvatar('male'); };
 
-test('51 exercises with unique ids, each a periodic cycle of 4 s per rep at 120 samples/s', () => {
-  const ids = S.EXERCISES.map(e => e.id);assert.equal(ids.length, 51);assert.equal(new Set(ids).size, 51);
+test('57 exercises with unique ids, each a periodic cycle of 4 s per rep at 120 samples/s', () => {
+  const ids = S.EXERCISES.map(e => e.id);assert.equal(ids.length, 57);assert.equal(new Set(ids).size, 57);
   each((ex, d) => { assert.equal(d.N, ex.reps * 4 * 120); assert.equal(d.duration, ex.reps * 4); });
 });
 
@@ -55,10 +55,10 @@ test('hands on a chair back, a wall or a seat edge stay put', () => {
   }
 });
 
-test('every move actually moves, except the isometric presses', () => {
+test('every move actually moves, except the isometric holds', () => {
   each((ex, d) => {
     let most = 0;for (let i = 0; i < d.N; i += 4) for (const k of S.POINTS) most = Math.max(most, dist(d.get(i, k), d.get(0, k)));
-    assert.ok(most > (['palmPress', 'towelPull'].includes(ex.id) ? 1 : ex.id === 'shoulderLift' ? 4 : 8), ex.id + ' moves ' + most.toFixed(1));
+    assert.ok(most > (['palmPress', 'towelPull', 'plank', 'wallSit'].includes(ex.id) ? 1 : ex.id === 'shoulderLift' ? 4 : 8), ex.id + ' moves ' + most.toFixed(1));
   });
 });
 
@@ -98,4 +98,22 @@ test('the two builds differ in shoulder and hip width but share limb lengths', (
   assert.ok(width('female', 'HL', 'HR') - width('male', 'HL', 'HR') > 2, 'her hips are wider');
   assert.ok(Math.abs(width('male', 'HL', 'KL') - width('female', 'HL', 'KL')) < 1e-3);
   S.setAvatar('male');
+});
+
+test('moves done on the floor stay on top of it: no point below the floor, the head never sinks into it', () => {
+  each((ex, d) => {
+    if (ex.floor !== 'body') return;
+    for (let i = 0; i < d.N; i++) {
+      for (const k of S.POINTS) assert.ok(d.get(i, k)[1] > -1e-3, ex.id + ' ' + k + ' below the floor');
+      assert.ok(d.get(i, 'HC')[1] >= 10.5, ex.id + ' head sinks into the floor');
+    }
+  });
+});
+
+test('the plank holds still at the elbows and the push-up goes well down', () => {
+  const plank = S.prepare(S.find('plank'));
+  for (let i = 0; i < plank.N; i++) for (const k of ['EL', 'ER', 'WL', 'WR']) assert.ok(dist(plank.get(i, k), plank.get(0, k)) < .2, 'plank ' + k + ' moves');
+  const push = S.prepare(S.find('pushUp'));let low = 1e9, high = 0;
+  for (let i = 0; i < push.N; i++) { const y = push.get(i, 'C7')[1]; low = Math.min(low, y); high = Math.max(high, y); }
+  assert.ok(high - low > 20, 'chest travels ' + (high - low).toFixed(1) + ' cm');
 });

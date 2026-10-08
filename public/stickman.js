@@ -264,15 +264,10 @@ const Stickman=(()=>{
     };
   }
 
-  // 扶桌俯卧撑: the body is a rigid plank pivoting on the balls of the feet; the hands stay on the table.
-  // The driver is the elbow angle; the body angle is solved each frame so the arms fit exactly.
-  function inclinePush(){
-    const table={type:"table",top:74,near:40,far:100,half:58},WR=[21,77.5,44],PSI=60;
-    const elbow=track([[0,172],[.05,172],[.47,80,[2.2,2.4]],[.53,80],[.86,172,[1.6,2.6]],[1,172]]);
-    const prot=track([[0,1],[.05,1],[.47,-2,[2.2,2.4]],[.53,-2],[.86,1,[1.6,2.6]],[.93,2.4],[1,1]]);
-    const breath=track([[0,0],[.05,.2],[.47,1],[.53,1],[.86,.1],[1,0]]);
-    const effort=track([[0,.2],[.05,.3],[.47,.85],[.53,.9],[.62,1],[.86,.45],[.93,.55],[1,.2]]);
-    const wrist=s=>[s*WR[0],WR[1],WR[2]],gap=e=>Math.sqrt(B.upper**2+B.fore**2-2*B.upper*B.fore*Math.cos(rad(e)));
+  // A rigid body pivoting on the balls of the feet with the hands at fixed wrists `WR` (x, y, z), solved
+  // so straight arms (172°) stand square to the body. Shared by the table and floor push-ups and the plank.
+  function pushRig(WR,lo,hi){
+    const PSI=60,wrist=s=>[s*WR[0],WR[1],WR[2]],gap=e=>Math.sqrt(B.upper**2+B.fore**2-2*B.upper*B.fore*Math.cos(rad(e)));
     // Rigid rotation (deg, + raises the body) about the ball of the foot, from a reference plank at angle a0.
     const ankle0=ankleAtBall([0,0,0],0,PSI);
     function plank(ballZ,a0,delta,ch){
@@ -283,20 +278,32 @@ const Stickman=(()=>{
         arms:SIDES.map(sd=>({ik:{wrist:wrist(sd),pole:[sd*.9,.3,-.7],hand:[0,-.12,1]}}))};
     }
     const shoulderGap=d=>len(sub(assemble(d).sides[0].S,wrist(1)));
-    const bisect=(f,lo,hi)=>{let flo=f(lo);for(let k=0;k<24;k++){const mid=(lo+hi)/2,fm=f(mid);if((fm<0)===(flo<0)){lo=mid;flo=fm;}else hi=mid;}return (lo+hi)/2;};
+    const bisect=(f,a,b)=>{let fa=f(a);for(let k=0;k<24;k++){const mid=(a+b)/2,fm=f(mid);if((fm<0)===(fa<0)){a=mid;fa=fm;}else b=mid;}return (a+b)/2;};
     // Start pose: arms at 172°, square to the body, balls of the feet on the floor.
     const top={breath:0,prot:1};let A0=45,BZ=-90;
     for(let k=0;k<4;k++){
       A0=bisect(a=>{const d=plank(0,a,0,top),S=assemble(d).sides[0].S,dy=S[1]-WR[1],dx=S[0]-WR[0];
         const z=WR[2]-Math.sqrt(Math.max(0,gap(172)**2-dy*dy-dx*dx))-S[2],arm=unit(sub(wrist(1),add(S,[0,0,z]))),U=[0,Math.sin(rad(a)),Math.cos(rad(a))];
-        BZ=z;return dot(arm,U);},25,70);
+        BZ=z;return dot(arm,U);},lo,hi);
     }
+    return {plank:(delta,ch)=>plank(BZ,A0,delta,ch),bisect,
+      // The pose whose shoulders sit `elbow` degrees of arm bend from the wrists.
+      atElbow:(elbow,ch)=>plank(BZ,A0,bisect(dl=>shoulderGap(plank(BZ,A0,dl,ch))-gap(elbow),-35,15),ch)};
+  }
+  // 扶桌俯卧撑: the body is a rigid plank pivoting on the balls of the feet; the hands stay on the table.
+  // The driver is the elbow angle; the body angle is solved each frame so the arms fit exactly.
+  function inclinePush(){
+    const table={type:"table",top:74,near:40,far:100,half:58},rig=pushRig([21,77.5,44],25,70);
+    const elbow=track([[0,172],[.05,172],[.47,80,[2.2,2.4]],[.53,80],[.86,172,[1.6,2.6]],[1,172]]);
+    const prot=track([[0,1],[.05,1],[.47,-2,[2.2,2.4]],[.53,-2],[.86,1,[1.6,2.6]],[.93,2.4],[1,1]]);
+    const breath=track([[0,0],[.05,.2],[.47,1],[.53,1],[.86,.1],[1,0]]);
+    const effort=track([[0,.2],[.05,.3],[.47,.85],[.53,.9],[.62,1],[.86,.45],[.93,.55],[1,.2]]);
     return {
       id:"inclinePush",oldId:"inclinePush",name:"扶桌俯卧撑",level:"55–70 · 40–55",reps:1,view:{yaw:66,pitch:10},props:[table],handSupport:true,
       channels:q=>({q,elbow:elbow(q),prot:prot(q),breath:breath(q),effort:effort(q)}),
       springs:{elbow:[4,.5],prot:[3,.7]},
-      build(ch){const D=gap(ch.elbow),delta=bisect(dl=>shoulderGap(plank(BZ,A0,dl,ch))-D,-35,15);return plank(BZ,A0,delta,ch);},
-      rig:{plank:(delta,ch)=>plank(BZ,A0,delta,ch),table},
+      build:ch=>rig.atElbow(ch.elbow,ch),
+      rig:{plank:rig.plank,table},
       parts:()=>({upperL:1,upperR:1,foreL:.8,foreR:.8,clavL:.8,clavR:.8,spine:.5}),
       metric:{label:"胸口上下速度",point:"C7",mode:"vy"},
       trails:["C7","EL","ER"],
@@ -392,13 +399,15 @@ const Stickman=(()=>{
     lift:track([[0,0],[.04,0],[.42,1,[1.6,2.6]],[.54,1],[.94,0,[2.2,2.2]],[1,0]]),
     lower:track([[0,0],[.04,0],[.47,1,[2,2.6]],[.53,1],[.86,0,[1.6,2.6]],[1,0]]),
     even:track([[0,0],[.04,0],[.46,1,[2,2.2]],[.54,1],[.96,0,[2,2.2]],[1,0]]),
-    press:track([[0,0],[.08,0],[.3,1,[1.8,2.2]],[.62,1],[.82,0,[2,2]],[1,0]])
+    press:track([[0,0],[.08,0],[.3,1,[1.8,2.2]],[.62,1],[.82,0,[2,2]],[1,0]]),
+    oneLeg:track([[0,0],[.22,0],[.5,1,[1.6,2.6]],[.58,1],[.8,0,[2.2,2.2]],[1,0]])
   };
   const PHASES={
     lift:[[0,.04,"准备"],[.04,.42,"发力 · 向心"],[.42,.54,"停一下"],[.54,.94,"慢慢回到起点"],[.94,1,"放松"]],
     lower:[[0,.04,"准备"],[.04,.47,"慢慢下去 · 离心"],[.47,.53,"停一下"],[.53,.86,"发力回来 · 向心"],[.86,1,"站稳 · 放松"]],
     even:[[0,.04,"准备"],[.04,.46,"做出动作"],[.46,.54,"停一下"],[.54,.96,"回到起点"],[.96,1,"放松"]],
-    press:[[0,.08,"准备"],[.08,.3,"逐渐用力"],[.3,.62,"保持用力 · 不憋气"],[.62,.82,"慢慢放松"],[.82,1,"放松"]]
+    press:[[0,.08,"准备"],[.08,.3,"逐渐用力"],[.3,.62,"保持用力 · 不憋气"],[.62,.82,"慢慢放松"],[.82,1,"放松"]],
+    oneLeg:[[0,.22,"抬起一条腿"],[.22,.5,"臀部发力抬起"],[.5,.58,"停一下"],[.58,.8,"慢慢放下"],[.8,1,"放下腿 · 换边"]]
   };
   // Shift the weight over the standing leg before a one-leg move, and back after it.
   const SHIFT=track([[0,0],[.1,1],[.9,1],[1,0]]);
@@ -406,7 +415,7 @@ const Stickman=(()=>{
   const sideKey=m=>m>0?"L":"R";
   function lib(id,name,c){
     const timing=TIMING[c.timing||"even"];
-    return {id,oldId:id,name,level:"",reps:c.alt?2:1,view:{yaw:c.front?14:64,pitch:10,...c.view},props:c.props||[],towel:c.towel,handSupport:c.handSupport,
+    return {id,oldId:id,name,level:"",reps:c.alt?2:1,view:{yaw:c.front?14:64,pitch:10,...c.view},props:c.props||[],towel:c.towel,handSupport:c.handSupport,floor:c.floor,
       channels:q=>{const u=timing(q);return {q,u,raw:q,sh:SHIFT(q),breath:u*.8,effort:.15+.85*u};},
       // Alternating moves hand over at the rep boundary, so their progress must land exactly on 0: no overshoot spring.
       springs:c.spring===false||c.alt?{}:{u:c.spring||[3.2,.62,0,1.06]},
@@ -587,7 +596,63 @@ const Stickman=(()=>{
       pose:(u,m)=>{const d=push.plank(0,{breath:u,prot:1}),i=m>0?0:1,leg=d.legs[i];
         d.legs[i]={...leg,ankle:add(leg.ankle,[0,40*Math.sqrt(u),58*Math.pow(u,1.6)]),pitch:leg.pitch+(20-leg.pitch)*u,toeBend:leg.toeBend*(1-u)};return d;}})
   );
-//@@LIB@@
+  // ---------- on the floor (the advanced level) ----------
+  // Lying on the back, head toward -z, shoulders (C7) resting at [0,11,-60]. `lift` raises the hips by
+  // turning the trunk about the shoulders (degrees); the feet stay planted with the knees up.
+  const C7_BACK=[0,11,-60],FEET_Z=34;
+  function supine({lift=0,legs}={}){
+    const t=rad(lift),U=[0,-Math.sin(t),-Math.cos(t)],F=[0,Math.cos(t),-Math.sin(t)];
+    return {pelvis:add(sub(C7_BACK,mul(U,B.trunk)),mul(F,1.5)),trunk:{pitch:-90-lift},head:{pitch:-90+lift*.3},breath:0,
+      legs:legs||SIDES.map(s=>({...flatFoot(s*11,FEET_Z,s*4),pole:[0,1,.5]})),
+      arms:SIDES.map(s=>({ik:{wrist:[s*(B.shoulder+5),3.5,C7_BACK[2]+44],pole:[s*.4,1,0],hand:[0,-.1,1]}}))};
+  }
+  // Lying face down, head toward +z, the pelvis resting at [0,11,0] and the toes tucked; `chest` lifts the trunk.
+  function prone({chest=0,raise=0}){
+    const d={pelvis:[0,11,0],trunk:{pitch:90-chest},head:{pitch:90-chest*.6},breath:0,
+      legs:SIDES.map(s=>({...ballFoot([s*9,0,-86],0,82),pole:[0,-1,.2]})),arms:SIDES.map(()=>HANG)};
+    // Arms overhead in a Y, 35° out, nearly straight; `raise` lifts the hands off the floor.
+    const R=(B.upper+B.fore)*.96;
+    d.arms=assemble(d).sides.map(sd=>{const y=4+14*raise,h=Math.sqrt(Math.max(0,R*R-(y-sd.S[1])**2));
+      const W=[sd.S[0]+sd.s*h*Math.sin(rad(35)),y,sd.S[2]+h*Math.cos(rad(35))];return {ik:{wrist:W,pole:[sd.s*.3,1,0],hand:unit(sub(W,sd.S))}};});
+    return d;
+  }
+  // A foot leaving the floor toward `target` (lying down): it rises before it travels, so it never slides or dips.
+  function liftOff(planted,target,g,pitch,heading){
+    let ankle=add(mix3(planted,target,clamp(g)**2),[0,4*Math.sqrt(Math.sin(Math.PI*clamp(g))),0]);
+    const fp=footPoints(ankle,heading,pitch,0),gap=3*Math.sqrt(Math.sin(Math.PI*clamp(g)));
+    ankle=add(ankle,[0,Math.max(0,gap-Math.min(fp.heel[1],fp.ball[1],fp.toe[1])),0]);
+    return {ankle,heading,pitch,toeBend:0,pole:[0,1,.3]};
+  }
+  const LEG_UP=track([[0,0],[.21,1],[.81,1],[1,0]]);
+  // Push-up on the floor: the same rigid-body solver as the table push-up, hands under the shoulders.
+  const floorPush=pushRig([22,4,0],6,50);
+  // Forearm plank: the body angle that puts the shoulders right above elbows resting on the floor.
+  // Bracing lifts the hips 2 cm square to the body while the shoulders and forearms stay where they are.
+  const forearmPlank=(()=>{
+    const rest={breath:0,prot:0},delta=floorPush.bisect(dl=>assemble(floorPush.plank(dl,rest)).sides[0].S[1]-33.5,-40,10);
+    const d0=floorPush.plank(delta,rest),a=90-d0.trunk.pitch,n=[0,Math.cos(rad(a)),-Math.sin(rad(a))];
+    const wrists=assemble(d0).sides.map(sd=>[sd.S[0]-sd.s*1.5,3,sd.S[2]+24]);
+    return (u,ch)=>{const d=floorPush.plank(delta,{breath:ch.breath*.4,prot:0}),up=2*u;
+      d.pelvis=add(d.pelvis,mul(n,up));d.trunk={...d.trunk,pitch:d.trunk.pitch+deg(Math.atan2(up,B.trunk))};
+      d.arms=wrists.map(w=>({ik:{wrist:w,pole:[0,-1,-.8],hand:[0,-.08,1]}}));return d;};
+  })();
+  EXERCISES.push(
+    lib("wallSit","靠墙静蹲",{timing:"press",props:[wallAt(-46)],trails:["P"],parts:{thighL:1,thighR:1,pelvis:.7},
+      phases:[[0,.08,"背贴墙 · 大腿接近水平"],[.08,.3,"再沉一点"],[.3,.62,"保持 · 不憋气"],[.62,.82,"回到起点高度"],[.82,1,"稳住"]],
+      pose:u=>standing({rest:"thigh",drop:STAND-55+4*u,pz:-33-u,pitch:-4,legs:both(s=>flatFoot(s*11,8,s*6))})}),
+    lib("gluteBridge","臀桥",{timing:"lift",floor:"body",view:{pitch:16},trails:["P"],parts:{pelvis:1,thighL:.7,thighR:.7,spine:.4},
+      pose:u=>supine({lift:28*u})}),
+    lib("singleBridge","单腿臀桥",{alt:true,timing:"oneLeg",floor:"body",view:{pitch:16},trails:["P","TOL","TOR"],parts:m=>({pelvis:1,["thigh"+sideKey(-m)]:1,spine:.4}),
+      pose:(u,m,ch)=>{const i=m>0?0:1,d=supine({lift:26*u}),p=assemble(d).sides,H=p[i].H,dir=unit(sub(p[1-i].K,p[1-i].H)),g=LEG_UP(ch.q);
+        d.legs[i]=liftOff(d.legs[i].ankle,add(H,mul(dir,78)),g,-70*g,m*4);return d;}}),
+    lib("pushUp","俯卧撑",{timing:"lower",handSupport:true,floor:"body",view:{pitch:12},trails:["C7","EL","ER"],parts:{upperL:1,upperR:1,foreL:.8,foreR:.8,clavL:.8,clavR:.8,spine:.5},
+      pose:(u,m,ch)=>floorPush.atElbow(172-106*u,{breath:ch.breath,prot:mix(1,-2,u)})}),
+    lib("plank","平板支撑",{timing:"press",handSupport:true,floor:"body",view:{pitch:12},trails:["P"],parts:{spine:1,pelvis:.8,clavL:.5,clavR:.5},
+      phases:[[0,.08,"手肘在肩膀正下方"],[.08,.3,"收紧腹部和臀部"],[.3,.62,"保持 · 自然呼吸"],[.62,.82,"稍微放松 · 不塌腰"],[.82,1,"保持一条直线"]],
+      pose:(u,m,ch)=>forearmPlank(u,ch)}),
+    lib("proneY","俯卧 Y 字举",{timing:"lift",floor:"body",view:{yaw:36,pitch:30},trails:["TL","TR"],parts:{clavL:1,clavR:1,upperL:.8,upperR:.8,spine:.7},
+      pose:u=>prone({chest:4+6*u,raise:u})})
+  );
 
   // ---------- precompute ----------
   // Free arms: a driven pendulum (swing and abduction) with muscle tone. While `free` is 0 a stiff
@@ -631,12 +696,14 @@ const Stickman=(()=>{
       const a=get(i-1,ex.metric.point),b=get(i+1,ex.metric.point),v=mul(sub(b,a),1/(2*dt));metric[i]=ex.metric.mode==="vy"?v[1]:len(v);
     }
     const lo=[1e9,0,1e9],hi=[-1e9,-1e9,-1e9];let bx=0,bz=0;
+    // The floor patch sits under the feet, or under the whole body for moves done on the floor.
+    const anchor=i=>{const f=mix3(get(i,"HEL"),get(i,"TOR"),.5);return ex.floor==="body"?mix3(f,get(i,"HC"),.5):f;};
     for(let i=0;i<N;i++){for(let k=0;k<POINTS.length;k++){const o=i*STRIDE+k*3;for(let a=0;a<3;a++){lo[a]=Math.min(lo[a],pts[o+a]);hi[a]=Math.max(hi[a],pts[o+a]);}}
-      const f=mix3(get(i,"HEL"),get(i,"TOR"),.5);bx+=f[0];bz+=f[2];}
+      const f=anchor(i);bx+=f[0];bz+=f[2];}
     lo[1]=0;hi[1]+=B.head;
     for(const pr of ex.props){const b=pr.type==="chair"?[[-pr.half,0,pr.back],[pr.half,pr.top,pr.front]]:[[-pr.half,0,pr.near],[pr.half,pr.top,pr.far]];for(let a=0;a<3;a++){lo[a]=Math.min(lo[a],b[0][a]);hi[a]=Math.max(hi[a],b[1][a]);}}
     const base=[bx/N,bz/N];let floorR=0;
-    for(let i=0;i<N;i+=4)for(const k of ["HEL","TOL","HER","TOR"]){const p=get(i,k);floorR=Math.max(floorR,Math.hypot(p[0]-base[0],p[2]-base[1]));}
+    for(let i=0;i<N;i+=4)for(const k of ex.floor==="body"?["HEL","TOL","HER","TOR","HC","TL","TR"]:["HEL","TOL","HER","TOR"]){const p=get(i,k);floorR=Math.max(floorR,Math.hypot(p[0]-base[0],p[2]-base[1]));}
     return ex.cache[avatar]={N,dt,duration,pts,effort,seat,reps,loads,metric,bounds:[lo,hi],base,floorR:floorR+30,reach,get,fits:new Map()};
   }
   // ---------- rendering ----------
@@ -757,7 +824,7 @@ const Stickman=(()=>{
         const hc0=at("HC"),fw0=unit(sub(at("HF"),hc0)),up0=unit(sub(at("HU"),hc0));
         // Hair: a short crop for him; a ponytail for her that trails the head's motion.
         if(avatar==="female"&&hair){
-          const root=add(hc0,add(mul(fw0,-B.head*.9),mul(up0,B.head*.35))),v=sub(hc0,hair.prev),tip=add(root,add(add(mul(fw0,-6),mul([0,-1,0],21)),mul(v,-2.6)));
+          const root=add(hc0,add(mul(fw0,-B.head*.9),mul(up0,B.head*.35))),v=sub(hc0,hair.prev),tip=add(root,add(add(mul(fw0,-6),mul([0,-1,0],21)),mul(v,-2.6)));tip[1]=Math.max(tip[1],1.5);
           const a=proj(root),m=proj(add(mix3(root,tip,.5),mul(fw0,-3))),b=proj(tip);
           ctx.lineCap="round";ctx.strokeStyle=pal.outline;ctx.lineWidth=7*s+3;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.quadraticCurveTo(m[0],m[1],b[0],b[1]);ctx.stroke();
           ctx.strokeStyle=pal.hair;ctx.lineWidth=7*s;ctx.beginPath();ctx.moveTo(a[0],a[1]);ctx.quadraticCurveTo(m[0],m[1],b[0],b[1]);ctx.stroke();

@@ -72,7 +72,7 @@ test('both avatars render every exercise without changing motion or playback',as
   s.selectAvatar('invalid');assert.equal(s.Stickman.getAvatar(),'male');
 });
 test('every library item has a stick-figure move, and every level covers all 7 categories with at least 3 moves',()=>{
-  const {s}=harness(),keys=[...s.LEVELS.map(l=>l.key)];assert.deepEqual(keys,['strong','standard','gentle']);assert.equal(s.ITEMS.length,51);
+  const {s}=harness(),keys=[...s.LEVELS.map(l=>l.key)];assert.deepEqual(keys,['strong','standard','gentle']);assert.equal(s.ITEMS.length,57);
   for(const key of keys)for(const c of s.CATEGORIES)assert.ok(s.ITEMS.filter(i=>i.key===c.key&&i.levels.includes(key)).length>=3,key+' '+c.key);
   assert.ok(s.ITEMS.some(i=>i.levels.length>1),'levels overlap');
   assert.equal(s.Stickman.EXERCISES.length,s.ITEMS.length);
@@ -93,15 +93,15 @@ test('choosing a level filters the plan and library, and is remembered with its 
     const shown=[...el('library-list').innerHTML.matchAll(/data-preview="(\w+)"/g)].map(m=>m[1]);
     assert.equal(shown.join(),s.ITEMS.filter(i=>i.levels.includes(key)).map(i=>i.id).join());
   }
-  s.setLibrary({scope:'every'});assert.equal([...el('library-list').innerHTML.matchAll(/data-preview=/g)].length,51);
+  s.setLibrary({scope:'every'});assert.equal([...el('library-list').innerHTML.matchAll(/data-preview=/g)].length,57);
   s.setLibrary({category:'push'});assert.equal([...el('library-list').innerHTML.matchAll(/data-preview=/g)].length,s.ITEMS.filter(i=>i.key==='push').length,'all levels, one category');
   s.selectLevel(s.getLevel());assert.equal([...el('library-list').innerHTML.matchAll(/data-preview=/g)].length,s.ITEMS.filter(i=>i.key==='push'&&i.levels.includes(s.getLevel())).length,'choosing a level returns to that level');
   s.setLibrary({category:'all'});
-  s.selectLevel('strong');s.newPlan();const strongPlan=store.get('cq-plan-v3-strong');
+  s.selectLevel('strong');s.newPlan();const strongPlan=store.get('cq-plan-v4-strong');
   s.selectLevel('gentle');s.selectLevel('strong');assert.equal(JSON.stringify(s.getPlan().map(i=>i.id)),strongPlan,'each level keeps its plan');
   s.selectLevel('nonsense');assert.equal(s.getLevel(),'strong');
   s.openPractice();s.selectLevel('gentle');assert.equal(s.getLevel(),'strong','level is fixed during a workout');
-  const again=harness({storage:{'cq-level-v1':'standard','cq-plan-v3-standard':JSON.stringify(s.DEFAULT_PLANS.strong)}});
+  const again=harness({storage:{'cq-level-v1':'standard','cq-plan-v4-standard':JSON.stringify(s.DEFAULT_PLANS.strong)}});
   assert.equal(again.s.getLevel(),'standard');assert.equal(again.s.getPlan().map(i=>i.id).join(),s.DEFAULT_PLANS.standard.join(),'a plan outside the level is replaced');
   const old=['march','stand','wallPush','elbowPull','kneePress','seatedHeel','side'];
   assert.equal(harness({storage:{'cq-plan-v2':JSON.stringify(old)}}).s.getPlan().map(i=>i.id).join(),old.join(),'plans saved before levels still load');

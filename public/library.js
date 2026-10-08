@@ -10,7 +10,7 @@ const CATEGORIES = [
 
 // Three overlapping intensity levels. Every level offers at least three moves per category.
 const LEVELS = [
-  { key: "strong", age: "40–55 岁", name: "进阶", hint: "徒手抗阻为主：深蹲、弓步、扶桌俯卧撑" },
+  { key: "strong", age: "40–55 岁", name: "进阶", hint: "徒手抗阻：俯卧撑、平板支撑、弓步、臀桥" },
   { key: "standard", age: "55–70 岁", name: "标准", hint: "站姿为主，扶稳练力量和平衡" },
   { key: "gentle", age: "70+", name: "温和", hint: "坐姿和扶椅为主，从小幅度开始" }
 ];
@@ -33,7 +33,9 @@ const LIBRARY = {
     {"id":"hamstringCurl","name":"扶稳屈膝","purpose":"练大腿后侧，帮助控制屈膝和迈步。","steps":["双手扶稳固定支撑，身体站直。","一侧膝盖弯曲，脚跟向后抬，再换边。"],"cue":"大腿不向前抬；支撑腿微弯，不塌腰。","alternating":true,"levels":["standard","gentle"]},
     {"id":"squat","name":"徒手深蹲","purpose":"练大腿和臀部，是起身、上楼和搬东西的基础力量。","steps":["椅子放在身后，双脚略宽于髋，脚尖稍朝外。","臀部向后坐到接近椅面，双臂前伸，再站直。"],"cue":"膝盖朝脚尖方向；背部长直，不坐下休息。","levels":["strong","standard"]},
     {"id":"reverseLunge","name":"后撤步蹲","purpose":"单腿练大腿和臀部，同时练平衡。","steps":["站直，双手叉腰，身旁放一把椅子备扶。","一脚向后退一步，两膝弯曲下沉，再收回换边。"],"cue":"前膝在脚踝上方；下沉深度量力，站不稳就扶椅。","alternating":true,"levels":["strong"]},
-    {"id":"wallSlide","name":"靠墙滑蹲","purpose":"背靠墙练大腿前侧，膝盖受力更可控。","steps":["背靠墙站，双脚离墙约一脚半。","背贴墙向下滑到舒适深度，再推地站起。"],"cue":"膝盖朝脚尖方向；膝痛时减小深度。","levels":["strong","standard"]}
+    {"id":"wallSlide","name":"靠墙滑蹲","purpose":"背靠墙练大腿前侧，膝盖受力更可控。","steps":["背靠墙站，双脚离墙约一脚半。","背贴墙向下滑到舒适深度，再推地站起。"],"cue":"膝盖朝脚尖方向；膝痛时减小深度。","levels":["strong","standard"]},
+    {"id":"wallSit","name":"靠墙静蹲","purpose":"大腿和臀部持续用力，练下肢耐力，膝盖受力可控。","steps":["背靠墙，双脚向前离墙约两脚长，与髋同宽。","背贴墙下滑到大腿接近水平，跟着数拍保持，每 4 拍再稍沉一点。"],"cue":"膝盖在脚踝正上方、朝脚尖方向；膝痛时滑得浅一些。","levels":["strong"]},
+    {"id":"gluteBridge","name":"臀桥","purpose":"练臀部和大腿后侧，帮助起身、上楼，也保护腰背。","steps":["仰躺在垫子上，屈膝，双脚踩地与髋同宽，双手放在身体两侧。","脚跟踩地，臀部发力抬到肩、髋、膝成一条线，再慢慢放下。"],"cue":"用臀部发力，不用腰顶；抬到身体成直线即可，不过度挺腰。","levels":["strong"]}
   ],
   push: [
     {"id":"wallPush","name":"墙面俯卧撑","purpose":"练胸、肩和手臂，让推门和撑起身体更有力。","steps":["面对墙站立，双手与肩同高。","弯手肘靠近墙，再把墙推远。"],"cue":"只弯手肘；头、背、髋始终保持一条直线。","levels":["strong","standard","gentle"]},
@@ -42,7 +44,8 @@ const LIBRARY = {
     {"id":"armRaise","name":"坐姿前抬臂","purpose":"活动肩前侧，练习向前拿取物品的控制。","steps":["坐直，手臂垂于两侧，掌心相对。","双臂向前抬至肩高以下，再放下。"],"cue":"手肘微弯；不耸肩，肩痛时减小幅度。","levels":["gentle"]},
     {"id":"bicepsCurl","name":"坐姿屈肘","purpose":"活动肘关节和手臂，练习拿取时的控制。","steps":["坐直，双臂贴身，先空手练习。","上臂保持不动，弯肘抬手，再放下。"],"cue":"不甩臂；增加负重前先确认适合自己。","levels":["gentle"]},
     {"id":"inclinePush","name":"扶桌俯卧撑","purpose":"比墙面俯卧撑负荷更大，练胸、肩和手臂后侧。","steps":["双手撑在牢固的桌边，双脚后退，身体成一条斜线。","弯手肘让胸口靠近桌边，再推回。"],"cue":"桌子必须不滑不翘；头、背、髋保持一条直线。","levels":["strong","standard"]},
-    {"id":"chairDip","name":"椅子臂屈伸","purpose":"练手臂后侧和肩部，帮助撑扶手起身。","steps":["椅子靠墙放稳，坐在前沿，双手撑在臀部两侧椅边。","臀部移出椅面，弯手肘下降一小段，再撑起。"],"cue":"只下降一小段；肩膀前侧疼痛时不做此动作。","levels":["strong"]}
+    {"id":"chairDip","name":"椅子臂屈伸","purpose":"练手臂后侧和肩部，帮助撑扶手起身。","steps":["椅子靠墙放稳，坐在前沿，双手撑在臀部两侧椅边。","臀部移出椅面，弯手肘下降一小段，再撑起。"],"cue":"只下降一小段；肩膀前侧疼痛时不做此动作。","levels":["strong"]},
+    {"id":"pushUp","name":"俯卧撑","purpose":"练胸、肩、手臂和核心，是最有效的徒手推力练习。","steps":["双手撑地略宽于肩，脚尖着地，身体从头到脚成一条直线。","屈肘让胸口靠近地面，再把地面推远。"],"cue":"做不了就改成膝盖着地；腰不塌，臀不翘。","levels":["strong"]}
   ],
   pull: [
     {"id":"elbowPull","name":"坐姿拉肘夹背","purpose":"活动上背和肩后侧，练习保持挺拔姿势。","steps":["坐直，双臂向前伸，略低于肩膀。","弯手肘向后拉，轻轻夹背，再伸回。"],"cue":"肘保持在肩膀下方；腰部不要后仰。","levels":["standard","gentle"]},
@@ -51,7 +54,8 @@ const LIBRARY = {
     {"id":"chestOpen","name":"坐姿展胸开臂","purpose":"活动胸肩和上背，缓解含胸的姿势。","steps":["坐直，双臂放在身体两侧。","双臂向侧后方小幅打开，再放松收回。"],"cue":"肩膀向下放松；不挺肚子，不强拉肩。","levels":["gentle"]},
     {"id":"shoulderRotate","name":"坐姿肩部外旋","purpose":"活动肩后侧，练习肩关节向外转动。","steps":["坐直，上臂贴身，手肘弯约九十度。","手肘留在原位，双手向两侧打开再收回。"],"cue":"只在舒适范围活动；不夹痛肩膀。","levels":["standard","gentle"]},
     {"id":"hingeRow","name":"俯身划臂","purpose":"练上背和手臂后拉，帮助保持挺拔姿势。","steps":["双脚与髋同宽，膝微弯，从髋部前倾约四十度。","手臂下垂，屈肘向后拉到身侧，再慢慢放下。"],"cue":"背部长直不弓；可双手各握一瓶水增加阻力。","levels":["strong","standard"]},
-    {"id":"towelPulldown","name":"毛巾下拉","purpose":"练背部两侧和肩胛下沉，帮助举手取物。","steps":["坐直，双手宽握毛巾举过头顶，把毛巾拉紧。","保持向两侧拉紧，手肘向下拉到肩高，再举回。"],"cue":"肩膀下沉不耸肩；毛巾在头前方，不压到脖子后面。","levels":["strong","standard"]}
+    {"id":"towelPulldown","name":"毛巾下拉","purpose":"练背部两侧和肩胛下沉，帮助举手取物。","steps":["坐直，双手宽握毛巾举过头顶，把毛巾拉紧。","保持向两侧拉紧，手肘向下拉到肩高，再举回。"],"cue":"肩膀下沉不耸肩；毛巾在头前方，不压到脖子后面。","levels":["strong","standard"]},
+    {"id":"proneY","name":"俯卧 Y 字举","purpose":"练上背和肩膀后侧，改善圆肩驼背。","steps":["俯卧在垫子上，双臂向前上方伸成 Y 字，拇指朝上。","肩胛向后下方收，双臂和胸口稍微抬离地面，再放下。"],"cue":"抬一小段即可；颈部放松，目视地面，腰不用力后仰。","levels":["strong"]}
   ],
   core: [
     {"id":"crossMarch","name":"坐姿对侧触膝","purpose":"练腹部、髋部和身体协调。","steps":["坐直，右脚抬起，同时左手靠近右膝。","放回后换边，身体不要后倒。"],"cue":"动作来自抬膝和轻微转身，不要猛拉颈部。","alternating":true,"levels":["standard","gentle"]},
@@ -61,7 +65,8 @@ const LIBRARY = {
     {"id":"diagonalReach","name":"坐姿对角伸手","purpose":"练坐姿重心控制和手眼协调。","steps":["坐稳，一只手扶住椅边。","另一手向对侧膝前伸少许，收回后换边。"],"cue":"双脚踩稳，臀部不离椅面，不追求伸远。","alternating":true,"levels":["gentle"]},
     {"id":"standCross","name":"站姿对侧提膝","purpose":"站着练腹部和髋部，同时练单脚平衡。","steps":["站直，双脚与髋同宽，身旁放一把椅子备扶。","抬起一侧膝盖，对侧手向膝盖靠近，再放下换边。"],"cue":"躯干稍前倾即可，不弯腰驼背；站不稳就扶椅。","alternating":true,"levels":["strong","standard"]},
     {"id":"tableKneeDrive","name":"扶桌提膝","purpose":"斜撑姿势下练腹部和肩部稳定。","steps":["双手撑在牢固的桌边，双脚后退，身体成一条斜线。","一侧膝盖向胸口提起，放回后换边。"],"cue":"髋部不塌不翘；动作要慢，保持呼吸。","alternating":true,"levels":["strong"]},
-    {"id":"goodMorning","name":"站姿髋铰链","purpose":"练臀部、大腿后侧和背部，学会弯腰搬物的正确姿势。","steps":["站直，双脚与髋同宽，双手交叉放在胸前。","膝微弯，臀部向后推，身体前倾，再用臀部发力站直。"],"cue":"背部始终长直；感觉大腿后侧拉紧就停。","levels":["strong","standard"]}
+    {"id":"goodMorning","name":"站姿髋铰链","purpose":"练臀部、大腿后侧和背部，学会弯腰搬物的正确姿势。","steps":["站直，双脚与髋同宽，双手交叉放在胸前。","膝微弯，臀部向后推，身体前倾，再用臀部发力站直。"],"cue":"背部始终长直；感觉大腿后侧拉紧就停。","levels":["strong","standard"]},
+    {"id":"plank","name":"平板支撑","purpose":"练腹部、背部和肩部的稳定，保护腰背。","steps":["前臂撑地，手肘在肩膀正下方，脚尖着地。","身体从头到脚成一条直线，跟着数拍保持约 30 秒，每 4 拍收紧一次。"],"cue":"不憋气；腰开始下塌就跪下休息，或改成膝盖着地。","levels":["strong"]}
   ],
   ankle: [
     {"id":"heel","name":"扶椅踮脚","purpose":"练小腿和脚踝，帮助迈步和站稳。","steps":["双手扶稳椅背，双脚朝前。","脚跟抬起，再有控制地落地。"],"cue":"脚趾始终着地；膝盖保持柔软，不锁死。","levels":["strong","standard","gentle"]},
@@ -79,14 +84,15 @@ const LIBRARY = {
     {"id":"forwardTap","name":"扶稳向前点步","purpose":"练习抬脚落脚与站立重心的控制。","steps":["双手扶稳固定支撑，双脚与髋同宽。","一脚向前点一小步，收回站稳再换边。"],"cue":"不跨大步，不松手；站立不稳时先不做。","alternating":true,"levels":["standard","gentle"]},
     {"id":"sideTap","name":"扶稳侧向点步","purpose":"练髋部侧向控制和脚步落点的准确性。","steps":["双手扶稳固定支撑，身体保持朝前。","一脚向旁点一小步，收回站稳再换边。"],"cue":"脚尖朝前，不交叉双腿，不把身体甩向旁边。","alternating":true,"levels":["standard","gentle"]},
     {"id":"singleLegStand","name":"单腿站立提膝","purpose":"练单腿站稳，帮助上下台阶和站着穿裤子。","steps":["双手轻扶椅背，双脚与髋同宽。","重心移到一侧，另一侧膝盖抬起停稳，再放下换边。"],"cue":"支撑腿微弯；能站稳时，只用指尖轻触椅背。","alternating":true,"levels":["strong","standard"]},
-    {"id":"singleLegHinge","name":"单腿前倾平衡","purpose":"练支撑腿的臀部和平衡控制。","steps":["双手扶稳椅背，身体站直。","身体前倾，同时一条腿伸直向后抬，再收回换边。"],"cue":"身体和后腿成一条线；髋部朝下，不向一侧翻开。","alternating":true,"levels":["strong"]}
+    {"id":"singleLegHinge","name":"单腿前倾平衡","purpose":"练支撑腿的臀部和平衡控制。","steps":["双手扶稳椅背，身体站直。","身体前倾，同时一条腿伸直向后抬，再收回换边。"],"cue":"身体和后腿成一条线；髋部朝下，不向一侧翻开。","alternating":true,"levels":["strong"]},
+    {"id":"singleBridge","name":"单腿臀桥","purpose":"单腿练臀部和髋部稳定，左右力量更均衡。","steps":["仰躺屈膝，双脚踩地，一条腿伸直抬起。","支撑脚踩地，臀部抬起再放下；放下腿后换边。"],"cue":"骨盆保持水平，不向一侧歪；太难时改做双腿臀桥。","alternating":true,"levels":["strong"]}
   ]
 };
 
 // English text, keyed like LIBRARY. Categories and levels follow the same order as above.
 const CATEGORIES_EN={warm:"Warm-up",lower:"Legs & hips",push:"Chest & arms",pull:"Back & shoulders",core:"Core & posture",ankle:"Calves & ankles",balance:"Hips & balance"};
 const LEVELS_EN={
-  strong:{age:"Ages 40–55",short:"40–55",name:"Advanced",hint:"Bodyweight strength: squats, lunges, table push-ups"},
+  strong:{age:"Ages 40–55",short:"40–55",name:"Advanced",hint:"Bodyweight strength: push-ups, planks, lunges, bridges"},
   standard:{age:"Ages 55–70",short:"55–70",name:"Standard",hint:"Mostly standing, holding on for strength and balance"},
   gentle:{age:"Ages 70+",short:"70+",name:"Gentle",hint:"Mostly seated or holding a chair, starting small"}
 };
@@ -141,5 +147,11 @@ const LIBRARY_EN={
   forwardTap:["Supported forward tap","Practises lifting and placing your foot while controlling your balance.",["Hold a steady support, feet hip-width apart.","Tap one foot a small step forward, bring it back, steady yourself and switch."],"No big steps and don't let go; skip this if you feel unsteady."],
   sideTap:["Supported side tap","Trains sideways hip control and accurate foot placement.",["Hold a steady support, body facing forward.","Tap one foot a small step to the side, bring it back, steady yourself and switch."],"Toes forward; don't cross your legs or throw your body sideways."],
   singleLegStand:["Single-leg knee lift","Trains standing on one leg for stairs and putting on trousers.",["Hold a chair back lightly, feet hip-width apart.","Shift onto one leg, lift the other knee and hold steady, then lower and switch."],"Keep the standing knee soft; when steady, touch the chair with fingertips only."],
-  singleLegHinge:["Single-leg hinge","Strengthens the standing leg's glutes and balance control.",["Hold a steady chair back and stand tall.","Lean forward as one straight leg lifts behind you, then return and switch."],"Body and back leg form one line; hips face the floor without opening sideways."]
+  singleLegHinge:["Single-leg hinge","Strengthens the standing leg's glutes and balance control.",["Hold a steady chair back and stand tall.","Lean forward as one straight leg lifts behind you, then return and switch."],"Body and back leg form one line; hips face the floor without opening sideways."],
+  wallSit:["Wall sit", "Keeps the thighs and glutes working to build leg endurance, with a controlled load on the knees.", ["Back against a wall, feet about two foot-lengths out and hip-width apart.", "Slide down until your thighs are nearly level and hold with the count, sinking a touch every 4 beats."], "Knees over the ankles, pointing over the toes; slide less far if your knees hurt."],
+  gluteBridge:["Glute bridge", "Strengthens the glutes and backs of the thighs for standing up and climbing stairs, and protects the lower back.", ["Lie on a mat with knees bent, feet flat and hip-width apart, arms by your sides.", "Press through your heels and lift your hips until shoulders, hips and knees line up, then lower slowly."], "Lift with your glutes, not your lower back; stop at a straight line without arching."],
+  pushUp:["Push-up", "Works the chest, shoulders, arms and core: the most effective bodyweight push.", ["Hands on the floor a little wider than your shoulders, on your toes, body in one line from head to heels.", "Bend your elbows to bring your chest toward the floor, then push the floor away."], "Too hard? Do it from your knees. Don't let the hips sag or pike."],
+  proneY:["Prone Y raise", "Strengthens the upper back and the backs of the shoulders to counter rounded shoulders.", ["Lie face down on a mat, arms reaching forward and out in a Y, thumbs up.", "Draw your shoulder blades back and down, lift your arms and chest slightly, then lower."], "Lift only a little; keep your neck relaxed and eyes on the floor, without arching your back."],
+  plank:["Plank", "Builds steadiness in the abs, back and shoulders to protect the lower back.", ["Forearms on the floor, elbows right under your shoulders, up on your toes.", "Hold one straight line from head to heels for about 30 seconds with the count, bracing every 4 beats."], "Keep breathing; when your hips start to sag, drop to your knees to rest, or hold from your knees."],
+  singleBridge:["Single-leg bridge", "Works each side's glutes and hip stability so both sides grow evenly strong.", ["Lie with knees bent and feet flat, then straighten one leg into the air.", "Press through the planted foot to lift and lower your hips; put the leg down and switch."], "Keep the pelvis level; if it's too hard, do the two-leg bridge."]
 };
